@@ -23,15 +23,19 @@ def generate_answer(user_query, retrieved_titles, tab_data):
     retrieved_docs = "\n\n".join([f"{title}: {tab_data[title]}" for title in retrieved_titles if title in tab_data])
 
     prompt = f"""
-    Based on the following information, answer the question.
+        You are an expert assistant. Answer the user's question **only** based on the information provided below. 
+        Do **not** use any external knowledge or generate content beyond the provided documents.
 
-    Information:
-    {retrieved_docs}
+        If the answer is **not present** in the information, reply with: 
+        "I'm sorry, but that question is outside the scope of the provided information."
 
-    Question: {user_query}
+        Information:
+        {retrieved_docs}
 
-    Answer in a clear, helpful, and concise manner.
-    """
+        Question: {user_query}
+
+        Answer in a clear, helpful, and concise manner.
+        """
 
     llm = ChatGroq(
         model="Llama3-8b-8192",

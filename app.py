@@ -1,6 +1,13 @@
 import streamlit as st
 import json
-from utils import get_data_from_website, generate_embeddings, create_faiss_index, load_faiss_index, load_metadata
+from utils import (get_data_from_website,
+                   generate_embeddings,
+                   create_faiss_index,
+                   load_faiss_index,
+                   load_metadata,
+                   append_ferpa_data,
+                   append_civil_rights_data,
+                   append_file_complaint_data)
 from logic import search_query, generate_answer
 from utils import get_model
 
@@ -17,8 +24,17 @@ if user_query:
     # Loading data and index
     if 'index' not in st.session_state:
         get_data_from_website("https://www.dinecollege.edu/academics/academic-policies/")
+
+        ferpa_url = "https://studentprivacy.ed.gov/ferpa"
+        civil_rights_url = "https://www.ed.gov/laws-and-policy/civil-rights-laws"
+        file_complaint_url = "https://www.ed.gov/laws-and-policy/civil-rights-laws/file-complaint"
+        append_ferpa_data(ferpa_url)
+        append_civil_rights_data(civil_rights_url)
+        append_file_complaint_data(file_complaint_url)
+
         with open('data/tab_data.json', 'r', encoding='utf-8') as f:
             tab_data = json.load(f)
+            
         documents = [f"{key}: {value}" for key, value in tab_data.items()]
         embeddings = generate_embeddings(documents)
         index = create_faiss_index(embeddings)
