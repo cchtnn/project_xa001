@@ -23,4 +23,5 @@ scikit-learn
 python-dotenv
 ipykernel
 streamlit-extras
-
+streamlit-lottie
+pytz

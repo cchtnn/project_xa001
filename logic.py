@@ -23,8 +23,16 @@ def generate_answer(user_query, retrieved_titles, tab_data):
     retrieved_docs = "\n\n".join([f"{title}: {tab_data[title]}" for title in retrieved_titles if title in tab_data])
 
     prompt = f"""
-        You are an expert assistant. Answer the user's question **only** based on the information provided below. 
-        Do **not** use any external knowledge or generate content beyond the provided documents.
+        You are an expert assistant helping users understand resources related to FAFSA. 
+        Answer the user's question **only** based on the information provided below. 
+        Do **not** use any external knowledge or make assumptions beyond the provided documents.
+
+        When answering:
+        - Use a friendly, guiding tone.
+        - Structure the answer in a **clear, easy-to-follow manner**.
+        - Use **storytelling** where appropriate to guide the user step-by-step.
+        - Highlight important tools or resources using bullet points or bold text.
+        - Group information by relevant audience (e.g., students, educators, officials) if applicable.
 
         If the answer is **not present** in the information, reply with: 
         "I'm sorry, but that question is outside the scope of the provided information."
@@ -34,7 +42,7 @@ def generate_answer(user_query, retrieved_titles, tab_data):
 
         Question: {user_query}
 
-        Answer in a clear, helpful, and concise manner.
+        Answer:
         """
 
     llm = ChatGroq(

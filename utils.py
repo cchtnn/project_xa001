@@ -6,15 +6,10 @@ from sentence_transformers import SentenceTransformer
 import faiss
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-
-# llm = ChatGroq(
-#     api_key=os.getenv("GROQ_API_KEY"),
-#     model="Llama3-8b-8192",
-#     temperature=0,
-#     max_tokens=4192,
-#     timeout=30,
-#     max_retries=2,
-# )
+from bs4 import BeautifulSoup, NavigableString
+from urllib.parse import urljoin
+from collections import defaultdict
+import torch
 
 def get_data_from_website(url):
     """
@@ -209,6 +204,126 @@ def append_file_complaint_data(url, output_filename="data//tab_data.json"):
 
     _append_to_json(result, output_filename)
 
+def extract_table_as_text(table):
+    rows = []
+    for row in table.find_all('tr'):
+        cols = [col.get_text(strip=True) for col in row.find_all(['th', 'td'])]
+        rows.append('\t'.join(cols))
+    return '\n'.join(rows)
+
+def extract_text_with_links(element, base_url):
+    result = ""
+    for child in element.children:
+        if child.name == 'a':
+            link_text = child.get_text(strip=True)
+            link_url = child.get('href', '')
+            if link_url and not link_url.startswith(('http://', 'https://')):
+                link_url = urljoin(base_url, link_url)
+            result += f"{link_text} [{link_url}]" if link_url else link_text
+        elif isinstance(child, str):
+            result += child
+        elif child.name:
+            result += extract_text_with_links(child, base_url)
+    return result.strip()
+
+def extract_list_content(heading_element, base_url):
+    content = []
+    current = heading_element.next_sibling
+
+    while current:
+        if isinstance(current, NavigableString):
+            current = current.next_sibling
+            continue
+        if current.name == 'ul':
+            for li in current.find_all('li', recursive=True):
+                item_content = extract_text_with_links(li, base_url)
+                content.append(item_content)
+            break
+        elif current.name in ['h2', 'h3']:
+            break
+        current = current.next_sibling
+
+    return content
+
+def extract_h3_with_paragraphs(soup):
+    result = {}
+    panels = soup.find_all("div", class_="panel panel-primary")
+    for panel in panels:
+        heading = panel.find("div", class_="panel-heading")
+        body = panel.find("div", class_="panel-body")
+        if heading and body:
+            h3 = heading.find("h3")
+            p = body.find("p")
+            if h3 and p:
+                heading_text = h3.get_text(strip=True)
+                paragraph_text = p.get_text(strip=True)
+                result[heading_text] = paragraph_text
+    return result
+
+def append_fafsa_data(url, output_filename="data/tab_data.json"):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching URL: {e}")
+        return
+
+    base_url = url
+    soup = BeautifulSoup(response.content, 'html.parser')
+    container = soup.find('div', class_='field field--name-body field--type-text-with-summary field--label-hidden field__item')
+    if not container:
+        print("No content container found.")
+        return
+
+    result = defaultdict(str)
+    current_header = None
+
+    for tag in container.find_all(recursive=False):
+        if tag.name and tag.name.startswith('h'):
+            current_header = tag.get_text(strip=True)
+            result[current_header] = ''
+
+        elif tag.name == 'p' and current_header:
+            paragraph_text = tag.get_text(strip=True)
+            if paragraph_text:
+                result[current_header] += paragraph_text + '\n'
+
+        elif tag.name == 'table' and current_header:
+            table_text = extract_table_as_text(tag)
+            if table_text:
+                result[current_header] += '\n' + table_text + '\n'
+
+        elif tag.name == 'div' and current_header:
+            nested_table = tag.find('table')
+            if nested_table:
+                table_text = extract_table_as_text(nested_table)
+                if table_text:
+                    result[current_header] += '\n' + table_text + '\n'
+
+    result = {k: v.strip() for k, v in result.items() if len(v.strip()) > 1}
+
+    headers = container.find_all(['h2', 'h3'])
+    for header in headers:
+        header_text = header.get_text(strip=True)
+        list_items = extract_list_content(header, base_url)
+        if list_items:
+            if header_text in result:
+                result[header_text] += '\n' + '\n'.join(list_items)
+            else:
+                result[header_text] = '\n'.join(list_items)
+
+    panel_data = extract_h3_with_paragraphs(soup)
+    for heading, paragraph in panel_data.items():
+        if heading in result:
+            result[heading] += '\n' + paragraph
+        else:
+            result[heading] = paragraph
+
+    os.makedirs(os.path.dirname(output_filename), exist_ok=True)
+    _append_to_json(result, output_filename)
+    print(f"Data appended to {output_filename}")
+    return result
+
 def _append_to_json(new_data, output_filename):
     """
     Appends a dictionary of data to an existing JSON file or creates a new one.
@@ -273,4 +388,6 @@ def load_metadata():
     return metadata
 
 def get_model():
-    return SentenceTransformer('all-MiniLM-L6-v2')
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+    return model
