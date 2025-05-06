@@ -1,4 +1,4 @@
-import os
+import os, re
 import json
 import requests
 from bs4 import BeautifulSoup
@@ -10,6 +10,7 @@ from bs4 import BeautifulSoup, NavigableString
 from urllib.parse import urljoin
 from collections import defaultdict
 import torch
+from PyPDF2 import PdfReader
 
 def get_data_from_website(url):
     """
@@ -391,3 +392,62 @@ def get_model():
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
     return model
+    
+def get_data_from_pdf(pdf_directory,output_filename="data/tab_data.json"):
+
+    all_files=os.listdir(pdf_directory)
+    all_pdf_files=[x for x in all_files if "pdf" in x]
+    all_pdf_files_path=[os.path.join(pdf_directory,x) for x in all_pdf_files]
+    # all_pdf_files_path
+    
+    for pdf_path in all_pdf_files_path:
+        print(pdf_path)
+        text=""
+
+        filename =pdf_path.split("/")[-1]
+        pdf_reader=PdfReader(pdf_path)
+
+        for page in pdf_reader.pages:
+            text+=page.extract_text()
+    
+        print({filename:text})
+
+        _append_to_json({filename:text},output_filename)
+
+
+def clean_text(text):
+    text = BeautifulSoup(text, "html.parser").get_text()  # remove HTML
+    text = re.sub(r'\s+', ' ', text)  # remove excessive whitespace
+    text = re.sub(r'[\r\n\t]', ' ', text)  # remove line breaks
+    return text.strip()
+
+def chunk_text(text, max_words=200):
+    words = text.split()
+    return [' '.join(words[i:i+max_words]) for i in range(0, len(words), max_words)]
+
+
+def preprocess_tab_data(tab_data):
+    cleaned_chunks = []
+    metadata = []
+
+    for title, content in tab_data.items():
+        cleaned = clean_text(content)
+        chunks = chunk_text(cleaned, max_words=200)
+        cleaned_chunks.extend(chunks)
+        metadata.extend([title] * len(chunks))
+
+    return cleaned_chunks, metadata
+
+
+def truncate_docs(docs, max_total_words=1500):
+    word_count = 0
+    result = []
+
+    for doc in docs:
+        words = doc.split()
+        if word_count + len(words) > max_total_words:
+            break
+        result.append(doc)
+        word_count += len(words)
+
+    return result

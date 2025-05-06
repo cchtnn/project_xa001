@@ -5,12 +5,20 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-def search_query(user_query, index, model, metadata, tab_data, top_k=3):
+def search_query(user_query, index, model, metadata, tab_data, top_k=2,distance_threshold=0.5):
     query_vector = model.encode([user_query], convert_to_numpy=True)
     distances, indices = index.search(query_vector, top_k)
     
-    retrieved_titles = [metadata[idx] for idx in indices[0]]
-    retrieved_docs = [tab_data[title] for title in retrieved_titles]
+    # retrieved_titles = [metadata[idx] for idx in indices[0]]
+    # retrieved_docs = [tab_data[title] for title in retrieved_titles]
+
+    valid_indices = [
+        i for i, dist in enumerate(distances[0])
+        if dist < distance_threshold and indices[0][i] < len(metadata)
+    ]
+
+    retrieved_titles = [metadata[indices[0][i]] for i in valid_indices]
+    retrieved_docs = [tab_data[title] for title in retrieved_titles if title in tab_data]
 
     return retrieved_titles, retrieved_docs, distances
 
@@ -49,8 +57,8 @@ def generate_answer(user_query, retrieved_titles, tab_data):
         model="Llama3-8b-8192",
         api_key=os.getenv("GROQ_API_KEY"),
         temperature=0,
-        max_tokens=4192,
-        timeout=30,
+        max_tokens=8000, # 4192
+        timeout=60,
         max_retries=2,
     )
     response = llm.invoke(prompt)

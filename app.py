@@ -15,7 +15,12 @@ from utils import (
     append_ferpa_data,
     append_civil_rights_data,
     append_file_complaint_data,
-    append_fafsa_data
+    append_fafsa_data,
+    get_data_from_pdf,
+    preprocess_tab_data,
+    chunk_text,
+    clean_text,
+    truncate_docs
 )
 from logic import search_query, generate_answer
 from utils import get_model
@@ -140,6 +145,10 @@ if user_query:
         append_civil_rights_data("https://www.ed.gov/laws-and-policy/civil-rights-laws")
         append_file_complaint_data("https://www.ed.gov/laws-and-policy/civil-rights-laws/file-complaint")
         append_fafsa_data("https://www.ed.gov/higher-education/paying-college/better-fafsa")
+
+        # Adding pdf data
+        pdf_directory="data\\hr_policies"
+        get_data_from_pdf(pdf_directory,output_filename="data/tab_data.json")
 
         with open('data/tab_data.json', 'r', encoding='utf-8') as f:
             tab_data = json.load(f)

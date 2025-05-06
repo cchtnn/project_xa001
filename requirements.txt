@@ -15,8 +15,8 @@ transformers>=4.31.0
 sentence-transformers>=2.2.2
 torch>=1.12.1
 bs4==0.0.2
-html2text==2020.1.16
-chromadb==0.4.22
+html2text
+chromadb
 streamlit
 langchain_core
 scikit-learn
@@ -25,3 +25,4 @@ ipykernel
 streamlit-extras
 streamlit-lottie
 pytz
+PyPDF2
