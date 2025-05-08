@@ -81,6 +81,23 @@ else:
     """, unsafe_allow_html=True)
 
 # --------------------------
+# Set current timestamp
+# --------------------------
+st.session_state.current_time = datetime.now().strftime("%A, %d %B %Y %H:%M:%S")
+
+# --------------------------
+# Custom Header Section
+# --------------------------
+st.markdown(f"""
+    <div style='text-align: center; margin-top: 30px;'>
+        <img src='https://cdn-icons-png.flaticon.com/512/4712/4712027.png' width='100'/>
+        <h1 style='font-size: 48px; margin: 10px 0;'>Jericho ChatBot</h1>
+        <p style='font-size: 18px; color: gray;'>Ask me any question, and I'll find the best answer for you!</p>
+        <p style='font-size: 14px; color: #888;'>{st.session_state.current_time}</p>
+    </div>
+""", unsafe_allow_html=True)
+
+# --------------------------
 # Sidebar Navigation
 # --------------------------
 page = st.sidebar.radio("Go to", ["Home", "About"])
@@ -103,34 +120,16 @@ if page == "About":
     """)
     st.stop()
 
-# --------------------------
-# Right-Aligned Date/Time
-# --------------------------
-# Timezone
-tz = pytz.timezone('Asia/Kolkata')
-now = datetime.now(tz)
-current_time = now.strftime("%A, %d %b %Y %H:%M:%S")
-st.markdown(f"<div style='text-align: right; font-size: 18px;'>{current_time}</div>", unsafe_allow_html=True)
 
+# Select Language
+with st.sidebar:
+    selected_language = st.selectbox(
+            "Select Language / Seleccione Idioma / Saad Hadilyaago",
+            options=["English", "Spanish", "Navajo"],
+            index=0  # Default to English)
+    )
 
-# --------------------------
-# Lottie Animation
-# --------------------------
-def load_lottieurl(url: str):
-    r = requests.get(url)
-    if r.status_code != 200:
-        return None
-    return r.json()
-
-lottie_url = "https://assets10.lottiefiles.com/packages/lf20_totrpclr.json"
-lottie_json = load_lottieurl(lottie_url)
-st_lottie(lottie_json, height=200, key="lottie-animation")
-
-# --------------------------
-# RAG Chatbot Interface
-# --------------------------
-st.title("🤖 Jericho Chatbot")
-st.write("Ask me any question, and I'll find the best answer for you!")
+    st.session_state.language = selected_language
 
 if "user_query" not in st.session_state:
     st.session_state.user_query = ""
@@ -140,11 +139,11 @@ user_query = st.session_state.user_query
 
 if user_query:
     if 'index' not in st.session_state:
-        get_data_from_website("https://www.dinecollege.edu/academics/academic-policies/")
-        append_ferpa_data("https://studentprivacy.ed.gov/ferpa")
-        append_civil_rights_data("https://www.ed.gov/laws-and-policy/civil-rights-laws")
-        append_file_complaint_data("https://www.ed.gov/laws-and-policy/civil-rights-laws/file-complaint")
-        append_fafsa_data("https://www.ed.gov/higher-education/paying-college/better-fafsa")
+        # get_data_from_website("https://www.dinecollege.edu/academics/academic-policies/")
+        # append_ferpa_data("https://studentprivacy.ed.gov/ferpa")
+        # append_civil_rights_data("https://www.ed.gov/laws-and-policy/civil-rights-laws")
+        # append_file_complaint_data("https://www.ed.gov/laws-and-policy/civil-rights-laws/file-complaint")
+        # append_fafsa_data("https://www.ed.gov/higher-education/paying-college/better-fafsa")
 
         # Adding pdf data
         pdf_directory="data\\hr_policies"
@@ -156,6 +155,10 @@ if user_query:
         documents = [f"{key}: {value}" for key, value in tab_data.items()]
         embeddings = generate_embeddings(documents)
         index = create_faiss_index(embeddings)
+
+        # print("documents :-",documents)
+        # print("embeddings :-",embeddings)
+        # print("index :-",index)
 
         metadata = list(tab_data.keys())
         with open('data/faiss_metadata.json', 'w', encoding='utf-8') as f:
@@ -172,9 +175,10 @@ if user_query:
     # Show loading spinner while generating the answer
     with st.spinner("🔄 Please wait while I find the best answer for you..."):
         time.sleep(1)  # Optional: simulate delay for smooth UI
-        retrieved_titles, retrieved_docs, distances = search_query(st.session_state.user_query, index, model, metadata, tab_data
-)
-        answer = generate_answer(st.session_state.user_query, retrieved_titles, tab_data)
+        retrieved_titles, retrieved_docs, distances = search_query(st.session_state.user_query, index, model, metadata, tab_data)
+        # print("retrieved_titles :-", retrieved_titles)
+        # print("retrieved_docs :-", retrieved_docs)
+        answer = generate_answer(st.session_state.user_query, retrieved_titles, tab_data, st.session_state.language)
 
     # Create a placeholder to display the final answer dynamically
     answer_placeholder = st.empty()
