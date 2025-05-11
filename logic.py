@@ -5,7 +5,7 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-def search_query(user_query, index, model, metadata, tab_data, top_k=2, distance_threshold=0.5):
+def search_query(user_query, index, model, metadata, tab_data, top_k=1, distance_threshold=0.5):
     def get_matches(threshold):
         query_vector = model.encode([user_query], convert_to_numpy=True)
         distances, indices = index.search(query_vector, top_k)
@@ -50,13 +50,8 @@ def generate_answer(user_query, retrieved_titles, tab_data, communication_langua
 
     prompt = f"""
                 You are an expert assistant helping users. 
-                Answer the user's question **only using the information provided below**. 
-                If the information to answer the question is **not clearly found** in the provided text, respond with:
-
-                "{fallback_response}"
-
-                Do not rely on your own knowledge. Only refer to the content in the documents.
-
+                Answer the user's question primarily using the information provided below.
+                
                 ---
 
                 ### Provided Information:
@@ -71,11 +66,14 @@ def generate_answer(user_query, retrieved_titles, tab_data, communication_langua
 
                 ### Instructions for Answering:
                 - The language of communication must be in user chosen {communication_language} language, you must respond in {communication_language} language.
-                - If the answer **is found** in the provided information, respond clearly and helpfully.
+                - First, check if the answer is found in the provided information:
+                  * If the answer IS found in the provided information, respond clearly using that information.
+                  * If the answer is PARTIALLY found, use what's available from the documents and clearly indicate which parts of your response come from the provided information.
+                  * If the answer is NOT found in the provided information, you may provide a helpful response based on your general knowledge, but preface it with: "This information is not found in the provided documents. Based on general knowledge: "
                 - Use a warm and helpful tone.
                 - Use bullet points, bold text, or headings if it improves clarity.
-                - If **no relevant information is found**, simply respond:  
-                *"{fallback_response}"*
+                - Always be transparent about the source of your information (documents vs. general knowledge).
+                - If you're completely uncertain about information outside the provided documents, acknowledge the limitations with: "I don't have specific information about this in the provided documents or in my general knowledge. {fallback_response}"
 
                 ---
 
