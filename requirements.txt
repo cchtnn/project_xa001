@@ -20,3 +20,4 @@ pytz
 PyPDF2
 PyCryptodome
 tiktoken
+chromadb

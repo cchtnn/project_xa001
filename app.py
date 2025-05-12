@@ -31,7 +31,7 @@ from logic import count_tokens
 # We'll import these later after collection is defined to avoid circular imports
 # We'll use them as: logic.search_query() and logic.generate_answer()
 import logic
-from utils import get_model
+# from utils import get_model
 
 # First, let's hide the default Streamlit header completely
 st.set_page_config(
@@ -45,8 +45,8 @@ st.set_page_config(
 chroma_client = chromadb.Client()
 collection = chroma_client.get_or_create_collection(name="jericho_documents")
 
-# Load model
-model = get_model()
+# # Load model
+# model = get_model()
 
 # File to store hash metadata
 METADATA_FILE = "data/metadata.json"
