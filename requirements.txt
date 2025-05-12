@@ -19,3 +19,4 @@ streamlit-lottie
 pytz
 PyPDF2
 PyCryptodome
+tiktoken

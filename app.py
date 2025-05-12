@@ -1,12 +1,15 @@
 import streamlit as st
-import json
+import json, os
 from datetime import datetime
+import hashlib
 import pytz
 import time
 import base64
 from pathlib import Path
 import requests
 from streamlit_lottie import st_lottie
+import chromadb
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from utils import (
     get_data_from_website,
     generate_embeddings,
@@ -23,13 +26,12 @@ from utils import (
     clean_text,
     truncate_docs
 )
-from logic import search_query, generate_answer
+# Import the functions from logic.py, but don't pass collection directly
+from logic import count_tokens
+# We'll import these later after collection is defined to avoid circular imports
+# We'll use them as: logic.search_query() and logic.generate_answer()
+import logic
 from utils import get_model
-
-# Load model
-model = get_model()
-
-st.session_state.current_time = datetime.now().strftime("%A, %d %B %Y %H:%M:%S")
 
 # First, let's hide the default Streamlit header completely
 st.set_page_config(
@@ -39,181 +41,147 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Hide all Streamlit default elements that might interfere with our custom layout
-st.markdown(
-    """
-    <style>
-        /* Hide the Streamlit header bar completely */
-        header {
-            visibility: hidden !important;
-            height: 0px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-        }
+# Initialize ChromaDB
+chroma_client = chromadb.Client()
+collection = chroma_client.get_or_create_collection(name="jericho_documents")
 
-        /* Reset the main content area to start from the top and reduce padding */
-        .main .block-container {
-            padding-top: 0 !important;
-            margin-top: 0 !important;
-            max-width: 1000px !important;
-        }
+# Load model
+model = get_model()
 
-        /* Hide hamburger menu and footer */
-        #MainMenu {visibility: hidden;}
-        footer {visibility: hidden;}
+# File to store hash metadata
+METADATA_FILE = "data/metadata.json"
 
-        /* Hide deploy button */
-        .st-emotion-cache-1avcm0n {
-            display: none !important;
-        }
-        button[title="Deploy"] {
-            display: none !important;
-        }
+# Function to calculate hash of a file
+def calculate_file_hash(file_path):
+    """Calculate MD5 hash of file to detect changes"""
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 
-        /* Now properly position our logo without interference */
-        .top-left-logo {
-            position: fixed;
-            top: 10px;
-            left: 10px;
-            height: auto;
-            width: 80px;
-            z-index: 9999; /* Increased z-index to ensure visibility */
-        }
-        .top-left-logo img {
-            display: block;
-            width: 100%;
-            height: auto;
-        }
+# Function to load or initialize metadata
+def get_metadata():
+    """Load metadata from file or create default"""
+    if os.path.exists(METADATA_FILE):
+        with open(METADATA_FILE, 'r') as f:
+            return json.load(f)
+    else:
+        return {"tab_data_hash": "", "last_updated": ""}
 
-        /* Style for the main header container - REPOSITIONED TO TOP */
-        .jericho-header {
-            text-align: center;
-            position: relative;
-            top: -90px;
-            left: 50%;
-            transform: translateX(-50%);
-            padding: 10px;
-            z-index: 100;
-            width: 500px;
-            margin-bottom: -150px;
-        }
+# Function to save metadata
+def save_metadata(metadata):
+    """Save metadata to file"""
+    os.makedirs(os.path.dirname(METADATA_FILE), exist_ok=True)
+    with open(METADATA_FILE, 'w') as f:
+        json.dump(metadata, f)
 
-        .jericho-header h1 {
-            font-size: 48px;
-            margin: 0;
-            padding: 0;
-            line-height: 1.2;
-        }
+# Function to load CSS from file
+def load_css(css_file):
+    with open(css_file, 'r') as f:
+        return f.read()
 
-        .jericho-header p.tagline {
-            font-size: 16px;
-            color: gray;
-            margin: 0;
-            padding: 0;
-        }
+# Function to load HTML template from file
+def load_html_template(template_file):
+    with open(template_file, 'r') as f:
+        return f.read()
 
-        .jericho-header p.timestamp {
-            font-size: 12px;
-            color: #888;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* Input container styles - moved up by adding custom positioning */
-        .input-container {
-            position: fixed;
-            top: 130px; /* Position directly below the header */
-            left: 50%;
-            transform: translateX(-50%);
-            max-width: 800px;
-            width: 90%;
-            z-index: 99;
-            margin-bottom: 0px; /* Reduced bottom margin */
-        }
-
-        /* Input styles */
-        div[data-baseweb="input"] > div {
-            border: 1px solid #ccc !important;
-            border-radius: 6px !important;
-            background-color: white !important;
-            box-shadow: none !important;
-        }
-
-        /* Button style */
-        .stButton > button {
-            background-color: #7792E3 !important;
-            color: white !important;
-            border: none !important;
-            border-radius: 8px !important;
-        }
-
-        /* Make sure inputs and buttons line up properly */
-        .stTextInput, .stButton {
-            margin-top: 0 !important;
-            padding-top: 0 !important;
-        }
-
-        /* Adjust spacing below the input area for answers */
-        .answers-container {
-            margin-top: 0; /* Remove default top margin */
-            padding-top: 10px; /* Adjust padding to control space below input */
-            position: relative;
-            z-index: 10;
-        }
-
-        /* New styles for the latest answer container */
-        .latest-answer-container {
-            background-color: #f0f0f0; /* Light grey background */
-            border-radius: 15px; /* Rounded corners */
-            padding: 20px; /* Padding inside the container */
-            margin-bottom: 30px; /* Space between latest answer and previous answers */
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Subtle shadow */
-            position: relative;
-        }
-
-        /* Larger font for the answer heading */
-        .answer-heading {
-            font-size: 24px !important; /* Larger font size */
-            font-weight: 600 !important; /* Make it bold */
-            margin-bottom: 15px !important; /* Space after heading */
-            color: #333 !important; /* Darker text color */
-        }
-
-        /* Regular answer text */
-        .answer-content {
-            font-size: 16px !important;
-            line-height: 1.5 !important;
-        }
-
-        .answer-separator {
-            margin-top: 10px; /* Add a small gap between question and answer */
-            margin-bottom: 15px;
-            border-top: 1px solid #eee;
-        }
-
-        /* Center empty space */
-        .container-centerize {
-            display: flex;
-            justify-content: center;
-            width: 100%;
-        }
+# Initialize or update vectorstore based on file hash
+@st.cache_resource(show_spinner=False)
+def initialize_vectorstore():
+    # Get the current hash of tab_data.json
+    tab_data_path = 'data/tab_data.json'
+    current_hash = calculate_file_hash(tab_data_path)
+    
+    # Load metadata
+    metadata_info = get_metadata()
+    stored_hash = metadata_info.get("tab_data_hash", "")
+    
+    # Load tab_data regardless (we'll need it for reference)
+    with open(tab_data_path, 'r', encoding='utf-8') as f:
+        tab_data = json.load(f)
+    
+    # Check if data has changed or collection is empty
+    if current_hash != stored_hash or collection.count() == 0:
+        print(f"💾 Data changed or collection empty. Processing data...")
+        print(f"Previous hash: {stored_hash}")
+        print(f"Current hash: {current_hash}")
         
-        /* Previous Q&A section styling */
-        .previous-qa-heading {
-            font-size: 22px;
-            font-weight: 600;
-            margin-top: 30px;
-            margin-bottom: 20px;
-            color: #333;
-        }
+        # If collection already has data, first delete it
+        if collection.count() > 0:
+            print("🗑️ Clearing existing collection data")
+            # Get all IDs in collection
+            results = collection.get()
+            if results and 'ids' in results and results['ids']:
+                collection.delete(ids=results['ids'])
         
-        .previous-qa-item {
-            margin-bottom: 20px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
+        # Text splitter for chunking documents
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500, 
+            chunk_overlap=50,
+            length_function=len,
+            separators=["\n\n", "\n", ". ", " ", ""]
+        )
+
+        # Process each document: chunk, embed, and add to ChromaDB
+        document_chunks = []
+        chunk_ids = []
+        chunk_metadata = []
+        chunk_count = 0
+
+        for title, content in tab_data.items():
+            # Create document with title and content
+            document = f"{title}: {content}"
+            
+            # Split document into chunks
+            chunks = text_splitter.split_text(document)
+            
+            # Process each chunk
+            for i, chunk in enumerate(chunks):
+                chunk_id = f"chunk_{chunk_count}"
+                chunk_count += 1
+                
+                # Store chunk with its metadata
+                document_chunks.append(chunk)
+                chunk_ids.append(chunk_id)
+                chunk_metadata.append({"title": title, "chunk_index": i, "source": "tab_data"})
+
+        embeddings = generate_embeddings(document_chunks)
+        
+        collection.add(
+            embeddings=embeddings.tolist(),
+            documents=document_chunks,
+            metadatas=chunk_metadata,
+            ids=chunk_ids
+        )
+
+        # Update metadata with new hash
+        metadata_info["tab_data_hash"] = current_hash
+        metadata_info["last_updated"] = datetime.now().isoformat()
+        save_metadata(metadata_info)
+        
+        print(f"✅ Added {len(document_chunks)} chunks to ChromaDB collection")
+        return chunk_ids, chunk_metadata, tab_data
+    else:
+        print(f"📚 Using existing collection data (hash match: {current_hash})")
+        # Return placeholder values for compatibility
+        return list(range(collection.count())), [], tab_data
+
+# Initialize data once at app startup, but will update if hash changes
+try:
+    index, metadata, tab_data = initialize_vectorstore()
+    data_loading_error = None
+except Exception as e:
+    data_loading_error = str(e)
+    print(f"❌ Error loading data: {e}")
+    # Create empty fallbacks
+    index, metadata, tab_data = [], [], {}
+
+st.session_state.current_time = datetime.now().strftime("%A, %d %B %Y %H:%M:%S")
+
+# Load CSS from template file
+css = load_css("templates/styles.css")
+st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
 # Display the logo in the top-left corner
 st.markdown(
@@ -331,51 +299,32 @@ st.markdown('</div>', unsafe_allow_html=True)
 # Container for answers with proper spacing
 st.markdown('<div class="answers-container">', unsafe_allow_html=True)
 
-# Process the query when the button is clicked
 if submit and query:
-    # Your existing processing code here
+    # Store the query
     st.session_state.user_query = query
-    # Your processing code here
-    if "index" not in st.session_state:
-        # get_data_from_website("https://www.dinecollege.edu/academics/academic-policies/")
-        # append_ferpa_data("https://studentprivacy.ed.gov/ferpa")
-        # append_civil_rights_data("https://www.ed.gov/laws-and-policy/civil-rights-laws")
-        # append_file_complaint_data("https://www.ed.gov/laws-and-policy/civil-rights-laws/file-complaint")
-        # append_fafsa_data("https://www.ed.gov/higher-education/paying-college/better-fafsa")
-
-        # Adding pdf data
-        # pdf_directory="data\\hr_policies"
-        # get_data_from_pdf(pdf_directory,output_filename="data/tab_data.json")
-
-        with open('data/tab_data.json', 'r', encoding='utf-8') as f:
-            tab_data = json.load(f)
-
-        documents = [f"{key}: {value}" for key, value in tab_data.items()]
-        embeddings = generate_embeddings(documents)
-        index = create_faiss_index(embeddings)
-        metadata = list(tab_data.keys())
-        with open('data/faiss_metadata.json', 'w', encoding='utf-8') as f:
-            json.dump(metadata, f, ensure_ascii=False, indent=2)
-
-        st.session_state.index = index
-        st.session_state.metadata = metadata
-        st.session_state.tab_data = tab_data
-    else:
-        index = st.session_state.index
-        metadata = st.session_state.metadata
-        tab_data = st.session_state.tab_data
-
+    
     # Show loading spinner while generating the answer
     with st.spinner("🔄 Please wait while I find the best answer for you..."):
-        time.sleep(1)
-        retrieved_titles, retrieved_docs, distances = search_query(st.session_state.user_query, index, model, metadata, tab_data)
-        answer = generate_answer(st.session_state.user_query, retrieved_titles, tab_data, st.session_state.language)
-
+        if data_loading_error:
+            answer = type('obj', (object,), {'content': 'Sorry, I cannot answer questions right now due to a data loading error.'})
+        else:
+            time.sleep(1)
+            # Use logic module functions with the collection parameter
+            retrieved_titles, retrieved_chunks, distances = logic.search_query(st.session_state.user_query, collection)
+            # Print token counts for each chunk
+            print("📏 Token counts for each retrieved chunk:")
+            for i, chunk in enumerate(retrieved_chunks):
+                print(f"  Chunk {i+1}: {logic.count_tokens(chunk)} tokens")
+            answer = logic.generate_answer(st.session_state.user_query, retrieved_chunks, tab_data, st.session_state.language)
+            # Count tokens in the response
+            response_tokens = logic.count_tokens(answer.content)
+            print(f"📊 Response contains {response_tokens} tokens")
+    
     # Display the latest answer in a styled container
     if hasattr(answer, 'content') and answer.content:
         st.markdown(f"""
         <div class="latest-answer-container">
-            <div class="answer-heading">Answer: Filing a Civil Rights Complaint</div>
+            <div class="answer-heading">Answer:</div>
             <div class="answer-content">{answer.content}</div>
         </div>
         """, unsafe_allow_html=True)

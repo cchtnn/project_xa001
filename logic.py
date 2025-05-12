@@ -2,44 +2,40 @@ from langchain.chains.question_answering import load_qa_chain
 from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_groq import ChatGroq
 import os
+import tiktoken
 from dotenv import load_dotenv
+from utils import generate_embeddings
+
 load_dotenv()
 
-def search_query(user_query, index, model, metadata, tab_data, top_k=1, distance_threshold=0.5):
-    def get_matches(threshold):
-        query_vector = model.encode([user_query], convert_to_numpy=True)
-        distances, indices = index.search(query_vector, top_k)
+# Remove the circular import from app.py
+# Instead, we'll pass the collection as a parameter to the functions
 
-        if threshold is None:
-            valid_indices = [
-                i for i in range(len(indices[0]))
-                if indices[0][i] < len(metadata)
-            ]
-        else:
-            valid_indices = [
-                i for i, dist in enumerate(distances[0])
-                if dist < threshold and indices[0][i] < len(metadata)
-            ]
+def search_query(user_query, collection, top_k=3):
+    """Search ChromaDB for relevant documents based on user query"""
+    # Generate embedding for the query
+    query_embedding = generate_embeddings(user_query)
+    
+    # Query the collection
+    results = collection.query(
+        query_embeddings=[query_embedding],
+        n_results=top_k
+    )
+    
+    retrieved_chunks = results['documents'][0]  # Top k chunks
+    chunk_metadata = results['metadatas'][0]    # Metadata for each chunk
+    distances = results['distances'][0]         # Distance scores
+    
+    # Get the unique titles from the retrieved chunks
+    retrieved_titles = list(set([metadata['title'] for metadata in chunk_metadata]))
+    
+    return retrieved_titles, retrieved_chunks, distances
 
-        retrieved_titles = [metadata[indices[0][i]] for i in valid_indices]
-        retrieved_docs = [tab_data[title] for title in retrieved_titles if title in tab_data]
-
-        return retrieved_titles, retrieved_docs, distances
-
-    # First attempt: use threshold
-    retrieved_titles, retrieved_docs, distances = get_matches(distance_threshold)
-
-    # Fallback attempt: no threshold if nothing found
-    if not retrieved_titles or not retrieved_docs:
-        retrieved_titles, retrieved_docs, distances = get_matches(None)
-
-    return retrieved_titles, retrieved_docs, distances
-
-def generate_answer(user_query, retrieved_titles, tab_data, communication_language):
+def generate_answer(user_query, retrieved_chunks, tab_data, communication_language):
     """
     Generates an answer to the user's query using the LLaMA model (via ChatGroq).
     """
-    retrieved_docs = "\n\n".join([f"{title}: {tab_data[title]}" for title in retrieved_titles if title in tab_data])
+    chunk_context = "\n\n".join(retrieved_chunks)
 
     fallback_messages = {
     "English": "I'm sorry, but that question is outside the scope of the provided information.",
@@ -55,7 +51,7 @@ def generate_answer(user_query, retrieved_titles, tab_data, communication_langua
                 ---
 
                 ### Provided Information:
-                {retrieved_docs}
+                {chunk_context}
 
                 ---
 
@@ -84,9 +80,29 @@ def generate_answer(user_query, retrieved_titles, tab_data, communication_langua
         model="Llama3-8b-8192",
         api_key=os.getenv("GROQ_API_KEY"),
         temperature=0,
-        max_tokens=8000, # 4192
+        max_tokens=4192,
         timeout=60,
         max_retries=2,
     )
+
+    # Count tokens in the prompt
+    token_count = count_tokens(prompt)
+    print(f"📊 Sending {token_count} tokens to the LLM")
+
+    # Check if we're close to the limit
+    if token_count > 6000:
+        print(f"⚠️ WARNING: Token count ({token_count}) is approaching or exceeding Groq's limit of 6000 TPM")
+        
     response = llm.invoke(prompt)
     return response
+
+def count_tokens(text, model="cl100k_base"):
+    """Count the number of tokens in a text string using tiktoken"""
+    try:
+        encoder = tiktoken.get_encoding(model)
+        tokens = encoder.encode(text)
+        return len(tokens)
+    except Exception as e:
+        print(f"Error counting tokens: {e}")
+        # Rough estimation if tiktoken fails
+        return len(text.split()) * 1.3  # Rough estimate
