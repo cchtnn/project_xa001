@@ -356,7 +356,8 @@ def generate_embeddings(documents):
     Generates embeddings for a list of documents using a SentenceTransformer model.
     """
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    model = SentenceTransformer('all-MiniLM-L6-v2', device=device)
+    model = SentenceTransformer('all-MiniLM-L6-v2')
+    model = model.to(device)
     embeddings = model.encode(documents, convert_to_numpy=True, show_progress_bar=True)
     return embeddings
 

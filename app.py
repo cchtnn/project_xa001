@@ -29,7 +29,7 @@ from utils import (
 
 from logic import count_tokens
 import logic
-from utils import get_model
+# from utils import get_model
 
 st.set_page_config(
     page_title="Diné College Assistant",
@@ -42,8 +42,8 @@ st.set_page_config(
 chroma_client = chromadb.Client()
 collection = chroma_client.get_or_create_collection(name="jericho_documents")
 
-# Load model
-model = get_model()
+# # Load model
+# model = get_model()
 
 # File to store hash metadata
 METADATA_FILE = "data/metadata.json"
