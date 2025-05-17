@@ -26,14 +26,11 @@ from utils import (
     clean_text,
     truncate_docs
 )
-# Import the functions from logic.py, but don't pass collection directly
+
 from logic import count_tokens
-# We'll import these later after collection is defined to avoid circular imports
-# We'll use them as: logic.search_query() and logic.generate_answer()
 import logic
 from utils import get_model
 
-# First, let's hide the default Streamlit header completely
 st.set_page_config(
     page_title="Diné College Assistant",
     page_icon="🏛️",
@@ -85,6 +82,11 @@ def load_css(css_file):
 def load_html_template(template_file):
     with open(template_file, 'r') as f:
         return f.read()
+    
+# Function to get base64 encoded image
+def get_image_base64(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
 
 # Initialize or update vectorstore based on file hash
 @st.cache_resource(show_spinner=False)
@@ -193,10 +195,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Create the header with all text
+# Get Jericho logo as base64
+jericho_logo_path = "templates/jericho_image.jpg"
+jericho_logo_base64 = get_image_base64(jericho_logo_path)
+
+# Create the header with logo image instead of text
 st.markdown(f"""
     <div class='jericho-header'>
-        <h1>Jericho</h1>
+        <div class='jericho-logo'>
+            <img src='data:image/jpeg;base64,{jericho_logo_base64}' alt='Jericho Logo'>
+        </div>
         <p class='tagline'>Ask me any question, and I'll find the best answer for you!</p>
         <p class='timestamp'>{st.session_state.current_time}</p>
     </div>
@@ -285,12 +293,10 @@ with col2:
 # Store selected language
 st.session_state.language = lang
 
-# Input section - using standard Streamlit components with styling
-st.markdown('<div class="input-container">', unsafe_allow_html=True)
 col1, col2 = st.columns([8, 1])
 
 with col1:
-    query = st.text_input("", key="input_query", label_visibility="collapsed", placeholder="Please type your question here...")
+    query = st.text_input("", key="input_query", label_visibility="collapsed", placeholder="Please type your question here...",value="")
 
 with col2:
     submit = st.button("Enter", key="submit")

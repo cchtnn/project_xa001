@@ -53,11 +53,18 @@ button[title="Deploy"] {
     margin-bottom: -150px;
 }
 
-.jericho-header h1 {
-    font-size: 48px;
-    margin: 0;
-    padding: 0;
-    line-height: 1.2;
+/* New style for Jericho logo container */
+.jericho-logo {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 10px;
+}
+
+/* Style for the Jericho logo image */
+.jericho-logo img {
+    max-width: 250px;
+    height: auto;
+    margin: 0 auto;
 }
 
 .jericho-header p.tagline {
@@ -84,6 +91,11 @@ button[title="Deploy"] {
     width: 90%;
     z-index: 99;
     margin-bottom: 0px; /* Reduced bottom margin */
+}
+
+/* Hide the "Press Enter to apply" text */
+.stTextInput div[data-baseweb="input-container"] + div {
+    display: none !important;
 }
 
 /* Input styles */
