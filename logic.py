@@ -5,6 +5,9 @@ import os
 import tiktoken
 from dotenv import load_dotenv
 from utils import generate_embeddings
+import hashlib
+import json
+import base64
 
 load_dotenv()
 
@@ -105,4 +108,54 @@ def count_tokens(text, model="cl100k_base"):
     except Exception as e:
         print(f"Error counting tokens: {e}")
         # Rough estimation if tiktoken fails
-        return len(text.split()) * 1.3  # Rough estimate
+        return len(text.split()) * 1.3
+    
+
+# File to store hash metadata
+METADATA_FILE = "data/metadata.json"
+
+# Function to calculate hash of a file
+def calculate_file_hash(file_path):
+    """Calculate MD5 hash of file to detect changes"""
+    hash_md5 = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
+
+# Function to load or initialize metadata
+def get_metadata():
+    """Load metadata from file or create default"""
+    if os.path.exists(METADATA_FILE):
+        with open(METADATA_FILE, 'r') as f:
+            return json.load(f)
+    else:
+        return {"tab_data_hash": "", "last_updated": ""}
+
+# Function to save metadata
+def save_metadata(metadata):
+    """Save metadata to file"""
+    os.makedirs(os.path.dirname(METADATA_FILE), exist_ok=True)
+    with open(METADATA_FILE, 'w') as f:
+        json.dump(metadata, f)
+
+# Function to load CSS from file
+def load_css(css_file):
+    with open(css_file, 'r') as f:
+        return f.read()
+
+# Function to load HTML template from file
+def load_html_template(template_file):
+    with open(template_file, 'r') as f:
+        return f.read()
+    
+# Function to get base64 encoded image
+def get_image_base64(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode()
+    
+# --- Load SVG as base64 ---
+def load_svg_base64(svg_path):
+    with open(svg_path, "rb") as f:
+        svg_data = f.read()
+    return base64.b64encode(svg_data).decode("utf-8")
