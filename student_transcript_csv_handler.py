@@ -26,6 +26,7 @@ class StudentTranscriptCSVHandler:
         self.model_name = model_name
         self.groq_api_key = os.getenv('GROQ_API_KEY')
         self.llm = None
+        self.summarizer_llm = None
         self.agent = None
         self.df = None
         self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
@@ -43,6 +44,9 @@ class StudentTranscriptCSVHandler:
             
             # Setup LLM
             self._setup_llm()
+            
+            # Setup summarizer
+            self._setup_summarizer()
             
             # Load CSV and create agent
             self._load_csv_and_create_agent()
@@ -71,6 +75,21 @@ class StudentTranscriptCSVHandler:
             print("✅ LLM setup completed")
         except Exception as e:
             raise Exception(f"Error initializing LLM: {str(e)}")
+    
+    def _setup_summarizer(self):
+        """Setup a separate LLM for summarization"""
+        try:
+            self.summarizer_llm = ChatGroq(
+                groq_api_key=self.groq_api_key,
+                model_name=self.model_name,
+                temperature=0.3,  # Slightly higher temperature for more natural summaries
+                max_tokens=2048,
+                streaming=False,
+                request_timeout=30
+            )
+            print("✅ Summarizer LLM setup completed")
+        except Exception as e:
+            raise Exception(f"Error initializing Summarizer LLM: {str(e)}")
     
     def _load_csv_and_create_agent(self):
         """Load CSV and create the agent"""
@@ -247,8 +266,93 @@ class StudentTranscriptCSVHandler:
         
         return '\n'.join(cleaned_lines) if cleaned_lines else response
     
-    def _query_csv_agent(self, question: str, max_retries: int = 2, clean_logs: bool = True):
-        """Query the CSV agent with error handling"""
+    def _extract_raw_data(self, response: str) -> str:
+        """Extract the raw data from agent response"""
+        if "Final Answer:" in response:
+            return response.split("Final Answer:")[-1].strip()
+        return response
+
+    def _summarize_response(self, raw_response: str, original_question: str, format_type: str = "auto") -> str:
+        """Use separate LLM to summarize and format the response with intelligent format selection"""
+        
+        if format_type == "auto":
+            prompt = f"""
+            You are an intelligent data presentation expert. I have a question and raw data response that needs to be formatted in the most appropriate way for the end user.
+
+            Original Question: {original_question}
+            
+            Raw Data Response: {raw_response}
+
+            Your task is to analyze the data and automatically choose the BEST presentation format based on the content. Follow these guidelines:
+
+            DECISION CRITERIA:
+            1. **Use TABLE format when:**
+               - Data contains structured information (like course numbers, student names, GPAs, dates)
+               - Data has clear columns/rows that can be organized
+               - Data involves comparisons between multiple items
+               - Data contains numerical values that need to be compared
+               - Question asks for specific records or listings
+
+            2. **Use STORY format when:**
+               - Data represents trends, patterns, or insights
+               - Question asks for analysis, summary, or explanation
+               - Data needs context or interpretation
+               - Result is a single value or simple answer
+               - Data involves calculations or aggregations that need explanation
+
+            3. **Use BULLET POINT format when:**
+               - Data is a simple list without complex structure
+               - Multiple unrelated items need to be presented
+               - Quick facts or key points need highlighting
+
+            FORMATTING RULES:
+            - Remove ALL technical jargon, pandas terms, dtype references
+            - Use clear, professional language
+            - Add appropriate emojis (📊 for tables, 📖 for stories, 📝 for lists)
+            - Include brief explanations where helpful
+            - Make it conversational but professional
+            - If using table format, use proper markdown table syntax
+            - If using story format, create engaging narrative with clear structure
+
+            ANALYZE the data first, then CHOOSE the best format automatically, and PRESENT the data accordingly. Do not ask which format to use - just pick the best one and execute it.
+
+            Provide only the final formatted response, nothing else.
+            """
+        
+        else:  # clean format
+            prompt = f"""
+            You are a data formatter. I have a question and raw data response that needs to be cleaned up and made user-friendly.
+
+            Original Question: {original_question}
+            
+            Raw Data Response: {raw_response}
+
+            Please clean up this response by:
+            1. Removing technical terms and agent execution details
+            2. Presenting the data clearly and concisely
+            3. Using proper formatting (bullet points, headers, etc.)
+            4. Making it easy to understand for end users
+            5. Keeping only the essential information
+
+            Provide only the cleaned, formatted response, nothing else.
+            """
+
+        try:
+            # Use the summarizer LLM
+            summary_response = self.summarizer_llm.invoke(prompt)
+            
+            # Extract the content from the response
+            if hasattr(summary_response, 'content'):
+                return summary_response.content
+            else:
+                return str(summary_response)
+                
+        except Exception as e:
+            print(f"❌ Summarization failed: {str(e)}")
+            return f"Summarization failed. Raw response: {raw_response}"
+    
+    def _query_csv_agent(self, question: str, max_retries: int = 2, clean_logs: bool = True, use_summarizer: bool = True, format_type: str = "auto"):
+        """Query the CSV agent with error handling and optional summarization"""
         if not self.agent:
             raise ValueError("CSV agent not initialized. Please call initialize() first.")
 
@@ -263,11 +367,18 @@ class StudentTranscriptCSVHandler:
                 print("=" * 60)
                 print(f"✅ Agent completed successfully")
                 
-                # Apply cleaning based on clean_logs parameter
-                if clean_logs:
-                    response = self._clean_response(response)
-                
-                return response
+                if use_summarizer:
+                    print("🔄 Formatting response with summarizer...")
+                    # Extract raw data and summarize
+                    raw_data = self._extract_raw_data(response)
+                    formatted_response = self._summarize_response(raw_data, question, format_type)
+                    print("✅ Summarization completed")
+                    return formatted_response
+                else:
+                    # Apply cleaning based on clean_logs parameter
+                    if clean_logs:
+                        response = self._clean_response(response)
+                    return response
                 
             except Exception as e:
                 print(f"❌ Attempt {attempt + 1} failed: {str(e)}")
@@ -303,13 +414,15 @@ class StudentTranscriptCSVHandler:
         
         return header + csv_response
     
-    def process_query(self, user_query: str, language='English'):
+    def process_query(self, user_query: str, language='English', use_summarizer: bool = True, format_type: str = "auto"):
         """
         Main function to process transcript queries using CSV agent
         
         Args:
             user_query (str): The user's question about transcripts
             language (str): Language for response
+            use_summarizer (bool): Whether to use the summarizer for better formatting
+            format_type (str): Format type - 'auto' or 'clean'
             
         Returns:
             str: Generated answer
@@ -331,7 +444,7 @@ class StudentTranscriptCSVHandler:
         
         try:
             # Query the CSV agent
-            csv_response = self._query_csv_agent(user_query, clean_logs=True)
+            csv_response = self._query_csv_agent(user_query, clean_logs=True, use_summarizer=use_summarizer, format_type=format_type)
             
             # Generate multilingual response
             final_response = self._generate_multilingual_response(csv_response, user_query, language)
@@ -364,31 +477,18 @@ def get_csv_transcript_handler():
     return StudentTranscriptCSVHandler()
 
 
-def process_transcript_query(user_query: str, language='English'):
+def process_transcript_query(user_query: str, language='English', use_summarizer: bool = True, format_type: str = "auto"):
     """
     Convenience function to process transcript queries using CSV agent
     
     Args:
         user_query (str): The user's question about transcripts
         language (str): Language for response
+        use_summarizer (bool): Whether to use the summarizer for better formatting
+        format_type (str): Format type - 'auto' or 'clean'
         
     Returns:
         str: Generated answer
     """
     handler = get_csv_transcript_handler()
-    return handler.process_query(user_query, language)
-
-
-# Example usage and testing
-if __name__ == "__main__":
-    # Test the handler
-    handler = StudentTranscriptCSVHandler()
-    
-    if handler.initialize():
-        # Test query
-        test_query = "student name wise calculate average of 'GPA' and sort that in descending order."
-        result = handler.process_query(test_query)
-        print("Test Result:")
-        print(result)
-    else:
-        print("Failed to initialize handler")
+    return handler.process_query(user_query, language, use_summarizer, format_type)
