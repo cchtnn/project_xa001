@@ -42,7 +42,19 @@ class QueryClassifier:
             "What are the student's course completions?",
             "Show me the student's enrollment history",
             "What is the student's academic standing?",
-            "Tell me about the student's degree progress"
+            "Tell me about the student's degree progress",
+            "Sort students in descending order of GPA",
+            "How many students have GPA >= 4.2",
+            "How many Students have A grade in Fall 2024-2025 and their details",
+            "List of students from Murray State College",
+            "Give me the GPA details of  Trista Barrett.",
+            "Tell me the courses which Joshua Don Gaitan has enrolled?",
+            "Tell me the course name which Leslie Nichole Bright has enrolled?",
+            "How many Students have A grade in 2024-2025 Fall and their details",
+            "Name of student name where organization is NEWMAN UNIVERSITY",
+            "Calculate average GPA of students and sort that in descending order.",
+            "Tell me the courses which Trista Denay Barrett has enrolled?",
+            "Tell me the course number and Term information in which student 'Trista Denay Barrett' has got 'A' grade?"
         ]
         
         if self.model:
@@ -83,6 +95,7 @@ class QueryClassifier:
                 query_type = 'STUDENT_TRANSCRIPT'
             else:
                 query_type = 'POLICY'
+                # query_type = 'STUDENT_TRANSCRIPT'
             
             print(f"🔍 Query Classification:")
             print(f"   Query: {user_query}")

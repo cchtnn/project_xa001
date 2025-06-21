@@ -21,3 +21,6 @@ PyPDF2
 PyCryptodome
 tiktoken
 chromadb
+langchain-groq
+langchain-experimental
+tabulate

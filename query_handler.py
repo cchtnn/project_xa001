@@ -1,11 +1,13 @@
 """
-Query Handler for Diné College Assistant
+Query Handler for Diné College Assistant - Updated Version
 Handles different types of queries based on classification
+Now uses CSV-based student transcript handler instead of FAISS
 """
 
 import time
 from query_classifier import classify_user_query, QueryType
-from student_transcript_handler import process_transcript_query
+# Updated import - now using CSV handler instead of FAISS handler
+from student_transcript_csv_handler import process_transcript_query
 import logic
 
 
@@ -40,7 +42,7 @@ class QueryHandler:
     
     def _handle_student_transcript_query(self, user_query, language):
         """
-        Handle student transcript type queries
+        Handle student transcript type queries using CSV agent
         
         Args:
             user_query (str): The user's question
@@ -49,10 +51,10 @@ class QueryHandler:
         Returns:
             object: Answer object with content attribute
         """
-        print("📊 Processing STUDENT TRANSCRIPT query...")
+        print("📊 Processing STUDENT TRANSCRIPT query with CSV Agent...")
         
         try:
-            # Use the student transcript handler to process the query
+            # Use the CSV-based student transcript handler to process the query
             answer_content = process_transcript_query(user_query, language)
             
             # Create answer object compatible with existing UI
@@ -63,12 +65,13 @@ class QueryHandler:
             return answer
             
         except Exception as e:
-            print(f"❌ Error processing student transcript query: {e}")
+            print(f"❌ Error processing student transcript query with CSV agent: {e}")
             
             # Return error message in appropriate language
             error_messages = {
                 "English": "I encountered an error while processing your student transcript query. Please try again or contact support.",
                 "Spanish": "Encontré un error al procesar tu consulta del expediente académico. Por favor, inténtalo de nuevo o contacta al soporte.",
+                "French": "J'ai rencontré une erreur lors du traitement de votre requête de relevé de notes. Veuillez réessayer ou contacter le support.",
                 "Navajo": "Bééhániih ályaa éí átʼé. Náábah ílį́ éí doodaii' ánáhwiiłtááh."
             }
             
@@ -126,6 +129,7 @@ class QueryHandler:
             error_messages = {
                 "English": "I encountered an error while processing your policy query. Please try again or rephrase your question.",
                 "Spanish": "Encontré un error al procesar tu consulta de política. Por favor, inténtalo de nuevo o reformula tu pregunta.",
+                "French": "J'ai rencontré une erreur lors du traitement de votre requête de politique. Veuillez réessayer ou reformuler votre question.",
                 "Navajo": "Bééhódeilnih ályaa éí átʼé. Náábah ílį́ éí doodaii' saad naaltsoos."
             }
             
