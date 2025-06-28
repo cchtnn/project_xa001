@@ -54,6 +54,7 @@ class QueryClassifier:
             "Name of student name where organization is NEWMAN UNIVERSITY",
             "Calculate average GPA of students and sort that in descending order.",
             "Tell me the courses which Trista Denay Barrett has enrolled?",
+            "give me all Student Name whose advisor is Laura Lyndsey",
             "Tell me the course number and Term information in which student 'Trista Denay Barrett' has got 'A' grade?"
         ]
         

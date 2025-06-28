@@ -15,7 +15,6 @@ import warnings
 import streamlit as st
 from dotenv import load_dotenv
 from student_query_reformulator import get_query_reformulator
-import re
 
 warnings.filterwarnings("ignore")
 load_dotenv()
@@ -89,7 +88,7 @@ class StudentTranscriptCSVHandler:
             self.summarizer_llm = ChatGroq(
                 groq_api_key=self.groq_api_key,
                 model_name=self.model_name,
-                temperature=0.3,
+                temperature=0.3,  # Slightly higher temperature for more natural summaries
                 max_tokens=2048,
                 streaming=False,
                 request_timeout=30
@@ -134,7 +133,7 @@ class StudentTranscriptCSVHandler:
             print(f"   Columns: {list(self.df.columns)}")
             print(f"   Column Info: {column_info}")
             
-            # Create the CSV agent with improved configuration
+            # Create the CSV agent
             self.agent = create_csv_agent(
                 llm=self.llm,
                 path=self.csv_path,
@@ -142,23 +141,10 @@ class StudentTranscriptCSVHandler:
                 agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                 allow_dangerous_code=True,
                 handle_parsing_errors=True,
-                max_iterations=5,
-                max_execution_time=60,
+                max_iterations=10,
+                max_execution_time=120,
                 return_intermediate_steps=False,
-                include_df_in_prompt=False,
-                prefix="""
-                You are working with a pandas DataFrame in Python. The DataFrame is loaded from a CSV file.
-                You should use the tools below to answer the question posed about the DataFrame.
-
-                IMPORTANT INSTRUCTIONS:
-                1. When you find the answer, provide it immediately as the Final Answer
-                2. Do NOT continue searching for more data once you have the answer
-                3. Do NOT try to find "the next" item unless specifically asked for multiple items
-                4. Be concise and direct in your responses
-                5. Always provide your final answer in a clear, readable format
-
-                The DataFrame columns and their types are automatically detected by pandas.
-                """
+                include_df_in_prompt=False
             )
             
             print("✅ CSV Agent created successfully")
@@ -253,215 +239,172 @@ class StudentTranscriptCSVHandler:
             print(f"⚠️ Error during query reformulation: {str(e)}")
             return user_query
     
-    def _extract_raw_data(self, response: str) -> str:
-        """Extract the raw data from agent response - IMPROVED GENERIC VERSION"""
+    def _clean_response(self, response: str) -> str:
+        """Clean the response to extract only the final answer"""
         if not response:
             return "No response generated"
         
-        print(f"🔍 DEBUG: Extracting raw data from response length: {len(response)}")
-        
-        # Method 1: Look for Final Answer section first
-        final_answer_match = None
-        if "Final Answer:" in response:
-            final_answer_part = response.split("Final Answer:")[-1].strip()
-            print(f"🔍 DEBUG: Final Answer section found, length: {len(final_answer_part)}")
-            
-            # Clean up the final answer part by removing common agent artifacts
-            cleaned_final = final_answer_part
-            for artifact in ["```", "python", "```python", "Output:", "Result:"]:
-                cleaned_final = cleaned_final.replace(artifact, "")
-            
-            cleaned_final = cleaned_final.strip()
-            
-            # If Final Answer contains meaningful data, prioritize it
-            if cleaned_final and (
-                # Check for tabular data patterns
-                re.search(r'\s+\d+\s+\w+.*\n', cleaned_final) or
-                # Check for course/academic data
-                re.search(r'[A-Z]{2,}\d+|Course Number|Student Name|Grade|Term|GPA', cleaned_final, re.IGNORECASE) or
-                # Check for structured data (multiple lines with consistent patterns)
-                len([line for line in cleaned_final.split('\n') if line.strip()]) > 2
-            ):
-                print("🔍 DEBUG: Using Final Answer section - contains meaningful data")
-                final_answer_match = cleaned_final
-        
-        # Method 2: Look for the last substantial data output in the response
+        # Find the actual data result by looking for patterns
         lines = response.split('\n')
-        data_blocks = []
-        current_block = []
+        result_lines = []
+        data_started = False
         
-        for i, line in enumerate(lines):
-            line_stripped = line.strip()
+        for line in lines:
+            line = line.strip()
             
-            # Skip obvious agent execution markers
-            if any(marker in line_stripped for marker in [
-                '> Entering', '> Finished', 'Let\'s get started!', 'Question:', 
-                'Thought:', 'Action:', 'Action Input:', 'chain...', 'python_repl_ast',
-                'is not a valid tool', 'Let\'s execute'
-            ]):
-                # If we have a current block, save it
-                if current_block:
-                    data_blocks.append('\n'.join(current_block))
-                    current_block = []
+            # Skip empty lines
+            if not line:
+                continue
+                
+            # Skip all agent execution patterns
+            skip_patterns = [
+                '> Entering new AgentExecutor chain',
+                '> Finished chain',
+                'Thought:',
+                'Action:',
+                'Action Input:',
+                'Observation:',
+                'TypeError:',
+                'NameError:',
+                'Here\'s the',
+                'The error message',
+                'I need to',
+                'Now that',
+                'Final Answer:',
+                'The final answer is',
+                'Note:',
+                'The result is',
+                'which is:',
+                'pandas Series',
+                'student names as',
+                'average gpa as',
+                'dtype=',
+                'Name: GPA,'
+            ]
+            
+            # Skip lines that match agent patterns
+            if any(pattern in line for pattern in skip_patterns):
+                continue
+                
+            # Look for the actual data pattern
+            if 'Student Name' in line and not any(skip in line for skip in skip_patterns):
+                data_started = True
                 continue
             
-            # Look for data patterns
-            is_data_line = (
-                # Table headers or data rows
-                re.search(r'Course Number|Student Name|Grade|Term|GPA', line_stripped, re.IGNORECASE) or
-                # Indexed data (pandas output)
-                re.search(r'^\s*\d+\s+[A-Z]', line_stripped) or
-                # Course codes
-                re.search(r'[A-Z]{2,}\d+', line_stripped) or
-                # Data with consistent structure
-                (line_stripped and not line_stripped.startswith(('Observation:', 'Final Answer:')))
-            )
+            # If we've found the data section, collect lines that look like results
+            if data_started:
+                # Check if line contains student name and GPA value
+                if any(char.isdigit() for char in line) and any(char.isalpha() for char in line):
+                    result_lines.append(line)
+        
+        # If we found data lines, return them
+        if result_lines:
+            return '\n'.join(result_lines)
+        
+        # Fallback: try to extract from Final Answer section more aggressively
+        if "Final Answer:" in response:
+            final_part = response.split("Final Answer:")[-1]
             
-            if is_data_line and line_stripped:
-                current_block.append(line)
-            elif current_block:
-                # End of current block
-                data_blocks.append('\n'.join(current_block))
-                current_block = []
-        
-        # Add the last block if it exists
-        if current_block:
-            data_blocks.append('\n'.join(current_block))
-        
-        # Method 3: Choose the best data block
-        best_data = None
-        
-        # Prioritize Final Answer if it's substantial
-        if final_answer_match and len(final_answer_match.split('\n')) >= 3:
-            best_data = final_answer_match
-            print("🔍 DEBUG: Using Final Answer as best data")
-        
-        # Otherwise, find the most substantial data block
-        elif data_blocks:
-            # Score each block based on data richness
-            scored_blocks = []
-            for block in data_blocks:
-                score = 0
-                lines_in_block = [line.strip() for line in block.split('\n') if line.strip()]
-                
-                # Score based on number of lines
-                score += len(lines_in_block)
-                
-                # Score based on data patterns
-                for line in lines_in_block:
-                    if re.search(r'[A-Z]{2,}\d+', line):  # Course codes
-                        score += 3
-                    if re.search(r'Course Number|Student Name|Grade|Term', line, re.IGNORECASE):  # Headers
-                        score += 2
-                    if re.search(r'\d+\.\d+', line):  # Numbers (GPA, etc.)
-                        score += 1
-                    if re.search(r'^\s*\d+\s+', line.strip()):  # Indexed data
-                        score += 1
-                
-                scored_blocks.append((score, block))
+            # Look for lines that contain both letters and numbers (likely data)
+            data_lines = []
+            for line in final_part.split('\n'):
+                line = line.strip()
+                if (line and 
+                    any(char.isdigit() for char in line) and 
+                    any(char.isalpha() for char in line) and
+                    not any(skip in line.lower() for skip in ['note:', 'result is', 'pandas', 'dtype'])):
+                    data_lines.append(line)
             
-            # Get the highest scoring block
-            if scored_blocks:
-                scored_blocks.sort(key=lambda x: x[0], reverse=True)
-                best_data = scored_blocks[0][1]
-                print(f"🔍 DEBUG: Using highest scoring data block (score: {scored_blocks[0][0]})")
+            if data_lines:
+                return '\n'.join(data_lines)
         
-        # Method 4: Fallback to cleaned response
-        if not best_data:
-            # Clean the entire response
-            clean_lines = []
-            for line in lines:
-                line_stripped = line.strip()
-                if line_stripped and not any(marker in line_stripped for marker in [
-                    '> Entering', '> Finished', 'Let\'s get started!', 'Question:', 
-                    'Thought:', 'Action:', 'Action Input:', 'chain...', 'python_repl_ast',
-                    'is not a valid tool', 'Let\'s execute'
-                ]):
-                    clean_lines.append(line)
-            
-            if clean_lines:
-                best_data = '\n'.join(clean_lines).strip()
-                print("🔍 DEBUG: Using cleaned response as fallback")
+        # If nothing found, return a cleaned version of the original response
+        return self._basic_clean_response(response)
+    
+    def _basic_clean_response(self, response: str) -> str:
+        """Basic cleaning of response if advanced cleaning fails"""
+        # Remove agent execution traces
+        lines = response.split('\n')
+        cleaned_lines = []
         
-        # Final fallback
-        if not best_data:
-            best_data = response.strip()
-            print("🔍 DEBUG: Using original response as final fallback")
+        for line in lines:
+            line = line.strip()
+            if line and not any(pattern in line for pattern in [
+                '> Entering', '> Finished', 'Thought:', 'Action:', 'Observation:'
+            ]):
+                cleaned_lines.append(line)
         
-        print(f"🔍 DEBUG: Final extracted data length: {len(best_data)}")
-        print(f"🔍 DEBUG: First 100 chars: {best_data[:100]}...")
-        
-        return best_data
+        return '\n'.join(cleaned_lines) if cleaned_lines else response
+    
+    def _extract_raw_data(self, response: str) -> str:
+        """Extract the raw data from agent response"""
+        if "Final Answer:" in response:
+            return response.split("Final Answer:")[-1].strip()
+        return response
 
     def _summarize_response(self, raw_response: str, original_question: str, format_type: str = "auto") -> str:
-        """Use separate LLM to summarize and format the response with improved data interpretation"""
-        
-        print(f"🔄 DEBUG: Summarizing response. Raw response length: {len(raw_response)}")
-        print(f"🔄 DEBUG: First 200 chars of raw response: {raw_response[:200]}...")
-        
-        # Check if the raw response indicates an error or timeout
-        if "Agent stopped due to iteration limit or time limit" in raw_response:
-            return "I encountered a timeout while processing your query. This usually means the data was found but the system took too long to format it. Please try rephrasing your question or contact support."
+        """Use separate LLM to summarize and format the response with intelligent format selection"""
         
         if format_type == "auto":
             prompt = f"""
-            You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
+            You are an intelligent data presentation expert. I have a question and raw data response that needs to be formatted in the most appropriate way for the end user.
 
             Original Question: {original_question}
             
             Raw Data Response: {raw_response}
 
-            **CRITICAL DATA INTERPRETATION RULES:**
-            1. ANY structured data with course numbers (like ART1113, BM1403, CD1243) IS VALID STUDENT DATA
-            2. "Transfer Term" entries ARE LEGITIMATE ACADEMIC RECORDS representing courses transferred from other institutions
-            3. If you see tabular data with headers like "Course Number" and "Term", this IS the complete answer
-            4. Indexed data (0, 1, 2, etc.) followed by course codes and terms IS the query result
-            5. Do NOT conclude "no data found" if you see course information, even if terms show "0000-0000 : Transfer Term"
-            6. The raw data contains the ACTUAL ANSWER - format it properly, don't question its validity
+            Your task is to analyze the data and automatically choose the BEST presentation format based on the content. Follow these guidelines:
 
-            **DATA PRESENTATION RULES:**
-            - Present ALL data found in the raw response
-            - Use clear, professional academic language
-            - Add appropriate emojis (📊 for tables, 📋 for academic records)
+            DECISION CRITERIA:
+            1. **Use TABLE format when:**
+               - Data contains structured information (like course numbers, student names, GPAs, dates)
+               - Data has clear columns/rows that can be organized
+               - Data involves comparisons between multiple items
+               - Data contains numerical values that need to be compared
+               - Question asks for specific records or listings
+
+            2. **Use STORY format when:**
+               - Data represents trends, patterns, or insights
+               - Question asks for analysis, summary, or explanation
+               - Data needs context or interpretation
+               - Result is a single value or simple answer
+               - Data involves calculations or aggregations that need explanation
+
+            3. **Use BULLET POINT format when:**
+               - Data is a simple list without complex structure
+               - Multiple unrelated items need to be presented
+               - Quick facts or key points need highlighting
+
+            FORMATTING RULES:
+            - Remove ALL technical jargon, pandas terms, dtype references
+            - Use clear, professional language
+            - Add appropriate emojis (📊 for tables, 📖 for stories, 📝 for lists)
+            - Include brief explanations where helpful
+            - Make it conversational but professional
             - If using table format, use proper markdown table syntax
-            - Explain what "Transfer Term" means if present
-            - Count the actual number of records found
-            - Be accurate about what the data shows
+            - If using story format, create engaging narrative with clear structure
 
-            **FORMAT SELECTION:**
-            - Use TABLE format for structured data with multiple columns
-            - Use STORY format for single values or when explanation is needed
-            - Use LIST format for simple enumerations
+            ANALYZE the data first, then CHOOSE the best format automatically, and PRESENT the data accordingly. Do not ask which format to use - just pick the best one and execute it.
 
-            **IMPORTANT:** The raw data shows the actual query results. If there are 6 rows of course data, then 6 courses were found. Do not contradict what the data clearly shows.
-
-            Analyze the raw data carefully, count the actual records, and present the information accurately. Provide only the final formatted response.
+            Provide only the final formatted response, nothing else.
             """
         
         else:  # clean format
             prompt = f"""
-            You are a data formatter for student transcript information. Clean and format the following response accurately.
+            You are a data formatter. I have a question and raw data response that needs to be cleaned up and made user-friendly.
 
             Original Question: {original_question}
             
             Raw Data Response: {raw_response}
 
-            **IMPORTANT RULES:** 
-            - The raw data contains REAL academic information
-            - Course codes (like ART1113, BM1403) are valid course numbers
-            - "Transfer Term" entries are legitimate academic records
-            - Present ALL data that appears in the raw response accurately
-            - Count the actual number of records in the data
+            Please clean up this response by:
+            1. Removing technical terms and agent execution details
+            2. Presenting the data clearly and concisely
+            3. Using proper formatting (bullet points, headers, etc.)
+            4. Making it easy to understand for end users
+            5. Keeping only the essential information
 
-            Please format this response by:
-            1. Removing technical pandas formatting (index numbers, dtype info)
-            2. Removing agent execution details
-            3. Presenting academic data in a clear, user-friendly format
-            4. Using proper formatting (tables, headers, bullet points)
-            5. Being accurate about the number of records found
-            6. Explaining transfer terms if present
-
-            Provide only the cleaned, formatted response that accurately reflects the data found.
+            Provide only the cleaned, formatted response, nothing else.
             """
 
         try:
@@ -470,73 +413,14 @@ class StudentTranscriptCSVHandler:
             
             # Extract the content from the response
             if hasattr(summary_response, 'content'):
-                result = summary_response.content
+                return summary_response.content
             else:
-                result = str(summary_response)
-                    
-            print(f"✅ DEBUG: Summarization completed. Result length: {len(result)}")
-            return result
-                    
+                return str(summary_response)
+                
         except Exception as e:
             print(f"❌ Summarization failed: {str(e)}")
-            # Return a formatted version of the raw response
-            return self._manual_format_fallback(raw_response, original_question)
-
-    def _manual_format_fallback(self, raw_response: str, original_question: str) -> str:
-        """Enhanced manual formatting fallback when summarizer fails"""
-        try:
-            # Check if the response contains structured academic data
-            if re.search(r'Course Number|ART\d+|BM\d+|CD\d+', raw_response, re.IGNORECASE):
-                lines = raw_response.split('\n')
-                formatted_lines = []
-                
-                # Extract meaningful data lines
-                for line in lines:
-                    line = line.strip()
-                    # Skip empty lines and technical markers
-                    if line and not any(marker in line for marker in [
-                        'Action:', 'Thought:', 'Observation:', '> Entering', '> Finished',
-                        'python_repl_ast', 'is not a valid tool'
-                    ]):
-                        formatted_lines.append(line)
-                
-                if formatted_lines:
-                    # Count actual data rows (excluding headers)
-                    data_rows = [line for line in formatted_lines if re.search(r'^\s*\d+\s+[A-Z]', line)]
-                    count = len(data_rows)
-                    
-                    result = f"📚 **Academic Records Found ({count} records):**\n\n"
-                    
-                    # Check if it's tabular data
-                    if any('Course Number' in line for line in formatted_lines):
-                        # Format as table
-                        result += "| Course Number | Term |\n"
-                        result += "|---------------|------|\n"
-                        
-                        for line in formatted_lines:
-                            if re.search(r'^\s*\d+\s+([A-Z]+\d+)\s+(.+)', line):
-                                match = re.search(r'^\s*\d+\s+([A-Z]+\d+)\s+(.+)', line)
-                                if match:
-                                    course = match.group(1)
-                                    term = match.group(2)
-                                    result += f"| {course} | {term} |\n"
-                    else:
-                        # Format as list
-                        result += '\n'.join(formatted_lines)
-                    
-                    # Add explanation for transfer terms if present
-                    if "Transfer Term" in raw_response:
-                        result += "\n\n*Note: Transfer Term indicates courses transferred from other institutions.*"
-                    
-                    return result
-            
-            # General fallback
-            return f"📋 **Query Results:**\n\n{raw_response}"
-            
-        except Exception as e:
-            print(f"❌ Manual formatting also failed: {str(e)}")
-            return f"Query results for: {original_question}\n\n{raw_response}"
-        
+            return f"Summarization failed. Raw response: {raw_response}"
+    
     def _query_csv_agent(self, question: str, max_retries: int = 2, clean_logs: bool = True, use_summarizer: bool = True, format_type: str = "auto"):
         """Query the CSV agent with error handling and optional summarization"""
         if not self.agent:
@@ -558,20 +442,18 @@ class StudentTranscriptCSVHandler:
                 
                 print("=" * 60)
                 print(f"✅ Agent completed successfully")
-                print(f"🔍 DEBUG: Raw agent response length: {len(response)}")
                 
                 if use_summarizer:
                     print("🔄 Formatting response with summarizer...")
                     # Extract raw data and summarize (use original question for context)
                     raw_data = self._extract_raw_data(response)
-                    print(f"🔍 DEBUG: Extracted raw data length: {len(raw_data)}")
                     formatted_response = self._summarize_response(raw_data, question, format_type)
                     print("✅ Summarization completed")
                     return formatted_response
                 else:
                     # Apply cleaning based on clean_logs parameter
                     if clean_logs:
-                        response = self._extract_raw_data(response)
+                        response = self._clean_response(response)
                     return response
                 
             except Exception as e:
