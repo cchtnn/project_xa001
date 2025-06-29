@@ -151,12 +151,19 @@ class StudentTranscriptCSVHandler:
                 You should use the tools below to answer the question posed about the DataFrame.
 
                 IMPORTANT INSTRUCTIONS:
-                1. When you find the answer, provide it immediately as the Final Answer
-                2. Do NOT continue searching for more data once you have the answer
-                3. Do NOT try to find "the next" item unless specifically asked for multiple items
-                4. Be concise and direct in your responses
-                5. Always provide your final answer in a clear, readable format
+                CRITICAL INSTRUCTIONS FOR TOOL USAGE:
+                1. You have access to ONLY ONE tool: python_repl_ast
+                2. ALWAYS use this EXACT format for actions:
+                    Action: python_repl_ast
+                    Action Input: your_python_code_here
 
+                3. NEVER use descriptive text as the Action name
+                4. NEVER say "Use the python_repl_ast to..." - just use "python_repl_ast"
+                5. When you find the answer, provide it immediately as the Final Answer
+                6. Do NOT continue searching for more data once you have the answer
+                7. Do NOT try to find "the next" item unless specifically asked for multiple items
+                8. Give unique rows only - do not repeat rows in your answers.
+                
                 The DataFrame columns and their types are automatically detected by pandas.
                 """
             )
@@ -397,7 +404,7 @@ class StudentTranscriptCSVHandler:
         """Use separate LLM to summarize and format the response with improved data interpretation"""
         
         print(f"🔄 DEBUG: Summarizing response. Raw response length: {len(raw_response)}")
-        print(f"🔄 DEBUG: First 200 chars of raw response: {raw_response[:200]}...")
+        print(f"🔄 DEBUG: First 200 chars of raw response: {raw_response}...")
         
         # Check if the raw response indicates an error or timeout
         if "Agent stopped due to iteration limit or time limit" in raw_response:
@@ -412,26 +419,15 @@ class StudentTranscriptCSVHandler:
             Raw Data Response: {raw_response}
 
             **CRITICAL DATA INTERPRETATION RULES:**
-            1. ANY structured data with course numbers (like ART1113, BM1403, CD1243) IS VALID STUDENT DATA
-            2. "Transfer Term" entries ARE LEGITIMATE ACADEMIC RECORDS representing courses transferred from other institutions
-            3. If you see tabular data with headers like "Course Number" and "Term", this IS the complete answer
-            4. Indexed data (0, 1, 2, etc.) followed by course codes and terms IS the query result
-            5. Do NOT conclude "no data found" if you see course information, even if terms show "0000-0000 : Transfer Term"
-            6. The raw data contains the ACTUAL ANSWER - format it properly, don't question its validity
+            1. The raw data contains the ACTUAL ANSWER - format it properly, don't question its validity
 
             **DATA PRESENTATION RULES:**
             - Present ALL data found in the raw response
             - Use clear, professional academic language
             - Add appropriate emojis (📊 for tables, 📋 for academic records)
             - If using table format, use proper markdown table syntax
-            - Explain what "Transfer Term" means if present
             - Count the actual number of records found
             - Be accurate about what the data shows
-
-            **FORMAT SELECTION:**
-            - Use TABLE format for structured data with multiple columns
-            - Use STORY format for single values or when explanation is needed
-            - Use LIST format for simple enumerations
 
             **IMPORTANT:** The raw data shows the actual query results. If there are 6 rows of course data, then 6 courses were found. Do not contradict what the data clearly shows.
 
@@ -440,28 +436,26 @@ class StudentTranscriptCSVHandler:
         
         else:  # clean format
             prompt = f"""
-            You are a data formatter for student transcript information. Clean and format the following response accurately.
+            You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
 
             Original Question: {original_question}
             
             Raw Data Response: {raw_response}
 
-            **IMPORTANT RULES:** 
-            - The raw data contains REAL academic information
-            - Course codes (like ART1113, BM1403) are valid course numbers
-            - "Transfer Term" entries are legitimate academic records
-            - Present ALL data that appears in the raw response accurately
-            - Count the actual number of records in the data
+            **CRITICAL DATA INTERPRETATION RULES:**
+            1. The raw data contains the ACTUAL ANSWER - format it properly, don't question its validity
 
-            Please format this response by:
-            1. Removing technical pandas formatting (index numbers, dtype info)
-            2. Removing agent execution details
-            3. Presenting academic data in a clear, user-friendly format
-            4. Using proper formatting (tables, headers, bullet points)
-            5. Being accurate about the number of records found
-            6. Explaining transfer terms if present
+            **DATA PRESENTATION RULES:**
+            - Present ALL data found in the raw response
+            - Use clear, professional academic language
+            - Add appropriate emojis (📊 for tables, 📋 for academic records)
+            - If using table format, use proper markdown table syntax
+            - Count the actual number of records found
+            - Be accurate about what the data shows
 
-            Provide only the cleaned, formatted response that accurately reflects the data found.
+            **IMPORTANT:** The raw data shows the actual query results. If there are 6 rows of course data, then 6 courses were found. Do not contradict what the data clearly shows.
+
+            Analyze the raw data carefully, count the actual records, and present the information accurately. Provide only the final formatted response.
             """
 
         try:
