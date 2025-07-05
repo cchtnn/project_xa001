@@ -89,10 +89,10 @@ class StudentTranscriptCSVHandler:
             self.summarizer_llm = ChatGroq(
                 groq_api_key=self.groq_api_key,
                 model_name=self.model_name,
-                temperature=0.3,
-                max_tokens=2048,
+                temperature=0.1,
+                max_tokens=4096,
                 streaming=False,
-                request_timeout=30
+                request_timeout=60
             )
             print("✅ Summarizer LLM setup completed")
         except Exception as e:
@@ -125,7 +125,21 @@ class StudentTranscriptCSVHandler:
             
             # Convert GPA to numeric if it exists
             if 'GPA' in self.df.columns:
+                # First, replace empty strings and whitespace with NaN
+                self.df['GPA'] = self.df['GPA'].astype(str).str.strip()
+                self.df['GPA'] = self.df['GPA'].replace('', pd.NA)
+                self.df['GPA'] = self.df['GPA'].replace(' ', pd.NA)
+                self.df['GPA'] = self.df['GPA'].replace('nan', pd.NA)
+                
+                # Convert to numeric, coercing errors to NaN
                 self.df['GPA'] = pd.to_numeric(self.df['GPA'], errors='coerce')
+                self.df['GPA'] = pd.to_numeric(self.df['GPA'], errors='coerce')
+                
+                # Save the cleaned CSV back for the agent to use
+                self.df.to_csv(self.csv_path, index=False)
+                print(f"✅ GPA column cleaned and converted to numeric")
+                print(f"   Non-null GPA values: {self.df['GPA'].notna().sum()}")
+                print(f"   Null GPA values: {self.df['GPA'].isna().sum()}")
             
             # Get column information for debugging
             column_info = self._get_column_info()
@@ -164,7 +178,21 @@ class StudentTranscriptCSVHandler:
                 7. Do NOT try to find "the next" item unless specifically asked for multiple items
                 8. Give unique rows only - do not repeat rows in your answers.
                 
+                DATA HANDLING RULES:
+                9. pandas is already imported as 'pd' - you don't need to import it again
+                10. For GPA calculations, use .mean() method and handle NaN values properly
+                11. For groupby operations, use .dropna() if needed to exclude null values
+                12. Always check data types before performing operations
+                13. Use .sort_values(ascending=False) for descending order sorting
+                14. Display results clearly with proper formatting
+
+                EXAMPLE FOR GPA CALCULATIONS:
+                # Group by student name and calculate average GPA
+                result = df.groupby('Student Name')['GPA'].mean().sort_values(ascending=False)
+                print(result)
+
                 The DataFrame columns and their types are automatically detected by pandas.
+                The GPA column has been pre-processed to be numeric (float type).
                 """
             )
             
@@ -287,7 +315,9 @@ class StudentTranscriptCSVHandler:
                 # Check for course/academic data
                 re.search(r'[A-Z]{2,}\d+|Course Number|Student Name|Grade|Term|GPA', cleaned_final, re.IGNORECASE) or
                 # Check for structured data (multiple lines with consistent patterns)
-                len([line for line in cleaned_final.split('\n') if line.strip()]) > 2
+                len([line for line in cleaned_final.split('\n') if line.strip()]) > 2 or
+                # Check for pandas Series output (student names with GPA values)
+                re.search(r'Name:\s+\w+|dtype:\s+float|^\w+.*\s+\d+\.\d+', cleaned_final, re.MULTILINE)
             ):
                 print("🔍 DEBUG: Using Final Answer section - contains meaningful data")
                 final_answer_match = cleaned_final
@@ -304,7 +334,7 @@ class StudentTranscriptCSVHandler:
             if any(marker in line_stripped for marker in [
                 '> Entering', '> Finished', 'Let\'s get started!', 'Question:', 
                 'Thought:', 'Action:', 'Action Input:', 'chain...', 'python_repl_ast',
-                'is not a valid tool', 'Let\'s execute'
+                'is not a valid tool', 'Let\'s execute', 'NameError:', 'ValueError:', 'TypeError:'
             ]):
                 # If we have a current block, save it
                 if current_block:
@@ -320,6 +350,10 @@ class StudentTranscriptCSVHandler:
                 re.search(r'^\s*\d+\s+[A-Z]', line_stripped) or
                 # Course codes
                 re.search(r'[A-Z]{2,}\d+', line_stripped) or
+                # Pandas Series output (Name: student_name, value)
+                re.search(r'^[A-Za-z\s]+\s+\d+\.\d+$', line_stripped) or
+                # Series metadata
+                re.search(r'Name:\s+\w+|dtype:\s+float', line_stripped) or
                 # Data with consistent structure
                 (line_stripped and not line_stripped.startswith(('Observation:', 'Final Answer:')))
             )
@@ -364,6 +398,10 @@ class StudentTranscriptCSVHandler:
                         score += 1
                     if re.search(r'^\s*\d+\s+', line.strip()):  # Indexed data
                         score += 1
+                    if re.search(r'^[A-Za-z\s]+\s+\d+\.\d+$', line.strip()):  # Student GPA pairs
+                        score += 4
+                    if re.search(r'Name:\s+\w+|dtype:\s+float', line):  # Pandas Series
+                        score += 2
                 
                 scored_blocks.append((score, block))
             
@@ -382,7 +420,7 @@ class StudentTranscriptCSVHandler:
                 if line_stripped and not any(marker in line_stripped for marker in [
                     '> Entering', '> Finished', 'Let\'s get started!', 'Question:', 
                     'Thought:', 'Action:', 'Action Input:', 'chain...', 'python_repl_ast',
-                    'is not a valid tool', 'Let\'s execute'
+                    'is not a valid tool', 'Let\'s execute', 'NameError:', 'ValueError:', 'TypeError:'
                 ]):
                     clean_lines.append(line)
             
@@ -424,10 +462,11 @@ class StudentTranscriptCSVHandler:
             **DATA PRESENTATION RULES:**
             - Present ALL data found in the raw response
             - Use clear, professional academic language
-            - Add appropriate emojis (📊 for tables, 📋 for academic records)
+            - For GPA data, use markdown table format with columns: Student Name | Average GPA
             - If using table format, use proper markdown table syntax
             - Count the actual number of records found
             - Be accurate about what the data shows
+            - Round GPA values to 2 decimal places for display
 
             **IMPORTANT:** The raw data shows the actual query results. If there are 6 rows of course data, then 6 courses were found. Do not contradict what the data clearly shows.
 
@@ -448,7 +487,6 @@ class StudentTranscriptCSVHandler:
             **DATA PRESENTATION RULES:**
             - Present ALL data found in the raw response
             - Use clear, professional academic language
-            - Add appropriate emojis (📊 for tables, 📋 for academic records)
             - If using table format, use proper markdown table syntax
             - Count the actual number of records found
             - Be accurate about what the data shows
@@ -479,57 +517,203 @@ class StudentTranscriptCSVHandler:
     def _manual_format_fallback(self, raw_response: str, original_question: str) -> str:
         """Enhanced manual formatting fallback when summarizer fails"""
         try:
-            # Check if the response contains structured academic data
-            if re.search(r'Course Number|ART\d+|BM\d+|CD\d+', raw_response, re.IGNORECASE):
-                lines = raw_response.split('\n')
-                formatted_lines = []
-                
-                # Extract meaningful data lines
-                for line in lines:
-                    line = line.strip()
-                    # Skip empty lines and technical markers
-                    if line and not any(marker in line for marker in [
-                        'Action:', 'Thought:', 'Observation:', '> Entering', '> Finished',
-                        'python_repl_ast', 'is not a valid tool'
-                    ]):
-                        formatted_lines.append(line)
-                
-                if formatted_lines:
-                    # Count actual data rows (excluding headers)
-                    data_rows = [line for line in formatted_lines if re.search(r'^\s*\d+\s+[A-Z]', line)]
-                    count = len(data_rows)
-                    
-                    result = f"📚 **Academic Records Found ({count} records):**\n\n"
-                    
-                    # Check if it's tabular data
-                    if any('Course Number' in line for line in formatted_lines):
-                        # Format as table
-                        result += "| Course Number | Term |\n"
-                        result += "|---------------|------|\n"
-                        
-                        for line in formatted_lines:
-                            if re.search(r'^\s*\d+\s+([A-Z]+\d+)\s+(.+)', line):
-                                match = re.search(r'^\s*\d+\s+([A-Z]+\d+)\s+(.+)', line)
-                                if match:
-                                    course = match.group(1)
-                                    term = match.group(2)
-                                    result += f"| {course} | {term} |\n"
-                    else:
-                        # Format as list
-                        result += '\n'.join(formatted_lines)
-                    
-                    # Add explanation for transfer terms if present
-                    if "Transfer Term" in raw_response:
-                        result += "\n\n*Note: Transfer Term indicates courses transferred from other institutions.*"
-                    
-                    return result
+            # Clean the raw response first
+            lines = raw_response.split('\n')
+            formatted_lines = []
+            
+            # Extract meaningful data lines
+            for line in lines:
+                line = line.strip()
+                # Skip empty lines and technical markers
+                if line and not any(marker in line for marker in [
+                    'Action:', 'Thought:', 'Observation:', '> Entering', '> Finished',
+                    'python_repl_ast', 'is not a valid tool', 'NameError:', 'ValueError:', 
+                    'TypeError:', 'KeyError:', 'AttributeError:'
+                ]):
+                    formatted_lines.append(line)
+            
+            if not formatted_lines:
+                return f"📋 **Query Results:**\n\n{raw_response}"
+            
+            # Try different formatting strategies based on content patterns
+            
+            # Strategy 1: GPA Analysis
+            if self._is_gpa_data(formatted_lines):
+                return self._format_gpa_data(formatted_lines)
+            
+            # Strategy 2: Academic Records (Course data)
+            if self._is_academic_records(formatted_lines):
+                return self._format_academic_records(formatted_lines)
+            
+            # Strategy 3: Tabular Data (general table format)
+            if self._is_tabular_data(formatted_lines):
+                return self._format_tabular_data(formatted_lines)
+            
+            # Strategy 4: List-based Data
+            if self._is_list_data(formatted_lines):
+                return self._format_list_data(formatted_lines)
+            
+            # Strategy 5: Statistical/Numerical Data
+            if self._is_statistical_data(formatted_lines):
+                return self._format_statistical_data(formatted_lines)
             
             # General fallback
-            return f"📋 **Query Results:**\n\n{raw_response}"
+            return self._format_general_data(formatted_lines)
             
         except Exception as e:
-            print(f"❌ Manual formatting also failed: {str(e)}")
+            print(f"❌ Manual formatting failed: {str(e)}")
             return f"Query results for: {original_question}\n\n{raw_response}"
+
+    def _is_gpa_data(self, lines):
+        """Check if data contains GPA information"""
+        return any(re.search(r'GPA|\d+\.\d+$', line, re.IGNORECASE) for line in lines)
+
+    def _format_gpa_data(self, lines):
+        """Format GPA-related data"""
+        gpa_lines = []
+        for line in lines:
+            if re.search(r'^[A-Za-z\s]+\s+\d+\.\d+$', line.strip()):
+                gpa_lines.append(line.strip())
+        
+        if gpa_lines:
+            result = f"📊 **Student GPA Analysis ({len(gpa_lines)} records):**\n\n"
+            result += "| Student Name | Average GPA |\n"
+            result += "|--------------|-------------|\n"
+            
+            for line in gpa_lines:
+                parts = line.rsplit(' ', 1)
+                if len(parts) == 2:
+                    student_name = parts[0].strip()
+                    gpa_value = parts[1].strip()
+                    result += f"| {student_name} | {gpa_value} |\n"
+            
+            return result
+        
+        return self._format_general_data(lines)
+
+    def _is_academic_records(self, lines):
+        """Check if data contains academic course information"""
+        return any(re.search(r'Course Number|ART\d+|BM\d+|CD\d+|[A-Z]{2,4}\d+', line, re.IGNORECASE) for line in lines)
+
+    def _format_academic_records(self, lines):
+        """Format academic course records"""
+        # Count actual data rows
+        data_rows = [line for line in lines if re.search(r'^\s*\d+\s+[A-Z]', line)]
+        count = len(data_rows)
+        
+        result = f"📚 **Academic Records Found ({count} records):**\n\n"
+        
+        # Check if it's tabular course data
+        if any('Course Number' in line for line in lines):
+            result += "| Course Number | Term |\n"
+            result += "|---------------|------|\n"
+            
+            for line in lines:
+                if re.search(r'^\s*\d+\s+([A-Z]+\d+)\s+(.+)', line):
+                    match = re.search(r'^\s*\d+\s+([A-Z]+\d+)\s+(.+)', line)
+                    if match:
+                        course = match.group(1)
+                        term = match.group(2)
+                        result += f"| {course} | {term} |\n"
+        else:
+            result += '\n'.join(lines)
+        
+        # Add contextual notes
+        if "Transfer Term" in ' '.join(lines):
+            result += "\n\n*Note: Transfer Term indicates courses transferred from other institutions.*"
+        
+        return result
+
+    def _is_tabular_data(self, lines):
+        """Check if data appears to be in tabular format"""
+        # Look for common table indicators
+        header_indicators = ['Name', 'ID', 'Date', 'Score', 'Grade', 'Total', 'Count']
+        pipe_separated = any('|' in line for line in lines)
+        comma_separated = any(line.count(',') >= 2 for line in lines)
+        has_headers = any(any(header in line for header in header_indicators) for line in lines)
+        
+        return pipe_separated or (comma_separated and has_headers)
+
+    def _format_tabular_data(self, lines):
+        """Format general tabular data"""
+        result = "📊 **Data Table:**\n\n"
+        
+        # Try to detect delimiter
+        if any('|' in line for line in lines):
+            # Already pipe-separated
+            result += '\n'.join(lines)
+        elif any(line.count(',') >= 2 for line in lines):
+            # CSV-like format - convert to markdown table
+            csv_lines = [line for line in lines if ',' in line]
+            if csv_lines:
+                headers = csv_lines[0].split(',')
+                result += "| " + " | ".join(h.strip() for h in headers) + " |\n"
+                result += "|" + "|".join(['---' for _ in headers]) + "|\n"
+                
+                for line in csv_lines[1:]:
+                    cells = line.split(',')
+                    result += "| " + " | ".join(c.strip() for c in cells) + " |\n"
+        else:
+            result += '\n'.join(lines)
+        
+        return result
+
+    def _is_list_data(self, lines):
+        """Check if data appears to be a list"""
+        # Look for numbered lists, bullet points, or consistent patterns
+        numbered = any(re.search(r'^\d+\.', line) for line in lines)
+        bulleted = any(re.search(r'^[-*•]', line) for line in lines)
+        consistent_format = len(set(len(line.split()) for line in lines if line)) <= 2
+        
+        return numbered or bulleted or (len(lines) > 3 and consistent_format)
+
+    def _format_list_data(self, lines):
+        """Format list-based data"""
+        result = f"📋 **List Results ({len(lines)} items):**\n\n"
+        
+        # If not already formatted as a list, format it
+        if not any(re.search(r'^[-*•\d+\.]', line) for line in lines):
+            for i, line in enumerate(lines, 1):
+                result += f"{i}. {line}\n"
+        else:
+            result += '\n'.join(lines)
+        
+        return result
+
+    def _is_statistical_data(self, lines):
+        """Check if data contains statistical information"""
+        stat_keywords = ['average', 'mean', 'median', 'total', 'count', 'sum', 'min', 'max', 'std']
+        return any(any(keyword in line.lower() for keyword in stat_keywords) for line in lines)
+
+    def _format_statistical_data(self, lines):
+        """Format statistical/numerical data"""
+        result = "📈 **Statistical Analysis:**\n\n"
+        
+        # Group statistical lines
+        stats = []
+        data = []
+        
+        for line in lines:
+            if any(keyword in line.lower() for keyword in ['average', 'mean', 'total', 'count', 'sum']):
+                stats.append(line)
+            else:
+                data.append(line)
+        
+        if stats:
+            result += "**Summary Statistics:**\n"
+            for stat in stats:
+                result += f"- {stat}\n"
+            result += "\n"
+        
+        if data:
+            result += "**Data:**\n"
+            result += '\n'.join(data)
+        
+        return result
+
+    def _format_general_data(self, lines):
+        """General formatting for unstructured data"""
+        return f"📋 **Query Results ({len(lines)} lines):**\n\n" + '\n'.join(lines)
         
     def _query_csv_agent(self, question: str, max_retries: int = 2, clean_logs: bool = True, use_summarizer: bool = True, format_type: str = "auto"):
         """Query the CSV agent with error handling and optional summarization"""
