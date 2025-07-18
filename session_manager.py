@@ -5,67 +5,57 @@ Handles all session state operations and history management
 
 import streamlit as st
 from datetime import datetime
+import session_db
 
 
 class SessionManager:
-    """Manages Streamlit session state"""
-    
+    """Manages Streamlit session state with DB persistence"""
+
     @staticmethod
     def initialize_session():
-        """Initialize session state variables"""
+        session_db.init_db()
         if 'qa_history' not in st.session_state:
-            st.session_state.qa_history = []
-        
+            st.session_state.qa_history = session_db.load_qa_history()
         if 'current_time' not in st.session_state:
             st.session_state.current_time = datetime.now().strftime("%A, %d %B %Y %H:%M:%S")
-        
         if 'language' not in st.session_state:
-            st.session_state.language = "English"
-    
+            st.session_state.language = session_db.load_meta("language", "English")
+
     @staticmethod
     def set_user_query(query):
-        """Set the current user query"""
         st.session_state.user_query = query
-    
+
     @staticmethod
     def set_language(language):
-        """Set the selected language"""
         st.session_state.language = language
-    
+        session_db.save_meta("language", language)
+
     @staticmethod
     def add_to_history(question, answer):
-        """Add a question-answer pair to history"""
         if 'qa_history' not in st.session_state:
             st.session_state.qa_history = []
-        
-        st.session_state.qa_history.append({
-            "question": question,
-            "answer": answer
-        })
-    
+        st.session_state.qa_history.append({"question": question, "answer": answer})
+        session_db.save_qa_history(st.session_state.qa_history)
+
     @staticmethod
     def get_history():
-        """Get the Q&A history"""
         return st.session_state.get('qa_history', [])
-    
+
     @staticmethod
     def get_language():
-        """Get the selected language"""
         return st.session_state.get('language', 'English')
-    
+
     @staticmethod
     def get_user_query():
-        """Get the current user query"""
         return st.session_state.get('user_query', '')
-    
+
     @staticmethod
     def clear_history():
-        """Clear the Q&A history"""
         st.session_state.qa_history = []
-    
+        session_db.save_qa_history([])
+
     @staticmethod
     def update_current_time():
-        """Update current time"""
         st.session_state.current_time = datetime.now().strftime("%A, %d %B %Y %H:%M:%S")
 
 
