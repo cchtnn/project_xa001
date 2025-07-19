@@ -24,6 +24,8 @@ def init_db():
     conn.close()
 
 def save_qa_history(history):
+    # Initialize DB if it doesn't exist
+    init_db()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("DELETE FROM session_history")
@@ -33,14 +35,22 @@ def save_qa_history(history):
     conn.close()
 
 def load_qa_history():
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT question, answer FROM session_history")
-    rows = c.fetchall()
-    conn.close()
-    return [{"question": q, "answer": a} for q, a in rows]
+    # Initialize DB if it doesn't exist
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT question, answer FROM session_history")
+        rows = c.fetchall()
+        conn.close()
+        return [{"question": q, "answer": a} for q, a in rows]
+    except sqlite3.OperationalError:
+        # If table doesn't exist, return empty list
+        return []
 
 def save_meta(key, value):
+    # Initialize DB if it doesn't exist
+    init_db()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("REPLACE INTO session_meta (key, value) VALUES (?, ?)", (key, value))
@@ -48,9 +58,15 @@ def save_meta(key, value):
     conn.close()
 
 def load_meta(key, default=None):
-    conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor()
-    c.execute("SELECT value FROM session_meta WHERE key=?", (key,))
-    row = c.fetchone()
-    conn.close()
-    return row[0] if row else default
+    # Initialize DB if it doesn't exist
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT value FROM session_meta WHERE key=?", (key,))
+        row = c.fetchone()
+        conn.close()
+        return row[0] if row else default
+    except sqlite3.OperationalError:
+        # If table doesn't exist, return default
+        return default

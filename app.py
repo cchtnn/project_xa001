@@ -28,7 +28,9 @@ from session_manager import (
     set_language,
     add_to_history,
     get_language,
-    get_user_query
+    get_user_query,
+    clear_history,
+    update_current_time
 )
 from query_handler import create_query_handler
 import logic
@@ -36,6 +38,8 @@ import logic
 
 def main():
     """Main application function"""
+    
+    # DO NOT call clear_history() here!
     
     # Setup page configuration
     setup_page_config()
@@ -76,7 +80,13 @@ def main():
     
     # Setup main containers
     setup_containers()
-    
+
+    # Add a "New Chat" button
+    if st.button("🆕 New Chat (Clear History)"):
+        clear_history()
+        st.session_state.user_query = ""
+        st.rerun()
+
     # Handle form submission
     if submit and query:
         set_user_query(query)

@@ -131,7 +131,7 @@ class VectorStoreManager:
 
 
 # Initialize vectorstore with caching
-@st.cache_resource(show_spinner=False)
+# @st.cache_resource(show_spinner=False)
 def get_vectorstore_manager():
     """Get cached vectorstore manager instance"""
     return VectorStoreManager()
