@@ -218,3 +218,43 @@ div[data-testid="stSelectbox"] {
 div[data-testid="stSelectbox"] > label {
     display: none !important;
 }
+
+/* Multiple selectors to target the logout button - try all possible combinations */
+.stButton[data-testid="logout_btn"] {
+    position: fixed !important;
+    top: 12px !important;
+    right: 185px !important;
+    z-index: 10001 !important;
+    width: auto !important;
+}
+
+/* Alternative selectors for logout button */
+button[data-testid="logout_btn"] {
+    position: fixed !important;
+    top: 12px !important;
+    right: 185px !important;
+    z-index: 10001 !important;
+    width: auto !important;
+}
+
+/* Target button with "Logout" text */
+.stButton > button:contains("Logout") {
+    position: fixed !important;
+    top: 12px !important;
+    right: 185px !important;
+    z-index: 10001 !important;
+    width: auto !important;
+}
+
+/* Generic logout button targeting */
+button[title="Logout"],
+button[aria-label="Logout"],
+.logout-btn,
+#logout_btn,
+*[class*="logout"] {
+    position: fixed !important;
+    top: 12px !important;
+    right: 185px !important;
+    z-index: 10001 !important;
+    width: auto !important;
+}

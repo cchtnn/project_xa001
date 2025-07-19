@@ -24,3 +24,4 @@ chromadb
 langchain-groq
 langchain-experimental
 tabulate
+passlib[bcrypt]

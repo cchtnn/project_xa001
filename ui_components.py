@@ -1,6 +1,7 @@
 """
 UI Components for Diné College Assistant
 Contains all UI-related functions and components
+Fixed version with logout button properly positioned beside globe icon
 """
 
 import streamlit as st
@@ -51,11 +52,11 @@ def display_header():
 
 
 def setup_language_selector():
-    """Setup the language selector with custom styling"""
+    """Setup the language selector with custom styling and logout button"""
     svg_file = Path(PATHS["globe_svg"])
     globe_base64 = load_svg_base64(svg_file)
     
-    # Custom CSS for language selector
+    # Custom CSS for language selector and logout button positioning
     st.markdown("""
         <style>
             /* fixed position container for language selector */
@@ -98,10 +99,43 @@ def setup_language_selector():
             div[data-testid="stSelectbox"] > label {
                 display: none !important;
             }
+
+            /* Position logout button beside globe icon */
+            .stButton[data-testid="logout_btn"] {
+                position: fixed !important;
+                top: 12px !important;
+                right: 185px !important;
+                z-index: 10001 !important;
+                width: auto !important;
+            }
+
+            .stButton[data-testid="logout_btn"] > button {
+                background-color: #ff4444 !important;
+                color: white !important;
+                border: none !important;
+                border-radius: 4px !important;
+                padding: 4px 12px !important;
+                font-size: 12px !important;
+                font-weight: 500 !important;
+                cursor: pointer !important;
+                transition: all 0.3s ease !important;
+                height: 28px !important;
+                line-height: 1 !important;
+            }
+
+            .stButton[data-testid="logout_btn"] > button:hover {
+                background-color: #cc3333 !important;
+                transform: scale(1.05) !important;
+            }
+
+            .stButton[data-testid="logout_btn"] > button:focus {
+                outline: none !important;
+                box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.3) !important;
+            }
         </style>
     """, unsafe_allow_html=True)
     
-    # Create placeholder for language selector
+    # Create placeholder for language selector without logout icon
     placeholder = st.empty()
     placeholder.markdown(f"""
         <div class="language-selector">
@@ -127,6 +161,13 @@ def create_language_dropdown():
         )
     
     return lang
+
+
+def create_logout_button():
+    """Create a logout button positioned beside the globe icon"""
+    # Create the logout button with a specific key for CSS targeting
+    logout_clicked = st.button("Logout", key="logout_btn", help="Click to logout")
+    return logout_clicked
 
 
 def create_input_section():
