@@ -16,6 +16,8 @@ import streamlit as st
 from dotenv import load_dotenv
 from student_query_reformulator import get_query_reformulator
 import re
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 warnings.filterwarnings("ignore")
 load_dotenv()
@@ -24,8 +26,8 @@ load_dotenv()
 class StudentTranscriptCSVHandler:
     """Handles student transcript queries using CSV Agent with query reformulation"""
     
-    def __init__(self, csv_path="data/csv_folder/student_transcript.csv", model_name="llama3-8b-8192"):
-        self.csv_path = csv_path
+    def __init__(self, csv_path=None, model_name="llama3-8b-8192"):
+        self.csv_path = csv_path or st.session_state.get("active_transcript_csv_path", "data/csv_folder/student_transcript.csv")
         self.model_name = model_name
         self.groq_api_key = os.getenv('GROQ_API_KEY')
         self.llm = None
@@ -40,6 +42,7 @@ class StudentTranscriptCSVHandler:
         """Initialize the CSV handler with LLM, agent, and query reformulator"""
         try:
             print("📚 Initializing Student Transcript CSV Handler...")
+            print(f"CSV Path: {self.csv_path}")
             
             # Check if CSV file exists
             if not os.path.exists(self.csv_path):
@@ -844,12 +847,15 @@ class StudentTranscriptCSVHandler:
 
 # Global CSV handler instance with caching
 @st.cache_resource(show_spinner=False)
-def get_csv_transcript_handler():
+def get_csv_transcript_handler(csv_path=None):
     """Get cached CSV transcript handler instance"""
-    return StudentTranscriptCSVHandler()
+    if csv_path is None:
+        csv_path = "data/csv_folder/student_transcript.csv"
+    print(f"StudentTranscriptCSVHandler: Using CSV path: {csv_path}")
+    return StudentTranscriptCSVHandler(csv_path=csv_path)
 
 
-def process_transcript_query(user_query: str, language='English', use_summarizer: bool = True, format_type: str = "auto"):
+def process_transcript_query(user_query: str, language='English', use_summarizer: bool = True, format_type: str = "auto", csv_path=None):
     """
     Convenience function to process transcript queries using CSV agent with query reformulation
     
@@ -862,5 +868,5 @@ def process_transcript_query(user_query: str, language='English', use_summarizer
     Returns:
         str: Generated answer
     """
-    handler = get_csv_transcript_handler()
+    handler = get_csv_transcript_handler(csv_path)
     return handler.process_query(user_query, language, use_summarizer, format_type)

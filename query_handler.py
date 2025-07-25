@@ -5,10 +5,13 @@ Now uses CSV-based student transcript handler instead of FAISS
 """
 
 import time
+import streamlit as st
 from query_classifier import classify_user_query, QueryType
 # Updated import - now using CSV handler instead of FAISS handler
 from student_transcript_csv_handler import process_transcript_query
 import logic
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 
 class QueryHandler:
@@ -54,8 +57,9 @@ class QueryHandler:
         print("📊 Processing STUDENT TRANSCRIPT query with CSV Agent...")
         
         try:
+            csv_path = st.session_state.get("active_transcript_csv_path", None)
             # Use the CSV-based student transcript handler to process the query
-            answer_content = process_transcript_query(user_query, language)
+            answer_content = process_transcript_query(user_query, language, csv_path=csv_path)
             
             # Create answer object compatible with existing UI
             answer = type('obj', (object,), {

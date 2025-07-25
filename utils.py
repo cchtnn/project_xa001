@@ -11,6 +11,8 @@ from urllib.parse import urljoin
 from collections import defaultdict
 import torch
 from PyPDF2 import PdfReader
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 def get_data_from_website(url):
     """

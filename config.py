@@ -8,7 +8,7 @@ PAGE_CONFIG = {
     "page_title": "Diné College Assistant",
     "page_icon": "🏛️",
     "layout": "centered",
-    "initial_sidebar_state": "collapsed"
+    "initial_sidebar_state": "expanded"
 }
 
 # ChromaDB configuration

@@ -8,6 +8,8 @@ from datetime import datetime
 import session_db  # Only for language persistence if needed
 import tempfile
 import os
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 
 class SessionManager:

@@ -1,5 +1,7 @@
 import sqlite3
 import os
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 DB_PATH = "data/session_state.db"
 

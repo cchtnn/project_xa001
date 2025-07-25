@@ -11,6 +11,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from utils import generate_embeddings
 from logic import calculate_file_hash, get_metadata, save_metadata
 from config import CHROMA_COLLECTION_NAME, TEXT_SPLITTER_CONFIG, PATHS
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 
 class VectorStoreManager:

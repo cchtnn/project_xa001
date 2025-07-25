@@ -5,6 +5,9 @@ Refactored version with modular components and query type classification
 
 import streamlit as st
 import time
+import os
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 # Import custom modules
 from config import PAGE_CONFIG
@@ -38,7 +41,7 @@ from session_manager import (
 from query_handler import create_query_handler
 import logic
 from auth_db import init_auth_db, validate_user, add_user, list_users, get_user
-
+from student_transcript_csv_handler import process_transcript_query
 # Initialize auth DB on app start
 init_auth_db()
 
@@ -148,12 +151,83 @@ def main_app():
     # Setup main containers
     setup_containers()
     
-    # Add a "New Chat" button
-    if st.button("🆕 New Chat"):
-        clear_history()
-        st.session_state.user_query = ""
-        st.rerun()
-    
+    # --- Left Sidebar for New Chat and PDF Upload ---
+    with st.sidebar:
+        st.markdown("<h2 style='color: #FFD700; text-align: left; font-family: Arial, sans-serif; padding-bottom: 5px;'>🛠️ Tools</h2>", unsafe_allow_html=True)
+        
+        # New Chat Section
+        st.markdown("<div class='sidebar-section'>", unsafe_allow_html=True)
+        if st.button("🆕 New Chat", key="sidebar_new_chat", help="Start a new conversation"):
+            clear_history()
+            st.session_state.user_query = ""
+            st.rerun()
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # Divider
+        st.markdown("<hr style='border: 1px solid #444; margin: 10px 0;'>", unsafe_allow_html=True)
+        
+        st.markdown("<h3 style='color: #FFFFFF; text-align: left; font-family: Arial, sans-serif; padding-bottom: 0px;  font-size: 20px;'>📄 Upload PDF</h3>", unsafe_allow_html=True)
+        st.markdown("<div class='sidebar-section'>", unsafe_allow_html=True)
+        
+        is_private = st.checkbox("Private", key="sidebar_private_upload", help="Upload privately for your use only")
+        uploaded_file = st.file_uploader(" ", type=["pdf"], key="sidebar_pdf_uploader")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+        # In the sidebar section, replace the uploaded_file handling block with:
+        if uploaded_file is not None:
+            # Check if this file was already processed
+            file_key = f"processed_file_{uploaded_file.name}_{is_private}"
+            
+            # Define paths
+            user_folder = f"data/user_uploads/{st.session_state['username']}"
+            private_csv_path = os.path.join(user_folder, "csv_files", "student_transcript.csv")
+            public_csv_path = "data/public_uploads/csv_files/student_transcript.csv"
+            
+            # Check if the final merged CSV already exists
+            target_csv_path = private_csv_path if is_private else public_csv_path
+            if os.path.exists(target_csv_path) and file_key in st.session_state:
+                # Skip reprocessing if CSV exists and file was previously processed
+                st.session_state["private_csv_path"] = private_csv_path if is_private else None
+                st.session_state["active_transcript_csv_path"] = target_csv_path
+                st.success(f"Using existing processed data from {('private' if is_private else 'public')} space!")
+            else:
+                temp_pdf_path = f"temp_{uploaded_file.name}"
+                with open(temp_pdf_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                if is_private:
+                    os.makedirs(user_folder, exist_ok=True)
+                    save_path = os.path.join(user_folder, uploaded_file.name)
+                    save_scope = "private"
+                    st.session_state["private_csv_path"] = private_csv_path
+                else:
+                    public_folder = "data/public_uploads"
+                    os.makedirs(public_folder, exist_ok=True)
+                    save_path = os.path.join(public_folder, uploaded_file.name)
+                    save_scope = "public"
+                    st.session_state["private_csv_path"] = None
+                os.replace(temp_pdf_path, save_path)
+                logic.parse_and_index_pdf(save_path, user=st.session_state['username'], private=is_private)
+                st.session_state[file_key] = True
+                st.session_state["active_transcript_csv_path"] = target_csv_path
+                st.success(f"PDF uploaded and processed successfully! Using {save_scope} space.")
+
+        # Replace the CSV path selection logic at the bottom of main_app() with:
+        # Determine which CSV to use for transcript queries
+        if st.session_state.get("private_csv_path") and os.path.exists(st.session_state["private_csv_path"]):
+            transcript_csv_path = st.session_state["private_csv_path"]
+            print(f"Using private transcript CSV path: {transcript_csv_path}")
+        else:
+            transcript_csv_path = "data/public_uploads csv_files/student_transcript.csv"
+            if os.path.exists(transcript_csv_path):
+                print(f"Using public transcript CSV path: {transcript_csv_path}")
+            else:
+                print(f"Public CSV not found, no transcript data available")
+                transcript_csv_path = None
+
+        # Store for use in query handler
+        st.session_state["active_transcript_csv_path"] = transcript_csv_path
+            # st.success(f"PDF uploaded and saved to {save_scope} space!")
+        
     # Handle form submission
     if submit and query:
         set_user_query(query)
@@ -192,6 +266,17 @@ def main_app():
     
     # Close containers
     close_containers()
+
+    # Determine which CSV to use for transcript queries (only set the path, don't process)
+    if st.session_state.get("private_csv_path") and os.path.exists(st.session_state["private_csv_path"]):
+        transcript_csv_path = st.session_state["private_csv_path"]
+        print(f"Using private transcript CSV path: {transcript_csv_path}")
+    else:
+        transcript_csv_path = "data/public_uploads/csv_files/student_transcript.csv"
+        print(f"Using public transcript CSV path: {transcript_csv_path}")
+
+    # Store for use in query handler
+    st.session_state["active_transcript_csv_path"] = transcript_csv_path
 
 def main():
     """Main entry point"""

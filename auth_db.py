@@ -1,6 +1,8 @@
 import sqlite3
 from passlib.hash import bcrypt
 import os
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 DB_PATH = "data/auth.db"
 

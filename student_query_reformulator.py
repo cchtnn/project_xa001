@@ -12,6 +12,8 @@ from typing import Dict, Any
 import json
 import warnings
 from dotenv import load_dotenv
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 warnings.filterwarnings("ignore")
 load_dotenv()

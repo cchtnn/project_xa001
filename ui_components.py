@@ -9,6 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from logic import load_css, get_image_base64, load_svg_base64
 from config import LOGO_URLS, LANGUAGE_OPTIONS, PATHS
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 
 def setup_page_config():

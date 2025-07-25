@@ -32,7 +32,7 @@ button[title="Deploy"] {
     left: 10px;
     height: auto;
     width: 80px;
-    z-index: 9999; /* Increased z-index to ensure visibility */
+    z-index: 9999;
 }
 .top-left-logo img {
     display: block;
@@ -84,13 +84,13 @@ button[title="Deploy"] {
 /* Input container styles - moved up by adding custom positioning */
 .input-container {
     position: fixed;
-    top: 130px; /* Position directly below the header */
+    top: 130px;
     left: 50%;
     transform: translateX(-50%);
     max-width: 800px;
     width: 90%;
     z-index: 99;
-    margin-bottom: 0px; /* Reduced bottom margin */
+    margin-bottom: 0px;
 }
 
 /* Hide the "Press Enter to apply" text */
@@ -122,28 +122,28 @@ div[data-baseweb="input"] > div {
 
 /* Adjust spacing below the input area for answers */
 .answers-container {
-    margin-top: 0; /* Remove default top margin */
-    padding-top: 10px; /* Adjust padding to control space below input */
+    margin-top: 0;
+    padding-top: 10px;
     position: relative;
     z-index: 10;
 }
 
 /* New styles for the latest answer container */
 .latest-answer-container {
-    background-color: #f0f0f0; /* Light grey background */
-    border-radius: 15px; /* Rounded corners */
-    padding: 20px; /* Padding inside the container */
-    margin-bottom: 30px; /* Space between latest answer and previous answers */
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05); /* Subtle shadow */
+    background-color: #f0f0f0;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     position: relative;
 }
 
 /* Larger font for the answer heading */
 .answer-heading {
-    font-size: 24px !important; /* Larger font size */
-    font-weight: 600 !important; /* Make it bold */
-    margin-bottom: 15px !important; /* Space after heading */
-    color: #333 !important; /* Darker text color */
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    margin-bottom: 15px !important;
+    color: #333 !important;
 }
 
 /* Regular answer text */
@@ -153,7 +153,7 @@ div[data-baseweb="input"] > div {
 }
 
 .answer-separator {
-    margin-top: 10px; /* Add a small gap between question and answer */
+    margin-top: 10px;
     margin-bottom: 15px;
     border-top: 1px solid #eee;
 }
@@ -257,4 +257,65 @@ button[aria-label="Logout"],
     right: 185px !important;
     z-index: 10001 !important;
     width: auto !important;
+}
+
+/* 📂 File Uploader Styling */
+section[data-testid="stSidebar"] .stFileUploader {
+    margin-bottom: 15px !important;
+    width: 100% !important;
+}
+
+section[data-testid="stSidebar"] .stFileUploader > div:first-child,
+section[data-testid="stSidebar"] .stFileUploader div[role="button"] {
+    border: 2px dashed #4A90E2 !important;
+    border-radius: 10px !important;
+    padding: 20px 10px !important;
+    background-color: rgba(74, 144, 226, 0.07) !important;
+    text-align: center !important;
+    min-height: 140px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+}
+
+section[data-testid="stSidebar"] .stFileUploader div[role="button"]:hover {
+    border-color: #357ABD !important;
+    background-color: rgba(74, 144, 226, 0.12) !important;
+}
+
+section[data-testid="stSidebar"] .stFileUploader small,
+section[data-testid="stSidebar"] .stFileUploader span {
+    color: #CCCCCC !important;
+    font-size: 11px !important;
+    display: block !important;
+    text-align: center !important;
+    margin: 3px 0 !important;
+    line-height: 1.4 !important;
+}
+
+/* Browse Button Styling */
+section[data-testid="stSidebar"] .stFileUploader button {
+    background-color: #4A90E2 !important;
+    color: white !important;
+    border: none !important;
+    border-radius: 6px !important;
+    padding: 8px 16px !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    width: 100% !important;
+    margin-top: 10px !important;
+}
+
+section[data-testid="stSidebar"] .stFileUploader button:hover {
+    background-color: #357ABD !important;
+}
+
+/* Private Checkbox Styling */
+section[data-testid="stSidebar"] .stCheckbox {
+    margin-top: 10px !important;
+    margin-bottom: 5px !important;
+    padding-left: 3px !important;
+    display: flex !important;
+    align-items: center !important;
 }

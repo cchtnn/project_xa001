@@ -5,6 +5,8 @@ Classifies user queries as either STUDENT TRANSCRIPT TYPE or POLICY TYPE
 
 from sentence_transformers import SentenceTransformer, util
 import streamlit as st
+import logging
+logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 
 class QueryClassifier:
