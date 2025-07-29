@@ -411,10 +411,14 @@ def save_transcript_to_csv(content: str, image_name: str, csv_output_path: str) 
         print(f"Error saving transcript for {image_name}: {e}")
         return None
 
-def merge_all_csv_files(csv_output_path: str) -> str:
+def merge_all_csv_files(csv_output_path: str, pdf_filename: str = None) -> str:
     """
-    Merges all CSV files in the csv_folder into a single student_transcript.csv file.
+    Merges all CSV files in the csv_folder into a single CSV file named after the PDF.
     Handles headers properly - uses the first file's header and skips headers in subsequent files.
+    
+    Parameters:
+        csv_output_path (str): Path to the CSV output folder.
+        pdf_filename (str): Name of the original PDF file (optional).
     
     Returns:
         str: Path to the merged CSV file.
@@ -426,7 +430,15 @@ def merge_all_csv_files(csv_output_path: str) -> str:
             print("No CSV files found to merge.")
             return None
         
-        merged_filepath = os.path.join(csv_output_path, 'student_transcript.csv')
+        # Generate merged filename based on PDF name or default
+        if pdf_filename:
+            # Remove .pdf extension and add .csv
+            base_name = os.path.splitext(os.path.basename(pdf_filename))[0]
+            merged_filename = f"{base_name}.csv"
+        else:
+            merged_filename = 'student_transcript.csv'
+            
+        merged_filepath = os.path.join(csv_output_path, merged_filename)
         header_written = False
         total_rows = 0
         
@@ -435,7 +447,7 @@ def merge_all_csv_files(csv_output_path: str) -> str:
             
             for csv_file in csv_files:
                 # Skip the final merged file if it already exists
-                if csv_file == 'student_transcript.csv':
+                if csv_file == merged_filename:
                     continue
                     
                 csv_filepath = os.path.join(csv_output_path, csv_file)
@@ -477,13 +489,14 @@ def merge_all_csv_files(csv_output_path: str) -> str:
         print(f"Error merging CSV files: {e}")
         return None
 
-def process_images_to_csv(image_folder_path: str, csv_output_path: str) -> str:
+def process_images_to_csv(image_folder_path: str, csv_output_path: str, pdf_filename: str = None) -> str:
     """
     Process all images in the folder and convert them to CSV files.
     
     Parameters:
         image_folder_path (str): Path to folder containing extracted images.
         csv_output_path (str): Path to folder where CSV files will be saved.
+        pdf_filename (str): Name of the original PDF file (optional).
     
     Returns:
         str: Path to the final merged CSV file.
@@ -521,7 +534,7 @@ def process_images_to_csv(image_folder_path: str, csv_output_path: str) -> str:
         
         # Merge all CSV files into one final file
         if processed_files:
-            merged_csv_path = merge_all_csv_files(csv_output_path)
+            merged_csv_path = merge_all_csv_files(csv_output_path, pdf_filename)
             return merged_csv_path
         else:
             print("No CSV files were created to merge.")
@@ -588,7 +601,7 @@ def fix_term_career_totals(csv_path, output_path):
                     df.iloc[idx, col_idx] = value
         
         elif has_subterm_totals:
-            print(f"Found 'Subterm Totals' at row {idx}")
+            # print(f"Found 'Subterm Totals' at row {idx}")
             
             # Find all numeric values in this row (skip text columns)
             numeric_values = []
@@ -726,7 +739,8 @@ def parse_and_index_pdf(pdf_path, user, private):
         
         # Step 2: Process images and create CSV files
         print("Step 2: Processing images and creating CSV files...")
-        final_csv_path = process_images_to_csv(image_output_path, csv_output_path)
+        # Pass the PDF filename to process_images_to_csv
+        final_csv_path = process_images_to_csv(image_output_path, csv_output_path, pdf_path)
 
         # clean data
         if final_csv_path:
@@ -734,11 +748,6 @@ def parse_and_index_pdf(pdf_path, user, private):
         else:
             st.error("No CSV files were created from the images")
             return None
-        
-        st.success(f"PDF {pdf_path} parsed and indexed successfully!")
-        
-        # print("All transcripts processed and saved to CSV files.")
-        # print(f"Final merged CSV created: {final_csv_path}")
         
         return final_csv_path
         

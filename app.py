@@ -174,14 +174,20 @@ def main_app():
 
         st.markdown("</div>", unsafe_allow_html=True)
         # In the sidebar section, replace the uploaded_file handling block with:
+        # Replace the uploaded_file handling block in the sidebar section:
         if uploaded_file is not None:
             # Check if this file was already processed
             file_key = f"processed_file_{uploaded_file.name}_{is_private}"
             
-            # Define paths
+            # Define paths using PDF filename
             user_folder = f"data/user_uploads/{st.session_state['username']}"
-            private_csv_path = os.path.join(user_folder, "csv_files", "student_transcript.csv")
-            public_csv_path = "data/public_uploads/csv_files/student_transcript.csv"
+            
+            # Generate CSV filename from PDF filename
+            pdf_base_name = os.path.splitext(uploaded_file.name)[0]
+            csv_filename = f"{pdf_base_name}.csv"
+            
+            private_csv_path = os.path.join(user_folder, "csv_files", csv_filename)
+            public_csv_path = os.path.join("data/public_uploads/csv_files", csv_filename)
             
             # Check if the final merged CSV already exists
             target_csv_path = private_csv_path if is_private else public_csv_path
@@ -191,42 +197,70 @@ def main_app():
                 st.session_state["active_transcript_csv_path"] = target_csv_path
                 st.success(f"Using existing processed data from {('private' if is_private else 'public')} space!")
             else:
-                temp_pdf_path = f"temp_{uploaded_file.name}"
-                with open(temp_pdf_path, "wb") as f:
-                    f.write(uploaded_file.getbuffer())
-                if is_private:
-                    os.makedirs(user_folder, exist_ok=True)
-                    save_path = os.path.join(user_folder, uploaded_file.name)
-                    save_scope = "private"
-                    st.session_state["private_csv_path"] = private_csv_path
-                else:
-                    public_folder = "data/public_uploads"
-                    os.makedirs(public_folder, exist_ok=True)
-                    save_path = os.path.join(public_folder, uploaded_file.name)
-                    save_scope = "public"
-                    st.session_state["private_csv_path"] = None
-                os.replace(temp_pdf_path, save_path)
-                logic.parse_and_index_pdf(save_path, user=st.session_state['username'], private=is_private)
-                st.session_state[file_key] = True
-                st.session_state["active_transcript_csv_path"] = target_csv_path
+                # Add spinner for the processing part
+                with st.spinner("🔄 Processing PDF..."):
+                    temp_pdf_path = f"temp_{uploaded_file.name}"
+                    with open(temp_pdf_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    if is_private:
+                        os.makedirs(user_folder, exist_ok=True)
+                        save_path = os.path.join(user_folder, uploaded_file.name)
+                        save_scope = "private"
+                        st.session_state["private_csv_path"] = private_csv_path
+                    else:
+                        public_folder = "data/public_uploads"
+                        os.makedirs(public_folder, exist_ok=True)
+                        save_path = os.path.join(public_folder, uploaded_file.name)
+                        save_scope = "public"
+                        st.session_state["private_csv_path"] = None
+                    os.replace(temp_pdf_path, save_path)
+                    
+                    # Process PDF and get the actual CSV path returned
+                    final_csv_path = logic.parse_and_index_pdf(save_path, user=st.session_state['username'], private=is_private)
+                    
+                    st.session_state[file_key] = True
+                    st.session_state["active_transcript_csv_path"] = final_csv_path  # Use the actual returned path
+                
                 st.success(f"PDF uploaded and processed successfully! Using {save_scope} space.")
-
-        # Replace the CSV path selection logic at the bottom of main_app() with:
-        # Determine which CSV to use for transcript queries
-        if st.session_state.get("private_csv_path") and os.path.exists(st.session_state["private_csv_path"]):
-            transcript_csv_path = st.session_state["private_csv_path"]
-            print(f"Using private transcript CSV path: {transcript_csv_path}")
+                st.session_state["private_csv_path"] = private_csv_path if is_private else None
+        # Replace the CSV path determination logic at the end of main_app():
+        # Determine which CSV to use for transcript queries (only set the path, don't process)
+        if st.session_state.get("active_transcript_csv_path") and os.path.exists(st.session_state["active_transcript_csv_path"]):
+            transcript_csv_path = st.session_state["active_transcript_csv_path"]
+            print(f"Using active transcript CSV path: {transcript_csv_path}")
         else:
-            transcript_csv_path = "data/public_uploads csv_files/student_transcript.csv"
-            if os.path.exists(transcript_csv_path):
-                print(f"Using public transcript CSV path: {transcript_csv_path}")
+            # Fallback: look for any CSV files in respective directories
+            if st.session_state.get("private_csv_path"):
+                # Look for any CSV in private folder
+                private_csv_dir = os.path.dirname(st.session_state["private_csv_path"])
+                if os.path.exists(private_csv_dir):
+                    csv_files = [f for f in os.listdir(private_csv_dir) if f.endswith('.csv') and not f.startswith('page_')]
+                    if csv_files:
+                        transcript_csv_path = os.path.join(private_csv_dir, csv_files[0])  # Use first available CSV
+                        print(f"Using fallback private CSV: {transcript_csv_path}")
+                    else:
+                        transcript_csv_path = None
+                        print("No private CSV files found")
+                else:
+                    transcript_csv_path = None
+                    print("Private CSV directory doesn't exist")
             else:
-                print(f"Public CSV not found, no transcript data available")
-                transcript_csv_path = None
+                # Look for any CSV in public folder
+                public_csv_dir = "data/public_uploads/csv_files"
+                if os.path.exists(public_csv_dir):
+                    csv_files = [f for f in os.listdir(public_csv_dir) if f.endswith('.csv') and not f.startswith('page_')]
+                    if csv_files:
+                        transcript_csv_path = os.path.join(public_csv_dir, csv_files[0])  # Use first available CSV
+                        print(f"Using fallback public CSV: {transcript_csv_path}")
+                    else:
+                        transcript_csv_path = None
+                        print("No public CSV files found")
+                else:
+                    transcript_csv_path = None
+                    print("Public CSV directory doesn't exist")
 
         # Store for use in query handler
         st.session_state["active_transcript_csv_path"] = transcript_csv_path
-            # st.success(f"PDF uploaded and saved to {save_scope} space!")
         
     # Handle form submission
     if submit and query:
