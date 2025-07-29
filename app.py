@@ -176,28 +176,23 @@ def main_app():
         # In the sidebar section, replace the uploaded_file handling block with:
         # Replace the uploaded_file handling block in the sidebar section:
         if uploaded_file is not None:
-            # Check if this file was already processed
-            file_key = f"processed_file_{uploaded_file.name}_{is_private}"
+            # Generate unique key for this file upload
+            file_key = f"processed_file_{uploaded_file.name}_{is_private}_{st.session_state.get('username', 'unknown')}"
             
             # Define paths using PDF filename
             user_folder = f"data/user_uploads/{st.session_state['username']}"
-            
-            # Generate CSV filename from PDF filename
             pdf_base_name = os.path.splitext(uploaded_file.name)[0]
             csv_filename = f"{pdf_base_name}.csv"
-            
             private_csv_path = os.path.join(user_folder, "csv_files", csv_filename)
             public_csv_path = os.path.join("data/public_uploads/csv_files", csv_filename)
-            
-            # Check if the final merged CSV already exists
             target_csv_path = private_csv_path if is_private else public_csv_path
-            if os.path.exists(target_csv_path) and file_key in st.session_state:
-                # Skip reprocessing if CSV exists and file was previously processed
+            
+            # Check if this exact file was already processed
+            if file_key in st.session_state and os.path.exists(target_csv_path):
                 st.session_state["private_csv_path"] = private_csv_path if is_private else None
                 st.session_state["active_transcript_csv_path"] = target_csv_path
                 st.success(f"Using existing processed data from {('private' if is_private else 'public')} space!")
             else:
-                # Add spinner for the processing part
                 with st.spinner("🔄 Processing PDF..."):
                     temp_pdf_path = f"temp_{uploaded_file.name}"
                     with open(temp_pdf_path, "wb") as f:
@@ -215,14 +210,16 @@ def main_app():
                         st.session_state["private_csv_path"] = None
                     os.replace(temp_pdf_path, save_path)
                     
-                    # Process PDF and get the actual CSV path returned
+                    # Process PDF only if it hasn't been processed
                     final_csv_path = logic.parse_and_index_pdf(save_path, user=st.session_state['username'], private=is_private)
-                    
-                    st.session_state[file_key] = True
-                    st.session_state["active_transcript_csv_path"] = final_csv_path  # Use the actual returned path
-                
-                st.success(f"PDF uploaded and processed successfully! Using {save_scope} space.")
-                st.session_state["private_csv_path"] = private_csv_path if is_private else None
+                    if final_csv_path:
+                        st.session_state[file_key] = True
+                        st.session_state["active_transcript_csv_path"] = final_csv_path
+                        st.success(f"PDF uploaded and processed successfully! Using {save_scope} space.")
+                    else:
+                        st.error("Failed to process PDF. Please try again.")
+                        st.session_state["active_transcript_csv_path"] = None
+
         # Replace the CSV path determination logic at the end of main_app():
         # Determine which CSV to use for transcript queries (only set the path, don't process)
         if st.session_state.get("active_transcript_csv_path") and os.path.exists(st.session_state["active_transcript_csv_path"]):
@@ -302,15 +299,47 @@ def main_app():
     close_containers()
 
     # Determine which CSV to use for transcript queries (only set the path, don't process)
-    if st.session_state.get("private_csv_path") and os.path.exists(st.session_state["private_csv_path"]):
-        transcript_csv_path = st.session_state["private_csv_path"]
-        print(f"Using private transcript CSV path: {transcript_csv_path}")
+    # Use the active transcript CSV path if available, otherwise set a fallback
+    if st.session_state.get("active_transcript_csv_path") and os.path.exists(st.session_state["active_transcript_csv_path"]):
+        transcript_csv_path = st.session_state["active_transcript_csv_path"]
+        print(f"Using active transcript CSV path: {transcript_csv_path}")
     else:
-        transcript_csv_path = "data/public_uploads/csv_files/student_transcript.csv"
-        print(f"Using public transcript CSV path: {transcript_csv_path}")
-
-    # Store for use in query handler
-    st.session_state["active_transcript_csv_path"] = transcript_csv_path
+        # Fallback: Check for any CSV in private or public directories
+        user_folder = f"data/user_uploads/{st.session_state['username']}/csv_files"
+        public_csv_dir = "data/public_uploads/csv_files"
+        csv_files = []
+        
+        # Check private folder first
+        if os.path.exists(user_folder):
+            csv_files = [f for f in os.listdir(user_folder) if f.endswith('.csv') and not f.startswith('page_')]
+            if csv_files:
+                transcript_csv_path = os.path.join(user_folder, csv_files[0])
+                print(f"Using fallback private CSV: {transcript_csv_path}")
+            else:
+                transcript_csv_path = None
+                print("No private CSV files found")
+        else:
+            transcript_csv_path = None
+            print("Private CSV directory doesn't exist")
+        
+        # If no private CSV, check public folder
+        if not transcript_csv_path and os.path.exists(public_csv_dir):
+            csv_files = [f for f in os.listdir(public_csv_dir) if f.endswith('.csv') and not f.startswith('page_')]
+            if csv_files:
+                transcript_csv_path = os.path.join(public_csv_dir, csv_files[0])
+                print(f"Using fallback public CSV: {transcript_csv_path}")
+            else:
+                transcript_csv_path = None
+                print("No public CSV files found")
+        elif not transcript_csv_path:
+            transcript_csv_path = None
+            print("Public CSV directory doesn't exist")
+        
+        # Update the session state only if a valid CSV path is found
+        if transcript_csv_path:
+            st.session_state["active_transcript_csv_path"] = transcript_csv_path
+        else:
+            st.session_state["active_transcript_csv_path"] = None
 
 def main():
     """Main entry point"""
