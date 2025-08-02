@@ -21,7 +21,6 @@ def init_auth_db():
     """)
     c.execute("SELECT COUNT(*) FROM users")
     if c.fetchone()[0] == 0:
-        from passlib.hash import bcrypt
         default_admin_user = "admin"
         default_admin_pass = "admin123"  # Change after first login!
         hashed = bcrypt.hash(default_admin_pass)
@@ -65,3 +64,23 @@ def list_users():
     users = c.fetchall()
     conn.close()
     return users
+
+def update_user(original_username, new_username, new_password, new_role):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    if new_password:
+        hashed = bcrypt.hash(new_password)
+        c.execute("UPDATE users SET username=?, hashed_password=?, role=? WHERE username=?",
+                  (new_username, hashed, new_role, original_username))
+    else:
+        c.execute("UPDATE users SET username=?, role=? WHERE username=?",
+                  (new_username, new_role, original_username))
+    conn.commit()
+    conn.close()
+
+def delete_user(username):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM users WHERE username=?", (username,))
+    conn.commit()
+    conn.close()

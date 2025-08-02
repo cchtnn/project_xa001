@@ -25,3 +25,7 @@ langchain-groq
 langchain-experimental
 tabulate
 passlib[bcrypt]
+fastapi
+uvicorn
+python-multipart
+PyJWT

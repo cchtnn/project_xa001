@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <!-- Centered large logo above chat input bar -->
+        <div class="sticky-top sticky-chatbar bg-white pt-2 pb-2" style="z-index:1021;">
+            <div class="w-100 d-flex justify-content-center mb-3">
+                <img src="/static/jericho_image.jpg" alt="Chat Logo" style="height:80px; max-width:320px; width:auto; display:block;">
+            </div>
+            <div class="d-flex align-items-center mb-2">
+                <form id="chat-form" class="d-flex align-items-center flex-grow-1" onsubmit="return false;">
+                    <div class="flex-grow-1 me-2">
+                        <textarea class="form-control" name="query" id="query-textarea" rows="1" placeholder="Ask a question..." required style="resize:none; min-height:40px; max-height:120px; overflow-y:auto;"></textarea>
+                    </div>
+                    <button type="button" class="btn btn-success ms-2" id="enter-btn" title="Send">Enter</button>
+                    <label for="file-upload" class="input-group-text bg-white border-end-0 ms-2" style="cursor:pointer;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#0d6efd" class="bi bi-upload" viewBox="0 0 16 16">
+                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v3.1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10.4a.5.5 0 0 1 1 0v3.1A2 2 0 0 1 14 15.5H2A2 2 0 0 1 0 13.5V10.4a.5.5 0 0 1 .5-.5z"/>
+                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V10.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                        </svg>
+                    </label>
+                    <input id="file-upload" type="file" name="file" accept=".pdf" style="display:none;">
+                    <div class="input-group-text bg-white border-start-0 ms-2">
+                        <input class="form-check-input mt-0" type="checkbox" name="private" id="private" title="Private Upload">
+                        <label class="form-check-label ms-1" for="private" style="font-size:0.95em;">Private</label>
+                    </div>
+                    <button type="button" class="btn btn-primary ms-2" id="upload-btn" title="Upload PDF">Upload</button>
+                </form>
+            </div>
+            <div id="status-area" class="mt-2"></div>
+            <div id="upload-status" class="mt-2"></div>
+        </div>
+        <div id="chat-answer" class="mt-3"></div>
+        <h4 class="mt-5">Chat History</h4>
+        <div id="chat-history"></div>
+    </div>
+</div>
+<script>
+const statusArea = document.getElementById('status-area');
+const uploadStatus = document.getElementById('upload-status');
+const enterBtn = document.getElementById('enter-btn');
+const uploadBtn = document.getElementById('upload-btn');
+const fileInput = document.getElementById('file-upload');
+const queryTextarea = document.getElementById('query-textarea');
+
+// Spinner HTML
+function showSpinner(msg="Please wait...") {
+    statusArea.innerHTML = `<div class="d-flex align-items-center text-secondary">
+        <span class="spinner-border spinner-border-sm me-2"></span> ${msg}
+    </div>`;
+}
+
+// Hide spinner/status
+function hideSpinner() {
+    statusArea.innerHTML = "";
+}
+
+// Handle chat submit (question only)
+enterBtn.onclick = async function(e) {
+    e.preventDefault();
+    if (!queryTextarea.value.trim()) {
+        queryTextarea.focus();
+        return;
+    }
+    showSpinner();
+    const formData = new FormData();
+    formData.append('query', queryTextarea.value.trim());
+    const resp = await fetch('/query', {method: 'POST', body: formData});
+    const result = await resp.json();
+    hideSpinner();
+    document.getElementById('chat-answer').innerHTML = `<div class="alert alert-info">${result.answer}</div>`;
+    loadHistory();
+};
+
+// Handle file upload independently
+uploadBtn.onclick = async function(e) {
+    e.preventDefault();
+    if (!fileInput.files.length) {
+        uploadStatus.innerHTML = `<div class="alert alert-warning mb-0">Please select a PDF file to upload.</div>`;
+        return;
+    }
+    showSpinner();
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    formData.append('private', document.getElementById('private').checked);
+    const resp = await fetch('/upload', {method: 'POST', body: formData});
+    const result = await resp.json();
+    hideSpinner();
+    uploadStatus.innerHTML = `<div class="alert alert-success mb-2">File uploaded successfully.</div>`;
+    setTimeout(() => { uploadStatus.innerHTML = ""; }, 5000);
+    fileInput.value = ""; // Reset file input
+};
+
+function formatAnswer(answer) {
+    // Remove lines that are just a single * or stray * at start/end of lines
+    answer = answer.replace(/^\s*\*\s*$/gm, '');
+    answer = answer.replace(/^\*+\s*/gm, '');
+    answer = answer.replace(/\s*\*+$/gm, '');
+
+    // Remove * used as bullet points at the start of lines
+    answer = answer.replace(/^\s*\*\s*/gm, '');
+
+    // Format Markdown tables to Bootstrap tables
+    answer = answer.replace(
+        /((?:\|[^\n]+\|\n?)+)/g,
+        function(tableBlock) {
+            const rows = tableBlock.trim().split('\n');
+            let html = '<table class="table table-sm table-bordered w-auto mb-2">';
+            rows.forEach((row, idx) => {
+                const cells = row.split('|').filter(cell => cell.trim().length > 0);
+                if (cells.length) {
+                    html += '<tr>';
+                    cells.forEach(cell => {
+                        if (idx === 0) {
+                            html += `<th class="small px-2 py-1">${cell.trim()}</th>`;
+                        } else {
+                            html += `<td class="small px-2 py-1">${cell.trim()}</td>`;
+                        }
+                    });
+                    html += '</tr>';
+                }
+            });
+            html += '</table>';
+            return html;
+        }
+    );
+
+    // Replace **Header** at the start of a line with a compact header (not bold, not large)
+    answer = answer.replace(/^(\s*)\*\*([^\*]+)\*\*/gm, '<div class="fw-semibold text-dark small mb-1" style="font-size:1.05em;">$2</div>');
+    // Replace *Header* at the start of a line with a compact header
+    answer = answer.replace(/^(\s*)\*([^\*]+)\*/gm, '<div class="fw-normal text-secondary small mb-1" style="font-size:1em;">$2</div>');
+
+    // Remove any remaining single * marks (not Markdown)
+    answer = answer.replace(/(^|\s)\*([^\*\n]+)\*(\s|$)/g, '$1$2$3');
+
+    // Compact multiple line breaks
+    answer = answer.replace(/\n{2,}/g, '\n');
+    answer = answer.replace(/\n/g, '<br>');
+
+    // Remove extra <br> at start/end
+    answer = answer.replace(/^(<br>)+/, '');
+    answer = answer.replace(/(<br>)+$/, '');
+
+    // Remove extra spaces
+    answer = answer.replace(/\s{2,}/g, ' ');
+
+    // Fix numbers like "There are<br>32<br>records..." to "There are 32 records..."
+    answer = answer.replace(/(There are)<br>(\d+)<br>(records? found)/gi, '$1 $2 $3');
+    answer = answer.replace(/<br>(\d+)<br>/g, ' $1 ');
+
+    return answer.trim();
+}
+
+async function loadHistory() {
+    const resp = await fetch('/history');
+    const result = await resp.json();
+    const historyDiv = document.getElementById('chat-history');
+    if (result.history && result.history.length > 0) {
+        historyDiv.innerHTML = result.history.map(
+            qa => `<div class="mb-2 p-3 border rounded bg-light">
+                <div class="mb-1"><span class="fw-bold text-primary small">Q:</span> <span class="fw-semibold small">${qa.question}</span></div>
+                <div><span class="fw-bold text-success small">A:</span> ${formatAnswer(qa.answer)}</div>
+            </div>`
+        ).join('');
+    } else {
+        historyDiv.innerHTML = "<em>No chat history yet.</em>";
+    }
+}
+window.onload = loadHistory;
+</script>
+{% endblock %}

@@ -26,11 +26,14 @@ def load_custom_css():
 
 
 def display_top_logo():
-    """Display the top-left logo"""
+    """Display the top-left logo within a fixed header"""
     st.markdown(
         f"""
-        <div class='top-left-logo'>
-            <img src='{LOGO_URLS["dine_college"]}' alt='Logo'>
+        <div class='fixed-header'>
+            <div class='top-left-logo'>
+                <img src='{LOGO_URLS["dine_college"]}' alt='Logo'>
+            </div>
+            {display_header()}  <!-- Include header within fixed header -->
         </div>
         """,
         unsafe_allow_html=True,
@@ -42,7 +45,7 @@ def display_header():
     jericho_logo_base64 = get_image_base64(PATHS["jericho_logo"])
     current_time = datetime.now().strftime("%A, %d %B %Y %H:%M:%S")
     
-    st.markdown(f"""
+    return f"""
         <div class='jericho-header'>
             <div class='jericho-logo'>
                 <img src='data:image/jpeg;base64,{jericho_logo_base64}' alt='Jericho Logo'>
@@ -50,7 +53,7 @@ def display_header():
             <p class='tagline'>Ask me any question, and I'll find the best answer for you!</p>
             <p class='timestamp'>{current_time}</p>
         </div>
-    """, unsafe_allow_html=True)
+    """
 
 
 def setup_language_selector():
@@ -173,7 +176,8 @@ def create_logout_button():
 
 
 def create_input_section():
-    """Create the query input section"""
+    """Create the query input section within a fixed header"""
+    st.markdown('<div class="input-container">', unsafe_allow_html=True)
     col1, col2 = st.columns([8, 1])
     
     with col1:
@@ -194,7 +198,8 @@ def create_input_section():
 
 
 def display_answer(answer):
-    """Display the generated answer"""
+    """Display the generated answer within a scrollable content area"""
+    st.markdown('<div class="scrollable-content">', unsafe_allow_html=True)
     if hasattr(answer, 'content') and answer.content:
         st.markdown(f"""
         <div class="latest-answer-container">
@@ -209,11 +214,13 @@ def display_answer(answer):
             <div class="answer-content">Sorry, I couldn't find an answer to your question.</div>
         </div>
         """, unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 def display_qa_history():
-    """Display previous questions and answers"""
+    """Display previous questions and answers within a scrollable content area"""
     if 'qa_history' in st.session_state and st.session_state.qa_history:
+        st.markdown('<div class="scrollable-content">', unsafe_allow_html=True)
         st.markdown('<div class="previous-qa-heading">📚 Previous Questions and Answers:</div>', unsafe_allow_html=True)
         
         for qa in st.session_state.qa_history:
@@ -224,6 +231,7 @@ def display_qa_history():
                 <strong>A:</strong> {qa['answer']}
             </div>
             """, unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
 
 
 def setup_containers():
