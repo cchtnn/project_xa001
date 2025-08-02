@@ -10,6 +10,7 @@ import shutil
 import auth_db, session_db, session_manager, student_transcript_csv_handler, query_handler, logic, config
 import jwt
 from datetime import datetime, timedelta
+import re
 
 app = FastAPI()
 
@@ -44,10 +45,43 @@ def get_username_from_token(request: Request):
     payload = decode_access_token(token) if token else None
     return payload["sub"] if payload and "sub" in payload else None
 
+def generate_session_name(question):
+    """Generate a meaningful session name based on the first question"""
+    # Clean the question
+    question = question.strip()
+    
+    # Remove common question words and clean up
+    question = re.sub(r'^(what|how|when|where|why|who|can you|tell me|explain|describe)\s+', '', question.lower())
+    question = re.sub(r'\?+$', '', question)  # Remove question marks
+    question = re.sub(r'[^\w\s-]', '', question)  # Remove special characters except hyphens
+    
+    # Extract key terms and create a meaningful name
+    words = question.split()
+    
+    # Filter out common words
+    stop_words = {'is', 'are', 'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'about', 'me', 'you', 'your', 'my'}
+    meaningful_words = [word for word in words if word not in stop_words and len(word) > 2]
+    
+    # Take first 3-4 meaningful words and capitalize them
+    if meaningful_words:
+        session_name = ' '.join(meaningful_words[:4])
+        session_name = ' '.join(word.capitalize() for word in session_name.split())
+        
+        # Limit length to 30 characters
+        if len(session_name) > 30:
+            session_name = session_name[:27] + "..."
+        
+        return session_name
+    else:
+        # Fallback to first few words of the original question
+        fallback = ' '.join(words[:3])
+        fallback = ' '.join(word.capitalize() for word in fallback.split())
+        return fallback[:30] if fallback else "New Chat"
+
 # --- Authentication Endpoints ---
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, })
+    return templates.TemplateResponse("login.html", {"request": request})
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_get(request: Request):
@@ -59,7 +93,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     if not user:
         return templates.TemplateResponse(
             "login.html",
-            {"request": request, "error": "Invalid credentials", }
+            {"request": request, "error": "Invalid credentials"}
         )
     token = create_access_token({"sub": user["username"]})
     response = RedirectResponse(url="/chat", status_code=302)
@@ -69,14 +103,13 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 @app.get("/chat", response_class=HTMLResponse)
 async def chat_page(request: Request):
     username = get_username_from_token(request)
-    # Extract first name and capitalize first letter
-    if username:
-        first_name = username.split('.')[0].capitalize()
-    else:
-        first_name = ""
+    if not username:
+        return RedirectResponse(url="/login", status_code=302)
+    first_name = username.split('.')[0].capitalize()
+    sessions = session_db.get_user_sessions(username)
     return templates.TemplateResponse(
         "chat.html",
-        {"request": request, "user_authenticated": True, "username": first_name}
+        {"request": request, "user_authenticated": True, "username": first_name, "sessions": sessions}
     )
 
 @app.post("/logout")
@@ -84,6 +117,39 @@ async def logout(request: Request):
     response = RedirectResponse(url="/", status_code=302)
     response.delete_cookie("access_token")
     return response
+
+# --- Chat Session Endpoints ---
+@app.post("/new_session")
+async def new_session(request: Request):
+    username = get_username_from_token(request)
+    if not username:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session_id = session_db.create_new_session(username, "New Chat")  # Start with default name
+    return {"session_id": session_id}
+
+@app.get("/user_sessions")
+async def get_user_sessions(request: Request):
+    username = get_username_from_token(request)
+    if not username:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    sessions = session_db.get_user_sessions(username)
+    return {"sessions": sessions}
+
+@app.post("/rename_session")
+async def rename_session(request: Request, session_id: int = Form(...), new_name: str = Form(...)):
+    username = get_username_from_token(request)
+    if not username:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session_db.rename_session(session_id, new_name)
+    return {"success": True}
+
+@app.post("/delete_session")
+async def delete_session(request: Request, session_id: int = Form(...)):
+    username = get_username_from_token(request)
+    if not username:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    session_db.delete_session(session_id)
+    return {"success": True}
 
 # --- File Upload Endpoint ---
 @app.post("/upload")
@@ -101,10 +167,11 @@ async def upload_pdf(request: Request, file: UploadFile = File(...), private: bo
 
 # --- Query Endpoint ---
 @app.post("/query")
-async def query(request: Request, query: str = Form(...)):
+async def query(request: Request, query: str = Form(...), session_id: int = Form(...)):
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    
     try:
         index, metadata, tab_data = initialize_vectorstore()
         collection = get_collection()
@@ -119,20 +186,34 @@ async def query(request: Request, query: str = Form(...)):
     answer_obj, query_type, confidence_score = handler.process_query(query, language="English")
 
     # --- Save Q&A to history ---
-    history = session_db.load_qa_history()
-    history.append({"question": query, "answer": answer_obj.content})
-    session_db.save_qa_history(history)
+    try:
+        history = session_db.load_qa_history(session_id)
+        
+        # If this is the first question in the session, auto-rename it
+        if len(history) == 0:
+            session_name = generate_session_name(query)
+            session_db.rename_session(session_id, session_name)
+        
+        history.append({"question": query, "answer": answer_obj.content})
+        session_db.save_qa_history(session_id, history)
+    except Exception as e:
+        print(f"Error saving to history: {e}")
+        # Continue without saving history if there's an error
 
-    return {"answer": answer_obj.content}
+    return {"answer": answer_obj.content, "session_id": session_id}
 
 # --- History Endpoint ---
 @app.get("/history")
-async def history(request: Request):
+async def history(request: Request, session_id: int):
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    history = session_db.load_qa_history()
-    return {"history": history}
+    try:
+        history = session_db.load_qa_history(session_id)
+        return {"history": history}
+    except Exception as e:
+        print(f"Error loading history: {e}")
+        return {"history": []}
 
 # --- Admin Endpoints ---
 @app.get("/admin", response_class=HTMLResponse)
@@ -150,7 +231,7 @@ async def add_user(request: Request, username: str = Form(...), password: str = 
 
 @app.get("/admin/login", response_class=HTMLResponse)
 async def admin_login_get(request: Request):
-    return templates.TemplateResponse("admin_login.html", {"request": request, })
+    return templates.TemplateResponse("admin_login.html", {"request": request})
 
 @app.post("/admin/login", response_class=HTMLResponse)
 async def admin_login_post(request: Request, username: str = Form(...), password: str = Form(...)):
@@ -158,7 +239,7 @@ async def admin_login_post(request: Request, username: str = Form(...), password
     if not user or user["role"] != "admin":
         return templates.TemplateResponse(
             "admin_login.html",
-            {"request": request, "error": "Invalid credentials", }
+            {"request": request, "error": "Invalid credentials"}
         )
     response = RedirectResponse(url="/admin", status_code=302)
     response.set_cookie(key="access_token", value="FAKE_ADMIN_TOKEN", httponly=True)

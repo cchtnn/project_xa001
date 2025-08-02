@@ -1,13 +1,45 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8">
+<div class="row">
+    <div class="col-md-2">
+    <!-- Left sidebar with New Chat and History buttons - positioned to align with sticky input -->
+    <div style="margin-top: 110px; margin-left: -0px;"> <!-- Adjust this value to align with your sticky input bar -->
+        <div class="d-flex flex-column gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="new-chat-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-1" viewBox="0 0 16 16">
+                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
+                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
+                </svg>
+                New Chat
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="history-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history me-1" viewBox="0 0 16 16">
+                    <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-.985-.299l.219-.976c.383.086.76.2 1.126.342l-.36.933zm1.37.71a7.01 7.01 0 0 0-.439-.27l.493-.87a8.025 8.025 0 0 1 .979.654l-.615.789a6.996 6.996 0 0 0-.418-.302zm1.834 1.79a6.99 6.99 0 0 0-.653-.796l.724-.69c.27.285.52.59.747.91l-.818.576zm.744 1.352a7.08 7.08 0 0 0-.214-.468l.893-.45a7.976 7.976 0 0 1 .45 1.088l-.95.313a7.023 7.023 0 0 0-.179-.483zm.53 2.507a6.991 6.991 0 0 0-.1-1.025l.985-.17c.067.386.106.778.116 1.17l-1.001.025zm-.131 1.538c.033-.17.06-.339.081-.51l.993.123a7.957 7.957 0 0 1-.23 1.155l-.964-.267c.046-.165.086-.332.12-.501zm-.952 2.379c.184-.29.346-.594.486-.908l.914.405c-.16.36-.345.706-.555 1.038l-.845-.535zm-.964 1.205c.122-.122.239-.248.35-.378l.758.653a8.073 8.073 0 0 1-.401.432l-.707-.707z"/>
+                <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0v1z"/>
+                <path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5z"/>
+            </svg>
+            History
+        </button>
+        </div>
+        
+        <!-- Session History Sidebar -->
+        <div id="session-history" class="mt-3" style="display: none;">
+            <h6 class="text-muted">Chat Sessions</h6>
+            <div id="session-list" class="d-flex flex-column gap-1">
+                <!-- Sessions will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+    <div class="col-md-8 offset-md-1">
+        
         <!-- Centered large logo above chat input bar -->
         <div class="sticky-top sticky-chatbar bg-white pt-2 pb-2" style="z-index:1021;">
-            <div class="w-100 d-flex justify-content-center mb-3">
-                <img src="/static/jericho_image.jpg" alt="Chat Logo" style="height:80px; max-width:320px; width:auto; display:block;">
-            </div>
-            <div class="d-flex align-items-center mb-2">
+    <div class="w-100 d-flex justify-content-center mb-3">
+        <img src="/static/jericho_image.jpg" alt="Chat Logo" style="height:80px; max-width:320px; width:auto; display:block;">
+    </div>
+    
+    <div class="d-flex align-items-center mb-2">
                 <form id="chat-form" class="d-flex align-items-center flex-grow-1" onsubmit="return false;">
                     <div class="flex-grow-1 me-2">
                         <textarea class="form-control" name="query" id="query-textarea" rows="1" placeholder="Ask a question..." required style="resize:none; min-height:40px; max-height:120px; overflow-y:auto;"></textarea>
@@ -16,7 +48,7 @@
                     <label for="file-upload" class="input-group-text bg-white border-end-0 ms-2" style="cursor:pointer;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#0d6efd" class="bi bi-upload" viewBox="0 0 16 16">
                           <path d="M.5 9.9a.5.5 0 0 1 .5.5v3.1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10.4a.5.5 0 0 1 1 0v3.1A2 2 0 0 1 14 15.5H2A2 2 0 0 1 0 13.5V10.4a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V10.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V10.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 1-.708-.708l3-3z"/>
                         </svg>
                     </label>
                     <input id="file-upload" type="file" name="file" accept=".pdf" style="display:none;">
@@ -35,6 +67,27 @@
         <div id="chat-history"></div>
     </div>
 </div>
+
+<!-- Session Rename Modal -->
+<div class="modal fade" id="renameSessionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Rename Chat Session</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="form-control" id="newSessionName" placeholder="Enter new session name">
+                <input type="hidden" id="sessionToRename">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmRename">Rename</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 const statusArea = document.getElementById('status-area');
 const uploadStatus = document.getElementById('upload-status');
@@ -42,6 +95,10 @@ const enterBtn = document.getElementById('enter-btn');
 const uploadBtn = document.getElementById('upload-btn');
 const fileInput = document.getElementById('file-upload');
 const queryTextarea = document.getElementById('query-textarea');
+
+// Current session management
+let currentSessionId = null;
+let userSessions = [];
 
 // Spinner HTML
 function showSpinner(msg="Please wait...") {
@@ -62,14 +119,36 @@ enterBtn.onclick = async function(e) {
         queryTextarea.focus();
         return;
     }
+    
+    // Create new session if none exists
+    if (!currentSessionId) {
+        await createNewSession();
+    }
+    
     showSpinner();
     const formData = new FormData();
     formData.append('query', queryTextarea.value.trim());
+    formData.append('session_id', currentSessionId);
+    
     const resp = await fetch('/query', {method: 'POST', body: formData});
     const result = await resp.json();
     hideSpinner();
-    document.getElementById('chat-answer').innerHTML = `<div class="alert alert-info">${result.answer}</div>`;
-    loadHistory();
+    
+    document.getElementById('chat-answer').innerHTML = `
+        <div class="card shadow-sm mb-3" style="background: #eafaff;">
+            <div class="card-body" style="font-size:1.15em; line-height:1.7;">
+                ${formatAnswer(result.answer)}
+            </div>
+        </div>
+    `;
+    
+    queryTextarea.value = '';
+    loadCurrentSessionHistory();
+    
+    // Refresh session list to show updated name (especially for first question)
+    setTimeout(() => {
+        loadUserSessions();
+    }, 500);
 };
 
 // Handle file upload independently
@@ -90,6 +169,204 @@ uploadBtn.onclick = async function(e) {
     setTimeout(() => { uploadStatus.innerHTML = ""; }, 5000);
     fileInput.value = ""; // Reset file input
 };
+
+// Create new session
+async function createNewSession() {
+    const resp = await fetch('/new_session', {method: 'POST'});
+    const result = await resp.json();
+    currentSessionId = result.session_id;
+    
+    // Clear current chat
+    document.getElementById('chat-answer').innerHTML = '';
+    document.getElementById('chat-history').innerHTML = '<em>No chat history yet.</em>';
+    
+    // Refresh session list
+    await loadUserSessions();
+    return currentSessionId;
+}
+
+// Handle New Chat button
+document.getElementById('new-chat-btn').onclick = async function() {
+    await createNewSession();
+    queryTextarea.value = '';
+    queryTextarea.focus();
+};
+
+// Handle History button - toggle session history
+document.getElementById('history-btn').onclick = function() {
+    const sessionHistory = document.getElementById('session-history');
+    if (sessionHistory.style.display === 'none') {
+        sessionHistory.style.display = 'block';
+        loadUserSessions();
+    } else {
+        sessionHistory.style.display = 'none';
+    }
+};
+
+// Load user sessions
+async function loadUserSessions() {
+    try {
+        const resp = await fetch('/user_sessions');
+        const result = await resp.json();
+        userSessions = result.sessions || [];
+        
+        // If no sessions exist, create one
+        if (userSessions.length === 0) {
+            await createNewSession();
+            // Reload sessions after creating the first one
+            const resp2 = await fetch('/user_sessions');
+            const result2 = await resp2.json();
+            userSessions = result2.sessions || [];
+        } else if (!currentSessionId) {
+            // If sessions exist but no current session, use the most recent one
+            currentSessionId = userSessions[0].session_id;
+            await loadCurrentSessionHistory();
+        }
+        
+        renderSessionList();
+    } catch (error) {
+        console.error('Error loading sessions:', error);
+        // If there's an error, create a new session
+        await createNewSession();
+    }
+}
+
+// Render session list
+function renderSessionList() {
+    const sessionList = document.getElementById('session-list');
+    if (userSessions.length === 0) {
+        sessionList.innerHTML = '<em class="text-muted small">No sessions yet</em>';
+        return;
+    }
+    
+    sessionList.innerHTML = userSessions.map(session => `
+        <div class="d-flex align-items-center gap-1 mb-1">
+            <button class="btn btn-outline-secondary btn-sm flex-grow-1 text-start session-btn ${session.session_id === currentSessionId ? 'active' : ''}" 
+                    data-session-id="${session.session_id}" 
+                    style="font-size: 0.8em; padding: 4px 8px;">
+                ${session.session_name || 'Untitled Chat'}
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                        style="padding: 2px 6px; font-size: 0.7em;" data-bs-toggle="dropdown">
+                    ⋮
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item rename-session" href="#" data-session-id="${session.session_id}">Rename</a></li>
+                    <li><a class="dropdown-item delete-session text-danger" href="#" data-session-id="${session.session_id}">Delete</a></li>
+                </ul>
+            </div>
+        </div>
+    `).join('');
+    
+    // Add event listeners for session buttons
+    document.querySelectorAll('.session-btn').forEach(btn => {
+        btn.onclick = function() {
+            const sessionId = parseInt(this.dataset.sessionId);
+            switchToSession(sessionId);
+        };
+    });
+    
+    // Add event listeners for rename buttons
+    document.querySelectorAll('.rename-session').forEach(btn => {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            const sessionId = parseInt(this.dataset.sessionId);
+            const session = userSessions.find(s => s.session_id === sessionId);
+            document.getElementById('newSessionName').value = session.session_name || '';
+            document.getElementById('sessionToRename').value = sessionId;
+            new bootstrap.Modal(document.getElementById('renameSessionModal')).show();
+        };
+    });
+    
+    // Add event listeners for delete buttons
+    document.querySelectorAll('.delete-session').forEach(btn => {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            const sessionId = parseInt(this.dataset.sessionId);
+            if (confirm('Are you sure you want to delete this chat session?')) {
+                deleteSession(sessionId);
+            }
+        };
+    });
+}
+
+// Switch to a different session
+async function switchToSession(sessionId) {
+    currentSessionId = sessionId;
+    await loadCurrentSessionHistory();
+    
+    // Update active session in UI
+    document.querySelectorAll('.session-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (parseInt(btn.dataset.sessionId) === sessionId) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Clear current answer area
+    document.getElementById('chat-answer').innerHTML = '';
+}
+
+// Rename session
+document.getElementById('confirmRename').onclick = async function() {
+    const sessionId = parseInt(document.getElementById('sessionToRename').value);
+    const newName = document.getElementById('newSessionName').value.trim();
+    
+    if (!newName) {
+        alert('Please enter a session name');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('session_id', sessionId);
+    formData.append('new_name', newName);
+    
+    const resp = await fetch('/rename_session', {method: 'POST', body: formData});
+    if (resp.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('renameSessionModal')).hide();
+        await loadUserSessions();
+    }
+};
+
+// Delete session
+async function deleteSession(sessionId) {
+    const formData = new FormData();
+    formData.append('session_id', sessionId);
+    
+    const resp = await fetch('/delete_session', {method: 'POST', body: formData});
+    if (resp.ok) {
+        if (currentSessionId === sessionId) {
+            currentSessionId = null;
+            document.getElementById('chat-answer').innerHTML = '';
+            document.getElementById('chat-history').innerHTML = '<em>No chat history yet.</em>';
+        }
+        await loadUserSessions();
+    }
+}
+
+// Load current session history
+async function loadCurrentSessionHistory() {
+    if (!currentSessionId) {
+        document.getElementById('chat-history').innerHTML = '<em>No chat history yet.</em>';
+        return;
+    }
+    
+    const resp = await fetch(`/history?session_id=${currentSessionId}`);
+    const result = await resp.json();
+    const historyDiv = document.getElementById('chat-history');
+    
+    if (result.history && result.history.length > 0) {
+        historyDiv.innerHTML = result.history.map(
+            qa => `<div class="mb-2 p-3 border rounded bg-light">
+                <div class="mb-1"><span class="fw-bold text-primary small">Q:</span> <span class="fw-semibold small">${qa.question}</span></div>
+                <div><span class="fw-bold text-success small">A:</span> ${formatAnswer(qa.answer)}</div>
+            </div>`
+        ).join('');
+    } else {
+        historyDiv.innerHTML = "<em>No chat history yet.</em>";
+    }
+}
 
 function formatAnswer(answer) {
     // Remove lines that are just a single * or stray * at start/end of lines
@@ -125,10 +402,13 @@ function formatAnswer(answer) {
         }
     );
 
-    // Replace **Header** at the start of a line with a compact header (not bold, not large)
-    answer = answer.replace(/^(\s*)\*\*([^\*]+)\*\*/gm, '<div class="fw-semibold text-dark small mb-1" style="font-size:1.05em;">$2</div>');
-    // Replace *Header* at the start of a line with a compact header
-    answer = answer.replace(/^(\s*)\*([^\*]+)\*/gm, '<div class="fw-normal text-secondary small mb-1" style="font-size:1em;">$2</div>');
+    // Format headers: *Header:** or **Header:** or *Header** or **Header**
+    answer = answer.replace(
+        /^(\*{0,2})([A-Za-z0-9 \-\(\)]+?)(\*{2,}|:?\*{1,2}|:)\s*/gm,
+        function(match, p1, p2) {
+            return `<br><span class="fw-bold text-dark">${p2.trim()}</span><br>`;
+        }
+    );
 
     // Remove any remaining single * marks (not Markdown)
     answer = answer.replace(/(^|\s)\*([^\*\n]+)\*(\s|$)/g, '$1$2$3');
@@ -151,21 +431,9 @@ function formatAnswer(answer) {
     return answer.trim();
 }
 
-async function loadHistory() {
-    const resp = await fetch('/history');
-    const result = await resp.json();
-    const historyDiv = document.getElementById('chat-history');
-    if (result.history && result.history.length > 0) {
-        historyDiv.innerHTML = result.history.map(
-            qa => `<div class="mb-2 p-3 border rounded bg-light">
-                <div class="mb-1"><span class="fw-bold text-primary small">Q:</span> <span class="fw-semibold small">${qa.question}</span></div>
-                <div><span class="fw-bold text-success small">A:</span> ${formatAnswer(qa.answer)}</div>
-            </div>`
-        ).join('');
-    } else {
-        historyDiv.innerHTML = "<em>No chat history yet.</em>";
-    }
-}
-window.onload = loadHistory;
+// Initialize on page load
+window.onload = function() {
+    loadUserSessions();
+};
 </script>
 {% endblock %}

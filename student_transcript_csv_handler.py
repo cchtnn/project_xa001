@@ -1,10 +1,3 @@
-"""
-Student Transcript CSV Handler for Diné College Assistant
-Handles student transcript queries using CSV Agent with LangChain
-Replaces the FAISS-based approach with direct CSV querying
-Now integrates with StudentQueryReformulator for better query processing
-"""
-
 import os
 import pandas as pd
 from langchain.agents.agent_types import AgentType
@@ -466,16 +459,18 @@ class StudentTranscriptCSVHandler:
             - Present ALL data found in the raw response
             - Use clear, professional academic language
             - For GPA data, use markdown table format with columns: Student Name | Average GPA
-            - If using table format, use proper markdown table syntax
-            - Count the actual number of records found
+            - For list-like data (e.g., advisor names), use markdown table format with a single column labeled 'Advisor(s)'
+            - **TABLE FORMATTING REQUIREMENTS:**
+            * Use proper markdown table syntax with header and separator row only
+            * NEVER include empty rows or placeholder rows with just dashes
+            * For comma-separated values in advisor lists, split each name into a separate table row
+            * Table format should be: Header row, separator row (|---|), then data rows only
+            * Example for advisors: |Advisor(s)|\n|---|\n|John Smith|\n|Jane Doe|
             - Be accurate about what the data shows
             - Round GPA values to 2 decimal places for display
-
-            **IMPORTANT:** The raw data shows the actual query results. If there are 6 rows of course data, then 6 courses were found. Do not contradict what the data clearly shows.
-
-            Analyze the raw data carefully, count the actual records, and present the information accurately. Provide only the final formatted response.
+            - Add a brief explanatory note below the table when helpful for context
             """
-        
+
         else:  # clean format
             prompt = f"""
             You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
@@ -490,13 +485,19 @@ class StudentTranscriptCSVHandler:
             **DATA PRESENTATION RULES:**
             - Present ALL data found in the raw response
             - Use clear, professional academic language
-            - If using table format, use proper markdown table syntax
-            - Count the actual number of records found
+            - For GPA data, use markdown table format with columns: Student Name | Average GPA
+            - For list-like data (e.g., advisor names), use markdown table format with a single column labeled 'Advisor(s)'
+            - **TABLE FORMATTING REQUIREMENTS:**
+            * Use proper markdown table syntax with header and separator row only
+            * NEVER include empty rows or placeholder rows with just dashes
+            * For comma-separated values in advisor lists, split each name into a separate table row
+            * Table format should be: Header row, separator row (|---|), then data rows only
+            * Example for advisors: |Advisor(s)|\n|---|\n|John Smith|\n|Jane Doe|
             - Be accurate about what the data shows
+            - Round GPA values to 2 decimal places for display
+            - Add a brief explanatory note below the table when helpful for context
 
-            **IMPORTANT:** The raw data shows the actual query results. If there are 6 rows of course data, then 6 courses were found. Do not contradict what the data clearly shows.
-
-            Analyze the raw data carefully, count the actual records, and present the information accurately. Provide only the final formatted response.
+            **IMPORTANT:** The raw data shows the actual query results. Do not contradict what the data clearly shows.
             """
 
         try:
