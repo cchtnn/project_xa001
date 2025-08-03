@@ -29,3 +29,5 @@ fastapi
 uvicorn
 python-multipart
 PyJWT
+filetype
+clamd

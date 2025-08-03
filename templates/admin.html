@@ -1,88 +1,313 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container mt-4">
-    <h2 class="mb-4">Admin User Management</h2>
 
-    <div class="table-responsive">
-        <table class="table table-bordered table-hover align-middle">
-            <thead class="table-dark">
-                <tr>
-                    <th>Username</th>
-                    <th>Role</th>
-                    <th style="width: 180px;">Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for user in users %}
-                <tr>
-                    <td>{{ user.username }}</td>
-                    <td>{{ user.role }}</td>
-                    <td>
-                        <button class="btn btn-warning btn-sm me-2"
-                            onclick="showEditForm('{{ user.username }}', '{{ user.role }}')">Edit</button>
-                        <form action="/admin/delete_user" method="POST" style="display:inline;">
-                            <input type="hidden" name="username" value="{{ user.username }}">
-                            <button type="submit" class="btn btn-danger btn-sm"
-                                onclick="return confirm('Are you sure you want to delete {{ user.username }}?')">Delete</button>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<div class="container mt-5">
+    <h1>Admin User Management</h1>
+
+    <!-- Success Modal for Add User -->
+    <div class="modal fade" id="addUserSuccessModal" tabindex="-1" aria-labelledby="addUserSuccessModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserSuccessModalLabel">Success</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    User added successfully!
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <h3 class="mt-5 mb-3">Add User</h3>
-    <form action="/admin/add_user" method="POST" class="row g-3 align-items-center mb-4">
-        <div class="col-md-3">
-            <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+    <!-- Error Modal for Add User -->
+    <div class="modal fade" id="addUserErrorModal" tabindex="-1" aria-labelledby="addUserErrorModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addUserErrorModalLabel">Error</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Failed to add user. Please try again.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
         </div>
-        <div class="col-md-3">
-            <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.role }}</td>
+                <td>
+                    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editUserModal-{{ user.username }}">Edit</button>
+                    <form method="post" action="/admin/delete_user" style="display:inline;">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                        <input type="hidden" name="username" value="{{ user.username }}">
+                        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                    </form>
+                </td>
+            </tr>
+
+            <!-- Edit User Modal for each user -->
+            <div class="modal fade" id="editUserModal-{{ user.username }}" tabindex="-1" aria-labelledby="editUserModalLabel-{{ user.username }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editUserModalLabel-{{ user.username }}">Edit User</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form method="post" action="/admin/edit_user">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="original_username" value="{{ user.username }}">
+                                <div class="mb-3">
+                                    <label for="username-{{ user.username }}" class="form-label">Username:</label>
+                                    <input type="text" class="form-control" id="username-{{ user.username }}" name="username" value="{{ user.username }}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="role-{{ user.username }}" class="form-label">Role:</label>
+                                    <select class="form-control" id="role-{{ user.username }}" name="role">
+                                        <option value="user" {% if user.role == 'user' %}selected{% endif %}>User</option>
+                                        <option value="admin" {% if user.role == 'admin' %}selected{% endif %}>Admin</option>
+                                    </select>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Modal for Edit User -->
+            <div class="modal fade" id="editUserSuccessModal-{{ user.username }}" tabindex="-1" aria-labelledby="editUserSuccessModalLabel-{{ user.username }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editUserSuccessModalLabel-{{ user.username }}">Success</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            User information updated successfully!
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Modal for Edit User -->
+            <div class="modal fade" id="editUserErrorModal-{{ user.username }}" tabindex="-1" aria-labelledby="editUserErrorModalLabel-{{ user.username }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editUserErrorModalLabel-{{ user.username }}">Error</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Failed to update user. Please try again.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Success Modal for Delete User -->
+            <div class="modal fade" id="deleteUserSuccessModal-{{ user.username }}" tabindex="-1" aria-labelledby="deleteUserSuccessModalLabel-{{ user.username }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteUserSuccessModalLabel-{{ user.username }}">Success</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            User {{ user.username }} deleted successfully!
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error Modal for Delete User -->
+            <div class="modal fade" id="deleteUserErrorModal-{{ user.username }}" tabindex="-1" aria-labelledby="deleteUserErrorModalLabel-{{ user.username }}" aria-hidden="true">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="deleteUserErrorModalLabel-{{ user.username }}">Error</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            Failed to delete user. Please try again.
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <!-- Hidden inputs to trigger modals -->
+    <input type="hidden" id="addSuccess" value="{% if add_success %}true{% endif %}">
+    <input type="hidden" id="addError" value="{% if error %}true{% endif %}">
+    <input type="hidden" id="editSuccess" value="{% if edit_success %}true{% endif %}">
+    <input type="hidden" id="editError" value="{% if edit_error %}true{% endif %}">
+    <input type="hidden" id="deleteSuccess" value="{% if delete_success %}true{% endif %}">
+    <input type="hidden" id="deleteError" value="{% if delete_error %}true{% endif %}">
+
+    <h2>Add User</h2>
+    {% if error %}
+    <div class="alert alert-danger" role="alert">
+        {{ error }}
+        <button type="button" class="btn btn-link" data-bs-toggle="modal" data-bs-target="#passwordRequirementsModal">View password requirements</button>
+    </div>
+    {% endif %}
+    <form method="post" action="/admin/add_user">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <div class="mb-3">
+            <label for="add-username" class="form-label">Username:</label>
+            <input type="text" class="form-control" id="add-username" name="username" placeholder="Username" required>
         </div>
-        <div class="col-md-3">
-            <select class="form-select" id="role" name="role">
+        <div class="mb-3">
+            <label for="add-password" class="form-label">Password:</label>
+            <input type="password" class="form-control" id="add-password" name="password" placeholder="Password" required>
+            <small class="form-text text-muted">
+                Password must be at least 12 characters, with uppercase, lowercase, numbers, and special characters.
+                <a href="#" data-bs-toggle="modal" data-bs-target="#passwordRequirementsModal">View requirements</a>
+            </small>
+        </div>
+        <div class="mb-3">
+            <label for="add-role" class="form-label">Role:</label>
+            <select class="form-control" id="add-role" name="role">
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
             </select>
         </div>
-        <div class="col-md-3">
-            <button type="submit" class="btn btn-success">Add User</button>
-        </div>
+        <button type="submit" class="btn btn-primary">Add User</button>
     </form>
 
-    <div id="editForm" class="card shadow p-4" style="display:none; max-width: 500px;">
-        <h3 class="mb-3">Edit User</h3>
-        <form action="/admin/edit_user" method="POST" class="row g-3">
-            <input type="hidden" id="original_username" name="original_username">
-            <div class="col-12">
-                <label for="edit_username" class="form-label">Username:</label>
-                <input type="text" class="form-control" id="edit_username" name="username" required>
+    <!-- Password Requirements Modal -->
+    <div class="modal fade" id="passwordRequirementsModal" tabindex="-1" aria-labelledby="passwordRequirementsModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="passwordRequirementsModalLabel">Password Requirements</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Password must be at least 12 characters and include:</p>
+                    <ul>
+                        <li>At least one uppercase letter (A-Z)</li>
+                        <li>At least one lowercase letter (a-z)</li>
+                        <li>At least one number (0-9)</li>
+                        <li>At least one special character (e.g., @, $, !, %, *, ?, &)</li>
+                    </ul>
+                    <p><strong>Example:</strong> P@ssw0rd123!</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
-            <div class="col-12">
-                <label for="edit_role" class="form-label">Role:</label>
-                <select class="form-select" id="edit_role" name="role">
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
-                </select>
+        </div>
+    </div>
+
+    <!-- Generic Success Modal -->
+<div class="modal fade" id="genericSuccessModal" tabindex="-1" aria-labelledby="genericSuccessModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="genericSuccessModalLabel">Success</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="col-12 d-flex gap-2">
-                <button type="submit" class="btn btn-primary">Save Changes</button>
-                <button type="button" class="btn btn-secondary" onclick="hideEditForm()">Cancel</button>
+            <div class="modal-body" id="genericSuccessMessage">
+                Operation completed successfully!
             </div>
-        </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
     </div>
 </div>
 
+<!-- Generic Error Modal -->
+<div class="modal fade" id="genericErrorModal" tabindex="-1" aria-labelledby="genericErrorModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="genericErrorModalLabel">Error</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="genericErrorMessage">
+                Operation failed. Please try again.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Updated JavaScript -->
 <script>
-function showEditForm(username, role) {
-    document.getElementById('editForm').style.display = 'block';
-    document.getElementById('original_username').value = username;
-    document.getElementById('edit_username').value = username;
-    document.getElementById('edit_role').value = role;
-}
-function hideEditForm() {
-    document.getElementById('editForm').style.display = 'none';
-}
+    document.addEventListener('DOMContentLoaded', function() {
+        const addSuccess = document.getElementById('addSuccess');
+        const addError = document.getElementById('addError');
+        const editSuccess = document.getElementById('editSuccess');
+        const editError = document.getElementById('editError');
+        const deleteSuccess = document.getElementById('deleteSuccess');
+        const deleteError = document.getElementById('deleteError');
+
+        // Success messages
+        if (addSuccess && addSuccess.value === 'true') {
+            document.getElementById('genericSuccessMessage').textContent = 'User added successfully!';
+            new bootstrap.Modal(document.getElementById('genericSuccessModal')).show();
+        }
+        if (editSuccess && editSuccess.value === 'true') {
+            document.getElementById('genericSuccessMessage').textContent = 'User information updated successfully!';
+            new bootstrap.Modal(document.getElementById('genericSuccessModal')).show();
+        }
+        if (deleteSuccess && deleteSuccess.value === 'true') {
+            document.getElementById('genericSuccessMessage').textContent = 'User deleted successfully!';
+            new bootstrap.Modal(document.getElementById('genericSuccessModal')).show();
+        }
+
+        // Error messages
+        if (addError && addError.value === 'true') {
+            document.getElementById('genericErrorMessage').textContent = 'Failed to add user. Please try again.';
+            new bootstrap.Modal(document.getElementById('genericErrorModal')).show();
+        }
+        if (editError && editError.value === 'true') {
+            document.getElementById('genericErrorMessage').textContent = 'Failed to update user. Please try again.';
+            new bootstrap.Modal(document.getElementById('genericErrorModal')).show();
+        }
+        if (deleteError && deleteError.value === 'true') {
+            document.getElementById('genericErrorMessage').textContent = 'Failed to delete user. Please try again.';
+            new bootstrap.Modal(document.getElementById('genericErrorModal')).show();
+        }
+    });
 </script>
+</div>
+
 {% endblock %}

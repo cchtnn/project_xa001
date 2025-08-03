@@ -165,6 +165,44 @@ def load_meta(key, default=None):
         return row[0] if row else default
     except sqlite3.OperationalError:
         return default
+    
+def get_active_sessions(username):
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        # Assume sessions expire after 30 days of inactivity
+        c.execute("""
+            SELECT session_id, session_name, created_at 
+            FROM chat_sessions 
+            WHERE username = ? AND created_at > datetime('now', '-30 days')
+            ORDER BY created_at DESC
+        """, (username,))
+        sessions = [{"session_id": row[0], "session_name": row[1], "created_at": row[2]} for row in c.fetchall()]
+        conn.close()
+        return sessions
+    except sqlite3.OperationalError as e:
+        print(f"Database error in get_active_sessions: {e}")
+        return []
+    
+def cleanup_inactive_sessions():
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("DELETE FROM chat_sessions WHERE created_at < datetime('now', '-30 days')")
+        conn.commit()
+        conn.close()
+    except sqlite3.OperationalError as e:
+        print(f"Database error in cleanup_inactive_sessions: {e}")
+
+def validate_admin(username):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT role FROM users WHERE username = ?", (username,))
+    user = c.fetchone()
+    conn.close()
+    return user and user[0] == "admin"
 
 # Force database initialization on import
 init_db()

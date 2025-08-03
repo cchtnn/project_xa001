@@ -2,6 +2,8 @@ import sqlite3
 from passlib.hash import bcrypt
 import os
 import logging
+import re
+
 logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 DB_PATH = "data/auth.db"
@@ -22,17 +24,22 @@ def init_auth_db():
     c.execute("SELECT COUNT(*) FROM users")
     if c.fetchone()[0] == 0:
         default_admin_user = "admin"
-        default_admin_pass = "admin123"  # Change after first login!
+        default_admin_pass = os.getenv("DEFAULT_ADMIN_PASSWORD", "admin123")
+        if default_admin_pass == "admin123":
+            logging.warning("Using default admin password 'admin123'. Change it immediately after first login!")
         hashed = bcrypt.hash(default_admin_pass)
         c.execute(
             "INSERT INTO users (username, hashed_password, role, created_by) VALUES (?, ?, ?, ?)",
             (default_admin_user, hashed, "admin", "system")
         )
-        print(f"Default admin created: username='{default_admin_user}', password='{default_admin_pass}'")
+        logging.info(f"Default admin created: username='{default_admin_user}'")
     conn.commit()
     conn.close()
 
-def add_user(username, password, role, created_by):
+def add_user(username, password, role, created_by, bypass_password_validation=False):
+    if not bypass_password_validation:
+        if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$", password):
+            raise ValueError("Password must be at least 12 characters, with uppercase, lowercase, numbers, and special characters")
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     hashed = bcrypt.hash(password)
@@ -57,6 +64,10 @@ def validate_user(username, password):
         return user
     return None
 
+def validate_admin(username):
+    user = get_user(username)
+    return user and user["role"] == "admin"
+
 def list_users():
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -69,6 +80,8 @@ def update_user(original_username, new_username, new_password, new_role):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     if new_password:
+        if not re.match(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$", new_password):
+            raise ValueError("Password must be at least 12 characters, with uppercase, lowercase, numbers, and special characters")
         hashed = bcrypt.hash(new_password)
         c.execute("UPDATE users SET username=?, hashed_password=?, role=? WHERE username=?",
                   (new_username, hashed, new_role, original_username))
