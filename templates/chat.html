@@ -1,45 +1,60 @@
 {% extends "base.html" %}
 {% block content %}
 <div class="row">
-    <div class="col-md-2">
-    <!-- Left sidebar with New Chat and History buttons - positioned to align with sticky input -->
-    <div style="margin-top: 110px; margin-left: -0px;"> <!-- Adjust this value to align with your sticky input bar -->
-        <div class="d-flex flex-column gap-2">
-            <button type="button" class="btn btn-outline-primary btn-sm" id="new-chat-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-plus-circle me-1" viewBox="0 0 16 16">
-                    <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
-                    <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
-                </svg>
-                New Chat
-            </button>
-            <button type="button" class="btn btn-outline-secondary btn-sm" id="history-btn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-clock-history me-1" viewBox="0 0 16 16">
-                    <path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022l-.074.997zm2.004.45a7.003 7.003 0 0 0-.985-.299l.219-.976c.383.086.76.2 1.126.342l-.36.933zm1.37.71a7.01 7.01 0 0 0-.439-.27l.493-.87a8.025 8.025 0 0 1 .979.654l-.615.789a6.996 6.996 0 0 0-.418-.302zm1.834 1.79a6.99 6.99 0 0 0-.653-.796l.724-.69c.27.285.52.59.747.91l-.818.576zm.744 1.352a7.08 7.08 0 0 0-.214-.468l.893-.45a7.976 7.976 0 0 1 .45 1.088l-.95.313a7.023 7.023 0 0 0-.179-.483zm.53 2.507a6.991 6.991 0 0 0-.1-1.025l.985-.17c.067.386.106.778.116 1.17l-1.001.025zm-.131 1.538c.033-.17.06-.339.081-.51l.993.123a7.957 7.957 0 0 1-.23 1.155l-.964-.267c.046-.165.086-.332.12-.501zm-.952 2.379c.184-.29.346-.594.486-.908l.914.405c-.16.36-.345.706-.555 1.038l-.845-.535zm-.964 1.205c.122-.122.239-.248.35-.378l.758.653a8.073 8.073 0 0 1-.401.432l-.707-.707z"/>
-                <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0v1z"/>
-                <path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5z"/>
-            </svg>
-            History
-        </button>
-        </div>
-        
-        <!-- Session History Sidebar -->
-        <div id="session-history" class="mt-3" style="display: none;">
-            <h6 class="text-muted">Chat Sessions</h6>
-            <div id="session-list" class="d-flex flex-column gap-1">
-                <!-- Sessions will be loaded here -->
+    <!-- Collapsible Left Sidebar -->
+    <div class="col-auto" id="sidebar-col">
+        <div class="sidebar-container" id="sidebar-container" style="width: 280px; transition: all 0.3s ease;">
+            <!-- Sidebar Header with Toggle -->
+            <div class="d-flex justify-content-between align-items-center mb-3" style="margin-top: 110px; padding: 0 15px;">
+                <h6 class="text-muted mb-0" id="sidebar-title" style="font-weight: 600; font-size: 0.9rem;">Menu</h6>
+                <button class="btn btn-sm p-1" id="sidebar-toggle" style="border: none; background: none;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <!-- Sidebar Content -->
+            <div class="sidebar-content" id="sidebar-content" style="padding: 0 15px;">
+                <!-- New Chat and Search Section -->
+                <div class="d-flex flex-column gap-2 mb-4">
+                    <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center py-2 px-3" id="new-chat-btn" style="background-color: #f8f9fa; border-radius: 8px;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square me-2" viewBox="0 0 16 16">
+                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                        </svg>
+                        <span class="sidebar-text">New chat</span>
+                    </button>
+                </div>
+                
+                <!-- Divider -->
+                <hr class="my-3" style="border-color: #e5e7eb;">
+                
+                <!-- Chats Section -->
+                <div class="mb-3">
+                    <h6 class="text-muted small px-3 mb-2 sidebar-text" style="font-weight: 600; font-size: 0.75rem;">Chats</h6>
+                    
+                    <!-- Scrollable Chat Sessions Container -->
+                    <div id="session-history-container" style="max-height: 300px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbd5e0 transparent;">
+                        <div id="session-list" class="d-flex flex-column gap-1">
+                            <!-- Sessions will be loaded here -->
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
-</div>
-    <div class="col-md-8 offset-md-1">
-        
+    
+    <!-- Main Content Area -->
+    <div class="col" id="main-content">
+        <!-- Your existing main content here -->
         <!-- Centered large logo above chat input bar -->
         <div class="sticky-top sticky-chatbar bg-white pt-2 pb-2" style="z-index:1021;">
-    <div class="w-100 d-flex justify-content-center mb-3">
-        <img src="/static/jericho_image.jpg" alt="Chat Logo" style="height:80px; max-width:320px; width:auto; display:block;">
-    </div>
-    
-    <div class="d-flex align-items-center mb-2">
+            <div class="w-100 d-flex justify-content-center mb-3">
+                <img src="/static/jericho_image.jpg" alt="Chat Logo" style="height:80px; max-width:320px; width:auto; display:block;">
+            </div>
+            
+            <div class="d-flex align-items-center mb-2">
                 <form id="chat-form" class="d-flex align-items-center flex-grow-1" onsubmit="return false;">
                     <div class="flex-grow-1 me-2">
                         <textarea class="form-control" name="query" id="query-textarea" rows="1" placeholder="Ask a question..." required style="resize:none; min-height:40px; max-height:120px; overflow-y:auto;"></textarea>
@@ -67,6 +82,9 @@
         <div id="chat-history"></div>
     </div>
 </div>
+    
+    
+</div>
 
 <!-- Session Rename Modal -->
 <div class="modal fade" id="renameSessionModal" tabindex="-1">
@@ -87,6 +105,98 @@
         </div>
     </div>
 </div>
+
+<style>
+
+/* Sidebar Container */
+.sidebar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    background-color: #f8f9fa;
+    border-right: 1px solid #e5e7eb;
+    z-index: 1000;
+    overflow-x: hidden;
+}
+
+.sidebar-container.collapsed {
+    width: 60px !important;
+}
+
+.sidebar-container.collapsed .sidebar-text {
+    display: none;
+}
+
+.sidebar-container.collapsed #sidebar-title {
+    display: none;
+}
+
+.sidebar-container.collapsed #sidebar-toggle svg {
+    transform: rotate(180deg);
+}
+
+/* Main content adjustment */
+#main-content {
+    margin-left: 280px;
+    transition: margin-left 0.3s ease;
+}
+
+#main-content.expanded {
+    margin-left: 60px;
+}
+
+/* Custom scrollbar styles */
+#session-history-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+#session-history-container::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+#session-history-container::-webkit-scrollbar-thumb {
+    background-color: #cbd5e0;
+    border-radius: 3px;
+}
+
+#session-history-container::-webkit-scrollbar-thumb:hover {
+    background-color: #a0aec0;
+}
+
+/* Session button hover effects */
+.session-btn-custom {
+    transition: background-color 0.2s ease;
+}
+
+.session-btn-custom:hover {
+    background-color: #f1f5f9 !important;
+}
+
+.session-btn-custom.active {
+    background-color: #e2e8f0 !important;
+    font-weight: 500;
+}
+
+/* Collapsed state adjustments */
+.sidebar-container.collapsed .session-btn-custom {
+    padding: 8px !important;
+    justify-content: center;
+}
+
+.sidebar-container.collapsed .session-btn-custom svg {
+    margin: 0 !important;
+}
+
+.sidebar-container.collapsed #new-chat-btn {
+    padding: 8px !important;
+    justify-content: center;
+}
+
+.sidebar-container.collapsed #new-chat-btn svg {
+    margin: 0 !important;
+}
+</style>
 
 <script>
 const statusArea = document.getElementById('status-area');
@@ -135,12 +245,12 @@ enterBtn.onclick = async function(e) {
     hideSpinner();
     
     document.getElementById('chat-answer').innerHTML = `
-        <div class="card shadow-sm mb-3" style="background: #eafaff;">
-            <div class="card-body" style="font-size:1.15em; line-height:1.7;">
-                ${formatAnswer(result.answer)}
-            </div>
+    <div class="card shadow-sm mb-3" style="background-color: #FFFFE4; border-radius: 8px;">
+        <div class="card-body" style="font-size: 0.95rem; line-height: 1.6; color: #333;">
+            ${formatAnswer(result.answer)}
         </div>
-    `;
+    </div>
+`;
     
     queryTextarea.value = '';
     loadCurrentSessionHistory();
@@ -192,17 +302,6 @@ document.getElementById('new-chat-btn').onclick = async function() {
     queryTextarea.focus();
 };
 
-// Handle History button - toggle session history
-document.getElementById('history-btn').onclick = function() {
-    const sessionHistory = document.getElementById('session-history');
-    if (sessionHistory.style.display === 'none') {
-        sessionHistory.style.display = 'block';
-        loadUserSessions();
-    } else {
-        sessionHistory.style.display = 'none';
-    }
-};
-
 // Load user sessions
 async function loadUserSessions() {
     try {
@@ -231,25 +330,48 @@ async function loadUserSessions() {
     }
 }
 
+document.getElementById('sidebar-toggle').onclick = function() {
+    const sidebarContainer = document.getElementById('sidebar-container');
+    const mainContent = document.getElementById('main-content');
+    
+    if (sidebarContainer.classList.contains('collapsed')) {
+        // Expand sidebar
+        sidebarContainer.classList.remove('collapsed');
+        sidebarContainer.style.width = '280px';
+        mainContent.classList.remove('expanded');
+        mainContent.style.marginLeft = '280px';
+    } else {
+        // Collapse sidebar
+        sidebarContainer.classList.add('collapsed');
+        sidebarContainer.style.width = '60px';
+        mainContent.classList.add('expanded');
+        mainContent.style.marginLeft = '60px';
+    }
+};
+
 // Render session list
 function renderSessionList() {
     const sessionList = document.getElementById('session-list');
     if (userSessions.length === 0) {
-        sessionList.innerHTML = '<em class="text-muted small">No sessions yet</em>';
+        sessionList.innerHTML = '<em class="text-muted small px-3 sidebar-text">No sessions yet</em>';
         return;
     }
     
     sessionList.innerHTML = userSessions.map(session => `
-        <div class="d-flex align-items-center gap-1 mb-1">
-            <button class="btn btn-outline-secondary btn-sm flex-grow-1 text-start session-btn ${session.session_id === currentSessionId ? 'active' : ''}" 
+        <div class="position-relative">
+            <button class="btn btn-light border-0 text-start d-flex align-items-center py-2 px-3 w-100 session-btn-custom ${session.session_id === currentSessionId ? 'active' : ''}" 
                     data-session-id="${session.session_id}" 
-                    style="font-size: 0.8em; padding: 4px 8px;">
-                ${session.session_name || 'Untitled Chat'}
+                    style="background-color: #f8f9fa; border-radius: 8px; font-size: 0.9em; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chat-left me-2 flex-shrink-0" viewBox="0 0 16 16">
+                    <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+                </svg>
+                <span class="flex-grow-1 sidebar-text" style="overflow: hidden; text-overflow: ellipsis;">${session.session_name || 'Untitled Chat'}</span>
             </button>
-            <div class="dropdown">
-                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
-                        style="padding: 2px 6px; font-size: 0.7em;" data-bs-toggle="dropdown">
-                    ⋮
+            <div class="dropdown position-absolute top-0 end-0 me-2 mt-2 sidebar-text">
+                <button class="btn btn-sm p-1" type="button" data-bs-toggle="dropdown" style="border: none; background: none; opacity: 0.7;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
+                        <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                    </svg>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item rename-session" href="#" data-session-id="${session.session_id}">Rename</a></li>
@@ -259,15 +381,14 @@ function renderSessionList() {
         </div>
     `).join('');
     
-    // Add event listeners for session buttons
-    document.querySelectorAll('.session-btn').forEach(btn => {
+    // Re-attach event listeners (same as your existing code)
+    document.querySelectorAll('.session-btn-custom').forEach(btn => {
         btn.onclick = function() {
             const sessionId = parseInt(this.dataset.sessionId);
             switchToSession(sessionId);
         };
     });
     
-    // Add event listeners for rename buttons
     document.querySelectorAll('.rename-session').forEach(btn => {
         btn.onclick = function(e) {
             e.preventDefault();
@@ -279,7 +400,6 @@ function renderSessionList() {
         };
     });
     
-    // Add event listeners for delete buttons
     document.querySelectorAll('.delete-session').forEach(btn => {
         btn.onclick = function(e) {
             e.preventDefault();
@@ -297,7 +417,7 @@ async function switchToSession(sessionId) {
     await loadCurrentSessionHistory();
     
     // Update active session in UI
-    document.querySelectorAll('.session-btn').forEach(btn => {
+    document.querySelectorAll('.session-btn-custom').forEach(btn => {
         btn.classList.remove('active');
         if (parseInt(btn.dataset.sessionId) === sessionId) {
             btn.classList.add('active');
