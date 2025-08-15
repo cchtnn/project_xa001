@@ -2,48 +2,46 @@
 {% block content %}
 <div class="row">
     <!-- Collapsible Left Sidebar -->
-    <div class="col-auto" id="sidebar-col">
-        <div class="sidebar-container" id="sidebar-container" style="width: 280px; transition: all 0.3s ease;">
-            <!-- Sidebar Header with Toggle -->
-            <div class="d-flex justify-content-between align-items-center mb-3" style="margin-top: 110px; padding: 0 15px;">
-                <h6 class="text-muted mb-0" id="sidebar-title" style="font-weight: 600; font-size: 0.9rem;">Menu</h6>
-                <button class="btn btn-sm p-1" id="sidebar-toggle" style="border: none; background: none;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
-                    </svg>
-                </button>
-            </div>
+    <div class="sidebar-container" id="sidebar-container" style="width: 280px; transition: all 0.3s ease; overflow-x: visible;">
+    <!-- Sidebar Header with Toggle -->
+    <div class="d-flex justify-content-between align-items-center mb-3" style="margin-top: 110px; padding: 0 15px;">
+        <h6 class="text-muted mb-0" id="sidebar-title" style="font-weight: 600; font-size: 0.9rem;">Menu</h6>
+        <button class="btn btn-sm p-1" id="sidebar-toggle" style="border: none; background: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+                <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+            </svg>
+        </button>
+    </div>
+    
+    <!-- Sidebar Content -->
+    <div class="sidebar-content" id="sidebar-content" style="padding: 0 15px; overflow-x: visible;">
+        <!-- New Chat and Search Section -->
+        <div class="d-flex flex-column gap-2 mb-4">
+            <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center py-2 px-3" id="new-chat-btn" style="background-color: #f8f9fa; border-radius: 8px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square me-2" viewBox="0 0 16 16">
+                    <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                    <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
+                </svg>
+                <span class="sidebar-text">New chat</span>
+            </button>
+        </div>
+        
+        <!-- Divider -->
+        <hr class="my-3" style="border-color: #e5e7eb;">
+        
+        <!-- Chats Section -->
+        <div class="mb-3">
+            <h6 class="text-muted small px-3 mb-2 sidebar-text" style="font-weight: 600; font-size: 0.75rem;">Chats</h6>
             
-            <!-- Sidebar Content -->
-            <div class="sidebar-content" id="sidebar-content" style="padding: 0 15px;">
-                <!-- New Chat and Search Section -->
-                <div class="d-flex flex-column gap-2 mb-4">
-                    <button type="button" class="btn btn-light border-0 text-start d-flex align-items-center py-2 px-3" id="new-chat-btn" style="background-color: #f8f9fa; border-radius: 8px;">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square me-2" viewBox="0 0 16 16">
-                            <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
-                            <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5v11z"/>
-                        </svg>
-                        <span class="sidebar-text">New chat</span>
-                    </button>
-                </div>
-                
-                <!-- Divider -->
-                <hr class="my-3" style="border-color: #e5e7eb;">
-                
-                <!-- Chats Section -->
-                <div class="mb-3">
-                    <h6 class="text-muted small px-3 mb-2 sidebar-text" style="font-weight: 600; font-size: 0.75rem;">Chats</h6>
-                    
-                    <!-- Scrollable Chat Sessions Container -->
-                    <div id="session-history-container" style="max-height: 300px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #cbd5e0 transparent;">
-                        <div id="session-list" class="d-flex flex-column gap-1">
-                            <!-- Sessions will be loaded here -->
-                        </div>
-                    </div>
+            <!-- Scrollable Chat Sessions Container -->
+            <div id="session-history-container" style="max-height: 300px; overflow-y: auto; overflow-x: visible; scrollbar-width: thin; scrollbar-color: #cbd5e0 transparent;">
+                <div id="session-list" class="d-flex flex-column gap-1">
+                    <!-- Sessions will be loaded here -->
                 </div>
             </div>
         </div>
     </div>
+</div>
     
     <!-- Main Content Area -->
     <div class="col" id="main-content">
@@ -78,7 +76,6 @@
             <div id="upload-status" class="mt-2"></div>
         </div>
         <div id="chat-answer" class="mt-3"></div>
-        <h4 class="mt-5">Chat History</h4>
         <div id="chat-history"></div>
     </div>
 </div>
@@ -164,37 +161,75 @@
     background-color: #a0aec0;
 }
 
-/* Session button hover effects */
-.session-btn-custom {
-    transition: background-color 0.2s ease;
+/* Session list dropdown styles */
+.session-item .dropdown-menu {
+    position: fixed !important;
+    top: auto !important;
+    left: auto !important;
+    right: 20px !important;
+    z-index: 9999 !important;
+    min-width: 110px !important;
+    margin: 0 !important;
+    transform: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    border: 1px solid #dee2e6 !important;
+    background-color: white !important;
+    font-size: 0.85em !important;
+    border-radius: 6px !important;
 }
 
-.session-btn-custom:hover {
+.session-item {
+    position: relative;
+}
+
+.session-item .dropdown {
+    position: relative;
+}
+/* Session item hover effects */
+.session-item:hover {
     background-color: #f1f5f9 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.session-btn-custom.active {
-    background-color: #e2e8f0 !important;
-    font-weight: 500;
+.session-item:hover .btn {
+    opacity: 1 !important;
 }
 
-/* Collapsed state adjustments */
-.sidebar-container.collapsed .session-btn-custom {
-    padding: 8px !important;
-    justify-content: center;
+.dropdown-item:hover {
+    background-color: #f8f9fa;
 }
 
-.sidebar-container.collapsed .session-btn-custom svg {
-    margin: 0 !important;
+.dropdown-item.text-danger:hover {
+    background-color: #fef2f2;
+    color: #dc2626 !important;
 }
 
-.sidebar-container.collapsed #new-chat-btn {
-    padding: 8px !important;
-    justify-content: center;
+/* Fix dropdown positioning within scrollable container */
+#session-history-container {
+    max-height: 300px; 
+    overflow-y: auto; 
+    scrollbar-width: thin; 
+    scrollbar-color: #cbd5e0 transparent;
+    overflow-x: visible;
 }
 
-.sidebar-container.collapsed #new-chat-btn svg {
-    margin: 0 !important;
+/* Ensure sidebar container allows overflow for dropdowns */
+.sidebar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    background-color: #f8f9fa;
+    border-right: 1px solid #e5e7eb;
+    z-index: 1000;
+    overflow-x: visible;
+    overflow-y: hidden;
+}
+
+.sidebar-content {
+    height: calc(100vh - 110px);
+    overflow: visible;
+    padding-bottom: 20px;
 }
 </style>
 
@@ -221,6 +256,33 @@ function showSpinner(msg="Please wait...") {
 function hideSpinner() {
     statusArea.innerHTML = "";
 }
+
+// Handle dropdown toggle with dynamic positioning
+function toggleDropdown(event, sessionId) {
+    event.stopPropagation();
+    
+    // Close all other dropdowns first
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
+    // Get current dropdown and button position
+    const button = event.target.closest('button');
+    const dropdown = event.target.closest('.dropdown').querySelector('.dropdown-menu');
+    const buttonRect = button.getBoundingClientRect();
+    
+    // Position dropdown near the button
+    dropdown.style.top = (buttonRect.top + buttonRect.height + 5) + 'px';
+    dropdown.style.right = '20px';
+    
+    // Toggle current dropdown
+    dropdown.classList.toggle('show');
+}
+
+// Add event listener to handle dropdown show events
+document.addEventListener('show.bs.dropdown', function (e) {
+    closeAllDropdowns();
+});
 
 // Handle chat submit (question only)
 enterBtn.onclick = async function(e) {
@@ -349,6 +411,30 @@ document.getElementById('sidebar-toggle').onclick = function() {
     }
 };
 
+// Handle dropdown visibility
+document.addEventListener('click', function(e) {
+    // Close all dropdowns when clicking outside
+    if (!e.target.closest('.dropdown')) {
+        document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+            menu.classList.remove('show');
+        });
+    }
+});
+
+// Handle dropdown toggle
+function toggleDropdown(event, sessionId) {
+    event.stopPropagation();
+    
+    // Close all other dropdowns first
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
+    // Toggle current dropdown
+    const currentDropdown = event.target.closest('.dropdown').querySelector('.dropdown-menu');
+    currentDropdown.classList.toggle('show');
+}
+
 // Render session list
 function renderSessionList() {
     const sessionList = document.getElementById('session-list');
@@ -358,28 +444,46 @@ function renderSessionList() {
     }
     
     sessionList.innerHTML = userSessions.map(session => `
-        <div class="position-relative">
-            <button class="btn btn-light border-0 text-start d-flex align-items-center py-2 px-3 w-100 session-btn-custom ${session.session_id === currentSessionId ? 'active' : ''}" 
-                    data-session-id="${session.session_id}" 
-                    style="background-color: #f8f9fa; border-radius: 8px; font-size: 0.9em; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chat-left me-2 flex-shrink-0" viewBox="0 0 16 16">
-                    <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+    <div class="position-relative session-item" style="border-radius: 8px; transition: all 0.2s ease;">
+        <button class="btn btn-light border-0 text-start d-flex align-items-center py-2 px-3 w-100 session-btn-custom ${session.session_id === currentSessionId ? 'active' : ''}" 
+                data-session-id="${session.session_id}" 
+                style="background-color: #f8f9fa; border-radius: 8px; font-size: 0.9em; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chat-left me-2 flex-shrink-0" viewBox="0 0 16 16">
+                <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
+            </svg>
+            <span class="flex-grow-1 sidebar-text" style="overflow: hidden; text-overflow: ellipsis;">${session.session_name || 'Untitled Chat'}</span>
+        </button>
+        <div class="position-absolute top-50 end-0 translate-middle-y me-2 sidebar-text">
+    <div class="dropdown">
+        <button class="btn btn-sm" type="button" 
+                style="border: none; background: none; opacity: 0.7; padding: 2px 4px;" 
+                onclick="toggleDropdown(event, ${session.session_id})">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+                <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+            </svg>
+        </button>
+        <div class="dropdown-menu">
+            <a class="dropdown-item rename-session d-flex align-items-center py-1 px-2" href="#" data-session-id="${session.session_id}" onclick="event.stopPropagation()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-pencil me-2" viewBox="0 0 16 16">
+                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L10.5 8.207l-3-3L12.146.146zM11.207 9.207l-3-3L2.5 12.914a.5.5 0 0 0-.146.353V14.5a.5.5 0 0 0 .5.5h1.233a.5.5 0 0 0 .353-.146l5.707-5.707z"/>
                 </svg>
-                <span class="flex-grow-1 sidebar-text" style="overflow: hidden; text-overflow: ellipsis;">${session.session_name || 'Untitled Chat'}</span>
-            </button>
-            <div class="dropdown position-absolute top-0 end-0 me-2 mt-2 sidebar-text">
-                <button class="btn btn-sm p-1" type="button" data-bs-toggle="dropdown" style="border: none; background: none; opacity: 0.7;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16">
-                        <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                Rename
+            </a>
+            <hr class="dropdown-divider my-0">
+            <a class="dropdown-item delete-session text-danger d-flex align-items-center py-1 px-2" href="#" data-session-id="${session.session_id}" onclick="event.stopPropagation()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-trash me-2" viewBox="0 0 16 16">
+                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
                     </svg>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end">
-                    <li><a class="dropdown-item rename-session" href="#" data-session-id="${session.session_id}">Rename</a></li>
-                    <li><a class="dropdown-item delete-session text-danger" href="#" data-session-id="${session.session_id}">Delete</a></li>
-                </ul>
-            </div>
+                Delete
+            </a>
         </div>
-    `).join('');
+    </div>
+</div>
+    </div>
+</div>
+    </div>
+`).join('');
     
     // Re-attach event listeners (same as your existing code)
     document.querySelectorAll('.session-btn-custom').forEach(btn => {
@@ -389,24 +493,39 @@ function renderSessionList() {
         };
     });
     
+    // Update rename and delete event listeners to close dropdown after click
     document.querySelectorAll('.rename-session').forEach(btn => {
         btn.onclick = function(e) {
             e.preventDefault();
+            e.stopPropagation();
             const sessionId = parseInt(this.dataset.sessionId);
             const session = userSessions.find(s => s.session_id === sessionId);
             document.getElementById('newSessionName').value = session.session_name || '';
             document.getElementById('sessionToRename').value = sessionId;
+            
+            // Close dropdown
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+            
             new bootstrap.Modal(document.getElementById('renameSessionModal')).show();
         };
     });
-    
+
     document.querySelectorAll('.delete-session').forEach(btn => {
         btn.onclick = function(e) {
             e.preventDefault();
+            e.stopPropagation();
             const sessionId = parseInt(this.dataset.sessionId);
+            
+            // Close dropdown
+            document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
+                menu.classList.remove('show');
+            });
+            
             deleteSession(sessionId);
         };
-    });
+});
 }
 
 // Switch to a different session
@@ -475,14 +594,38 @@ async function loadCurrentSessionHistory() {
     const historyDiv = document.getElementById('chat-history');
     
     if (result.history && result.history.length > 0) {
-        historyDiv.innerHTML = result.history.map(
-            qa => `<div class="mb-2 p-3 border rounded bg-light">
-                <div class="mb-1"><span class="fw-bold text-primary small">Q:</span> <span class="fw-semibold small">${qa.question}</span></div>
-                <div><span class="fw-bold text-success small">A:</span> ${formatAnswer(qa.answer)}</div>
-            </div>`
-        ).join('');
+        // Get current date in dd-mmm-yyyy HH:MM:SS format
+        const currentDate = new Date();
+        const formatDate = (date) => {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = date.toLocaleString('en-US', { month: 'short' });
+            const year = date.getFullYear();
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+        };
+        
+        historyDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Chat History</h4>
+                <span class="text-muted small">${formatDate(currentDate)}</span>
+            </div>
+            ${result.history.map(
+                qa => `<div class="mb-2 p-3 border rounded bg-light">
+                    <div class="mb-1"><span class="fw-bold text-primary small">Q:</span> <span class="fw-semibold small">${qa.question}</span></div>
+                    <div><span class="fw-bold text-success small">A:</span> ${formatAnswer(qa.answer)}</div>
+                </div>`
+            ).join('')}
+        `;
     } else {
-        historyDiv.innerHTML = "<em>No chat history yet.</em>";
+        historyDiv.innerHTML = `
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="mb-0">Chat History</h4>
+                <span class="text-muted small">${formatDate(new Date())}</span>
+            </div>
+            <em>No chat history yet.</em>
+        `;
     }
 }
 
