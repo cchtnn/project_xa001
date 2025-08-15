@@ -62,6 +62,58 @@ def init_db():
     conn.commit()
     conn.close()
 
+def get_all_active_sessions():
+    """Get all active sessions for admin view"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            SELECT cs.session_id, cs.username, cs.session_name, cs.created_at,
+                   COUNT(sh.id) as message_count,
+                   MAX(sh.timestamp) as last_activity
+            FROM chat_sessions cs
+            LEFT JOIN session_history sh ON cs.session_id = sh.session_id
+            WHERE cs.created_at > datetime('now', '-30 days')
+            GROUP BY cs.session_id, cs.username, cs.session_name, cs.created_at
+            ORDER BY cs.created_at DESC
+        """)
+        sessions = []
+        for row in c.fetchall():
+            sessions.append({
+                "session_id": row[0],
+                "username": row[1], 
+                "session_name": row[2],
+                "created_at": row[3],
+                "message_count": row[4],
+                "last_activity": row[5] or row[3]  # Use created_at if no messages
+            })
+        conn.close()
+        return sessions
+    except sqlite3.OperationalError as e:
+        print(f"Database error in get_all_active_sessions: {e}")
+        return []
+
+def kill_user_session(session_id):
+    """Kill a specific user session"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        # Get session info before deletion
+        c.execute("SELECT username, session_name FROM chat_sessions WHERE session_id = ?", (session_id,))
+        session_info = c.fetchone()
+        
+        # Delete the session (CASCADE will handle history)
+        c.execute("DELETE FROM chat_sessions WHERE session_id = ?", (session_id,))
+        conn.commit()
+        conn.close()
+        
+        return session_info
+    except sqlite3.OperationalError as e:
+        print(f"Database error in kill_user_session: {e}")
+        return None
+
 def create_new_session(username, session_name="New Chat"):
     init_db()
     conn = sqlite3.connect(DB_PATH)

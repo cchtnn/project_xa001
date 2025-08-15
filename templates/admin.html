@@ -2,7 +2,55 @@
 {% block content %}
 
 <div class="container mt-5">
-    <h1>Admin User Management</h1>
+    <h1>Admin Dashboard</h1>
+
+    <!-- Active Sessions Management -->
+    <div class="mb-5">
+        <h2>Active User Sessions</h2>
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Session ID</th>
+                        <th>Username</th>
+                        <th>Session Name</th>
+                        <th>Created At</th>
+                        <th>Messages</th>
+                        <th>Last Activity</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if active_sessions %}
+                        {% for session in active_sessions %}
+                        <tr>
+                            <td>{{ session.session_id }}</td>
+                            <td>{{ session.username }}</td>
+                            <td>{{ session.session_name }}</td>
+                            <td>{{ session.created_at[:19] }}</td>
+                            <td>{{ session.message_count }}</td>
+                            <td>{{ session.last_activity[:19] }}</td>
+                            <td>
+                                <form method="post" action="/admin/kill_session" style="display:inline;" 
+                                      onsubmit="return confirm('Are you sure you want to kill this session?');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <input type="hidden" name="session_id" value="{{ session.session_id }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">Kill Session</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">No active sessions found</td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <h2>Admin User Management</h2>
 
     <!-- Success Modal for Add User -->
     <div class="modal fade" id="addUserSuccessModal" tabindex="-1" aria-labelledby="addUserSuccessModalLabel" aria-hidden="true">
@@ -170,12 +218,15 @@
     </table>
 
     <!-- Hidden inputs to trigger modals -->
+    <!-- Hidden inputs to trigger modals -->
     <input type="hidden" id="addSuccess" value="{% if add_success %}true{% endif %}">
     <input type="hidden" id="addError" value="{% if error %}true{% endif %}">
     <input type="hidden" id="editSuccess" value="{% if edit_success %}true{% endif %}">
     <input type="hidden" id="editError" value="{% if edit_error %}true{% endif %}">
     <input type="hidden" id="deleteSuccess" value="{% if delete_success %}true{% endif %}">
     <input type="hidden" id="deleteError" value="{% if delete_error %}true{% endif %}">
+    <input type="hidden" id="sessionKillSuccess" value="{% if session_kill_success %}true{% endif %}">
+    <input type="hidden" id="sessionKillError" value="{% if session_kill_error %}true{% endif %}">
 
     <h2>Add User</h2>
     {% if error %}
@@ -279,6 +330,19 @@
         const deleteSuccess = document.getElementById('deleteSuccess');
         const deleteError = document.getElementById('deleteError');
 
+        // Session kill messages
+        const sessionKillSuccess = document.getElementById('sessionKillSuccess');
+        const sessionKillError = document.getElementById('sessionKillError');
+
+        if (sessionKillSuccess && sessionKillSuccess.value === 'true') {
+            document.getElementById('genericSuccessMessage').textContent = 'Session killed successfully!';
+            new bootstrap.Modal(document.getElementById('genericSuccessModal')).show();
+        }
+        if (sessionKillError && sessionKillError.value === 'true') {
+            document.getElementById('genericErrorMessage').textContent = 'Failed to kill session. Please try again.';
+            new bootstrap.Modal(document.getElementById('genericErrorModal')).show();
+        }
+
         // Success messages
         if (addSuccess && addSuccess.value === 'true') {
             document.getElementById('genericSuccessMessage').textContent = 'User added successfully!';
@@ -306,6 +370,7 @@
             document.getElementById('genericErrorMessage').textContent = 'Failed to delete user. Please try again.';
             new bootstrap.Modal(document.getElementById('genericErrorModal')).show();
         }
+        
     });
 </script>
 </div>

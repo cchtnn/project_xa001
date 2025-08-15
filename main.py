@@ -247,12 +247,14 @@ async def admin_page(request: Request, access_token: str = Cookie(None)):
         return RedirectResponse(url="/admin/login", status_code=302)
     users_raw = auth_db.list_users()
     users = [{"username": u[0], "role": u[1]} for u in users_raw]
+    active_sessions = session_db.get_all_active_sessions()
     csrf_token = secrets.token_urlsafe(32)
     session_db.save_meta(f"csrf_{payload['sub']}", csrf_token)
     return templates.TemplateResponse("admin.html", {
         "request": request,
         "user_authenticated": True,
         "users": users,
+        "active_sessions": active_sessions,
         "csrf_token": csrf_token
     })
 
@@ -363,6 +365,48 @@ async def delete_user(request: Request, username: str = Form(...), csrf_token: s
             "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
             "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
             "delete_error": True
+        })
+
+
+@app.post("/admin/kill_session")
+async def kill_session(request: Request, session_id: int = Form(...), csrf_token: str = Form(...)):
+    admin_username = get_username_from_token(request)
+    if not admin_username or not auth_db.validate_admin(admin_username):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if session_db.load_meta(f"csrf_{admin_username}") != csrf_token:
+        raise HTTPException(status_code=403, detail="Invalid CSRF token")
+    
+    try:
+        session_info = session_db.kill_user_session(session_id)
+        if session_info:
+            logging.info(f"Admin {admin_username} killed session {session_id} for user {session_info[0]}")
+            users_raw = auth_db.list_users()
+            users = [{"username": u[0], "role": u[1]} for u in users_raw]
+            active_sessions = session_db.get_all_active_sessions()
+            
+            return templates.TemplateResponse("admin.html", {
+                "request": request,
+                "user_authenticated": True,
+                "users": users,
+                "active_sessions": active_sessions,
+                "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
+                "session_kill_success": True
+            })
+        else:
+            raise Exception("Session not found")
+    except Exception as e:
+        logging.error(f"Error killing session {session_id}: {e}")
+        users_raw = auth_db.list_users()
+        users = [{"username": u[0], "role": u[1]} for u in users_raw]
+        active_sessions = session_db.get_all_active_sessions()
+        
+        return templates.TemplateResponse("admin.html", {
+            "request": request,
+            "user_authenticated": True,
+            "users": users,
+            "active_sessions": active_sessions,
+            "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
+            "session_kill_error": True
         })
 
 if __name__ == "__main__":
