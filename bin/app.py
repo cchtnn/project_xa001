@@ -11,7 +11,7 @@ logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 # Import custom modules
 from config import PAGE_CONFIG
-from ui_components import (
+from bin.ui_components import (
     setup_page_config,
     load_custom_css,
     display_top_logo,

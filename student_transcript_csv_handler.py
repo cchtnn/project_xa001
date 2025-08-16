@@ -458,17 +458,52 @@ class StudentTranscriptCSVHandler:
             **DATA PRESENTATION RULES:**
             - Present ALL data found in the raw response
             - Use clear, professional academic language
-            - For GPA data, use markdown table format with columns: Student Name | Average GPA
-            - For list-like data (e.g., advisor names), use markdown table format with a single column labeled 'Advisor(s)'
-            - **TABLE FORMATTING REQUIREMENTS:**
-            * Use proper markdown table syntax with header and separator row only
-            * NEVER include empty rows or placeholder rows with just dashes
-            * For comma-separated values in advisor lists, split each name into a separate table row
-            * Table format should be: Header row, separator row (|---|), then data rows only
-            * Example for advisors: |Advisor(s)|\n|---|\n|John Smith|\n|Jane Doe|
+
+            **FORMATTING RULES - CHOOSE BEST FORMAT:**
+
+            **Option 1: Simple List Format (Default for single-column data like advisors):**
+            * For advisor lists, use this format:
+            **Advisor(s) for Student 'Student Name'**
+            - Advisor Name 1
+            - Advisor Name 2
+            - Advisor Name 3
+
+            **Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
+            * When data has multiple columns or comparative information, use HTML table format
+            * For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
+            <table>
+            <tr><th>Column Header 1</th><th>Column Header 2</th></tr>
+            <tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
+            <tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
+            </table>
+
+            **ABSOLUTE TABLE RULES - MUST FOLLOW:**
+            * NEVER use markdown table format with pipes (|) and dashes (---)
+            * ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
+            * FORBIDDEN: Any use of |---|, ---, or pipe separators
+            * Every <tr> after the header must contain actual student names, GPA values, or real information
+            * If you see raw data, immediately put that real data in <td> cells
+            * REQUIRED: Start immediately with real data in table rows after the header row
+
+            **FORMAT SELECTION GUIDE:**
+            - Use simple list format for: advisor names, course lists, single-column data
+            - Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
+
             - Be accurate about what the data shows
             - Round GPA values to 2 decimal places for display
-            - Add a brief explanatory note below the table when helpful for context
+            - Add a brief explanatory note when helpful for context
+
+            **CRITICAL FORMATTING REQUIREMENTS:**
+            - Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
+            - Example format (this exact structure must be followed — no blank lines or line breaks between sentence and table):
+            Here are the students sorted by GPA:<table>
+            <tr><th>Student Name</th><th>GPA</th></tr>
+            <tr><td>Example Student</td><td>3.50</td></tr>
+            </table>
+            - FORBIDDEN: Any blank line or whitespace between the colon and <table>
+            - FORBIDDEN: Markdown bolding using ** for headers
+            - FORBIDDEN: Any introductory phrasing like “I will present…” or “Here is…” followed by a blank line
+            - Keep content compact, professional, and minimal with no extra spacing
             """
 
         else:  # clean format
@@ -485,24 +520,60 @@ class StudentTranscriptCSVHandler:
             **DATA PRESENTATION RULES:**
             - Present ALL data found in the raw response
             - Use clear, professional academic language
-            - For GPA data, use markdown table format with columns: Student Name | Average GPA
-            - For list-like data (e.g., advisor names), use markdown table format with a single column labeled 'Advisor(s)'
-            - **TABLE FORMATTING REQUIREMENTS:**
-            * Use proper markdown table syntax with header and separator row only
-            * NEVER include empty rows or placeholder rows with just dashes
-            * For comma-separated values in advisor lists, split each name into a separate table row
-            * Table format should be: Header row, separator row (|---|), then data rows only
-            * Example for advisors: |Advisor(s)|\n|---|\n|John Smith|\n|Jane Doe|
+
+            **FORMATTING RULES - CHOOSE BEST FORMAT:**
+
+            **Option 1: Simple List Format (Default for single-column data like advisors):**
+            * For advisor lists, use this format:
+            **Advisor(s) for Student 'Student Name'**
+            - Advisor Name 1
+            - Advisor Name 2
+            - Advisor Name 3
+
+            **Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
+            * When data has multiple columns or comparative information, use HTML table format
+            * For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
+            <table>
+            <tr><th>Column Header 1</th><th>Column Header 2</th></tr>
+            <tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
+            <tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
+            </table>
+
+            **ABSOLUTE TABLE RULES - MUST FOLLOW:**
+            * NEVER use markdown table format with pipes (|) and dashes (---)
+            * ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
+            * FORBIDDEN: Any use of |---|, ---, or pipe separators
+            * Every <tr> after the header must contain actual student names, GPA values, or real information
+            * If you see raw data, immediately put that real data in <td> cells
+            * REQUIRED: Start immediately with real data in table rows after the header row
+
+            **FORMAT SELECTION GUIDE:**
+            - Use simple list format for: advisor names, course lists, single-column data
+            - Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
+
             - Be accurate about what the data shows
             - Round GPA values to 2 decimal places for display
-            - Add a brief explanatory note below the table when helpful for context
+            - Add a brief explanatory note when helpful for context
 
             **IMPORTANT:** The raw data shows the actual query results. Do not contradict what the data clearly shows.
+
+            **CRITICAL FORMATTING REQUIREMENTS:**
+            - Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
+            - Example format (this exact structure must be followed — no blank lines or line breaks between sentence and table):
+            Here are the students sorted by GPA:<table>
+            <tr><th>Student Name</th><th>GPA</th></tr>
+            <tr><td>Example Student</td><td>3.50</td></tr>
+            </table>
+            - FORBIDDEN: Any blank line or whitespace between the colon and <table>
+            - FORBIDDEN: Markdown bolding using ** for headers
+            - FORBIDDEN: Any introductory phrasing like “I will present…” or “Here is…” followed by a blank line
+            - Keep content compact, professional, and minimal with no extra spacing
             """
 
         try:
             # Use the summarizer LLM
             summary_response = self.summarizer_llm.invoke(prompt)
+            summary_response = re.sub(r":\s*<table>", ":<table>", summary_response)
             
             # Extract the content from the response
             if hasattr(summary_response, 'content'):
@@ -580,18 +651,24 @@ class StudentTranscriptCSVHandler:
                 gpa_lines.append(line.strip())
         
         if gpa_lines:
-            result = f"📊 **Student GPA Analysis ({len(gpa_lines)} records):**\n\n"
-            result += "| Student Name | Average GPA |\n"
-            result += "|--------------|-------------|\n"
-            
-            for line in gpa_lines:
-                parts = line.rsplit(' ', 1)
-                if len(parts) == 2:
-                    student_name = parts[0].strip()
-                    gpa_value = parts[1].strip()
-                    result += f"| {student_name} | {gpa_value} |\n"
-            
-            return result
+            result = f"📊 Student GPA Analysis ({len(gpa_lines)} records):<table>"
+        result += "<tr><th>Student Name</th><th>Average GPA</th></tr>"
+
+        for line in gpa_lines:
+            parts = line.rsplit(' ', 1)
+            if len(parts) == 2:
+                student_name = parts[0].strip()
+                gpa_value = parts[1].strip()
+                # round GPA to 2 decimals for display
+                try:
+                    gpa_value = f"{float(gpa_value):.2f}"
+                except:
+                    pass
+                result += f"<tr><td>{student_name}</td><td>{gpa_value}</td></tr>"
+
+        result += "</table>"
+        return result
+
         
         return self._format_general_data(lines)
 
@@ -639,28 +716,41 @@ class StudentTranscriptCSVHandler:
         return pipe_separated or (comma_separated and has_headers)
 
     def _format_tabular_data(self, lines):
-        """Format general tabular data"""
-        result = "📊 **Data Table:**\n\n"
+        """Format general tabular data as HTML table"""
+        result = "📊 Data Table:<table>"
         
         # Try to detect delimiter
         if any('|' in line for line in lines):
-            # Already pipe-separated
-            result += '\n'.join(lines)
-        elif any(line.count(',') >= 2 for line in lines):
-            # CSV-like format - convert to markdown table
-            csv_lines = [line for line in lines if ',' in line]
-            if csv_lines:
-                headers = csv_lines[0].split(',')
-                result += "| " + " | ".join(h.strip() for h in headers) + " |\n"
-                result += "|" + "|".join(['---' for _ in headers]) + "|\n"
-                
-                for line in csv_lines[1:]:
-                    cells = line.split(',')
-                    result += "| " + " | ".join(c.strip() for c in cells) + " |\n"
-        else:
-            result += '\n'.join(lines)
+            # Pipe-separated
+            rows = [line.split('|') for line in lines if '|' in line]
+            for i, row in enumerate(rows):
+                if not row:
+                    continue
+                cells = [cell.strip() for cell in row if cell.strip()]
+                if not cells:
+                    continue
+                if i == 0:  # header row
+                    result += "<tr>" + "".join(f"<th>{c}</th>" for c in cells) + "</tr>"
+                else:
+                    result += "<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>"
         
+        elif any(line.count(',') >= 1 for line in lines):
+            # CSV-like format
+            rows = [line.split(',') for line in lines if ',' in line]
+            for i, row in enumerate(rows):
+                cells = [c.strip() for c in row]
+                if i == 0:
+                    result += "<tr>" + "".join(f"<th>{c}</th>" for c in cells) + "</tr>"
+                else:
+                    result += "<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>"
+        else:
+            # fallback: plain rows
+            for line in lines:
+                result += f"<tr><td>{line}</td></tr>"
+        
+        result += "</table>"
         return result
+
 
     def _is_list_data(self, lines):
         """Check if data appears to be a list"""

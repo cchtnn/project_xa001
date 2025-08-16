@@ -86,6 +86,10 @@ def generate_session_name(question):
 async def home(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
+@app.get("/login", response_class=HTMLResponse)
+async def login_get(request: Request):
+    return templates.TemplateResponse("login.html", {"request": request})
+
 @app.post("/login")
 async def login_post(request: Request, username: str = Form(...), password: str = Form(...)):
     user = auth_db.validate_user(username, password)
@@ -96,7 +100,7 @@ async def login_post(request: Request, username: str = Form(...), password: str 
         })
     
     active_sessions = session_db.get_active_sessions(user["username"])
-    if len(active_sessions) >= 3:
+    if len(active_sessions) >= 10:
         return templates.TemplateResponse("login.html", {
             "request": request, 
             "error": "Too many active sessions"
