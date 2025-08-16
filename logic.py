@@ -16,6 +16,8 @@ import requests
 from io import StringIO
 import logging
 import pandas as pd
+import zipfile
+import tempfile
 import numpy as np
 logging.getLogger("watchdog").setLevel(logging.ERROR)
 
@@ -26,6 +28,219 @@ API_URL = "https://router.huggingface.co/nscale/v1/chat/completions"
 headers = {
     "Authorization": f"Bearer {os.getenv('HF_TOKEN')}",
 }
+
+def extract_and_process_zip(zip_path, user, private):
+    """
+    Extract ZIP file and process all PDF files inside it.
+    
+    Parameters:
+        zip_path (str): Path to the ZIP file.
+        user (str): Username for private processing.
+        private (bool): If True, save to user's private folder; if False, save to public uploads.
+    
+    Returns:
+        list: List of successfully processed PDF filenames.
+    """
+    processed_pdfs = []
+    
+    try:
+        # Determine output folders based on private flag
+        if private:
+            base_output_path = f"data/user_uploads/{user}"
+            image_output_path = os.path.join(base_output_path, "extracted_images")
+            csv_output_path = os.path.join(base_output_path, "csv_files")
+        else:
+            base_output_path = "data/public_uploads"
+            image_output_path = os.path.join(base_output_path, "extracted_images")
+            csv_output_path = os.path.join(base_output_path, "csv_files")
+        
+        # Create base directories
+        os.makedirs(base_output_path, exist_ok=True)
+        
+        # Create temporary directory for extraction
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Extract ZIP file
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+            
+            # Find all PDF files in extracted content (including subdirectories)
+            pdf_files = []
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    if file.lower().endswith('.pdf'):
+                        pdf_files.append(os.path.join(root, file))
+            
+            print(f"Found {len(pdf_files)} PDF files in ZIP")
+            
+            # Process each PDF file (extract images only)
+            for pdf_path in pdf_files:
+                try:
+                    print(f"Step 1: Extracting images from {os.path.basename(pdf_path)}...")
+                    extracted_images = extract_images_from_pdf(pdf_path, image_output_path)
+                    
+                    if extracted_images:
+                        processed_pdfs.append(os.path.basename(pdf_path))
+                        print(f"Successfully extracted images from: {os.path.basename(pdf_path)}")
+                    
+                except Exception as e:
+                    print(f"Error processing {os.path.basename(pdf_path)}: {e}")
+                    continue
+            
+            # After processing all PDFs, create individual CSVs and one final merged file
+            if processed_pdfs:
+                print("Step 2: Processing all images to individual CSV files...")
+                individual_csvs = process_images_to_individual_csv(image_output_path, csv_output_path, processed_pdfs)
+                
+                if individual_csvs:
+                    print("Step 3: Creating final merged CSV for all PDFs...")
+                    final_merged_csv = create_final_merged_csv(csv_output_path)
+                    
+                    if final_merged_csv:
+                        fix_term_career_totals(final_merged_csv, final_merged_csv)
+                        print(f"Final merged CSV for ZIP: {os.path.basename(final_merged_csv)}")
+        
+        # Clean up the original ZIP file
+        try:
+            os.remove(zip_path)
+        except:
+            pass
+        
+        return processed_pdfs
+        
+    except Exception as e:
+        print(f"Error extracting ZIP file {zip_path}: {e}")
+        return []
+    
+def process_images_to_individual_csv(image_folder_path: str, csv_output_path: str, processed_pdf_names: list = None) -> list:
+    """
+    Process all images in the folder and convert them to individual CSV files only.
+    
+    Parameters:
+        image_folder_path (str): Path to folder containing extracted images.
+        csv_output_path (str): Path to folder where CSV files will be saved.
+        processed_pdf_names (list): List of processed PDF names.
+    
+    Returns:
+        list: List of individual CSV file paths created.
+    """
+    try:
+        # Create CSV folder if it doesn't exist
+        os.makedirs(csv_output_path, exist_ok=True)
+        
+        # Get all image files
+        image_files = [f for f in os.listdir(image_folder_path) 
+                      if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff'))]
+        
+        if not image_files:
+            print("No image files found to process.")
+            return []
+        
+        processed_files = []
+        
+        # Loop through each image and process it
+        for image_file in image_files:
+            image_path = os.path.join(image_folder_path, image_file)
+            image_path = os.path.abspath(image_path).replace("\\", "/")
+            print(f"Processing: {image_file}")
+            try:
+                response = query_with_local_image(image_path)
+                if response and "choices" in response:
+                    content = response["choices"][0]["message"]['content']
+                    csv_file_path = save_transcript_to_csv(content, image_file, csv_output_path)
+                    if csv_file_path:
+                        processed_files.append(csv_file_path)
+                else:
+                    print(f"Invalid response for {image_file}")
+            except Exception as e:
+                print(f"Failed to process {image_file}: {e}")
+        
+        return processed_files
+            
+    except Exception as e:
+        print(f"Error processing images to individual CSVs: {e}")
+        return []
+
+def create_final_merged_csv(csv_output_path: str) -> str:
+    """
+    Creates a single merged CSV from all individual CSV files in the folder.
+    
+    Parameters:
+        csv_output_path (str): Path to the CSV output folder.
+    
+    Returns:
+        str: Path to the final merged CSV file.
+    """
+    try:
+        csv_files = [f for f in os.listdir(csv_output_path) 
+                    if f.endswith('.csv') and not f.startswith('merged_')]
+        
+        if not csv_files:
+            print("No individual CSV files found to merge.")
+            return None
+        
+        # Extract unique PDF names from CSV filenames for merged filename
+        pdf_names = set()
+        for csv_file in csv_files:
+            # Extract PDF name from filename like "Barrett_Trista_page_1.csv"
+            base_name = os.path.splitext(csv_file)[0]
+            # Remove page suffix
+            pdf_name = re.sub(r'_page_\d+$', '', base_name)
+            # Fix multiple underscores
+            pdf_name = re.sub(r'_+', '_', pdf_name)
+            pdf_names.add(pdf_name)
+        
+        # Create merged filename
+        sorted_names = sorted(list(pdf_names))
+        merged_filename = f"merged_{'_'.join(sorted_names)}.csv"
+        # Fix double underscores
+        merged_filename = re.sub(r'_+', '_', merged_filename)
+        merged_filepath = os.path.join(csv_output_path, merged_filename)
+        
+        header_written = False
+        total_rows = 0
+        
+        with open(merged_filepath, 'w', newline='', encoding='utf-8') as merged_file:
+            merged_writer = csv.writer(merged_file)
+            
+            for csv_file in sorted(csv_files):  # Sort for consistent order
+                csv_filepath = os.path.join(csv_output_path, csv_file)
+                print(f"Merging: {csv_file}")
+                
+                try:
+                    with open(csv_filepath, 'r', encoding='utf-8') as individual_file:
+                        csv_reader = csv.reader(individual_file)
+                        rows = list(csv_reader)
+                        
+                        if rows:
+                            if not header_written:
+                                # Write header from first file
+                                merged_writer.writerow(rows[0])
+                                header_written = True
+                                # Write all rows including data rows
+                                for row in rows[1:]:
+                                    if row:  # Skip empty rows
+                                        merged_writer.writerow(row)
+                                        total_rows += 1
+                            else:
+                                # Skip header row for subsequent files, write only data rows
+                                for row in rows[1:]:
+                                    if row:  # Skip empty rows
+                                        merged_writer.writerow(row)
+                                        total_rows += 1
+                                        
+                except Exception as e:
+                    print(f"Error reading {csv_file}: {e}")
+                    continue
+        
+        print(f"Successfully merged {len(csv_files)} CSV files")
+        print(f"Total data rows merged: {total_rows}")
+        print(f"Final merged file: {os.path.basename(merged_filepath)}")
+        
+        return merged_filepath
+        
+    except Exception as e:
+        print(f"Error creating final merged CSV: {e}")
+        return None
 
 def search_query(user_query, collection, top_k=3):
     """Search ChromaDB for relevant documents based on user query"""
@@ -173,22 +388,184 @@ def load_svg_base64(svg_path):
         svg_data = f.read()
     return base64.b64encode(svg_data).decode("utf-8")
 
-def extract_images_from_pdf(input_pdf_path, output_folder_path, dpi_width=1200, dpi_height=800):
+def parse_pdf_to_individual_csv(pdf_path, image_output_path, csv_output_path):
     """
-    Extracts images from a PDF using fitz (PyMuPDF) and saves them in the specified resolution.
-
+    Parse PDF and create individual CSV files only (no merging).
+    
     Parameters:
-        input_pdf_path (str): Path to the input PDF file.
-        output_folder_path (str): Directory where the extracted images will be saved.
-        dpi_width (int): Desired width in pixels.
-        dpi_height (int): Desired height in pixels.
+        pdf_path (str): Path to the input PDF file.
+        image_output_path (str): Path to save extracted images.
+        csv_output_path (str): Path to save individual CSV files.
     
     Returns:
-        list: List of extracted image file paths.
+        str: PDF filename if successful, None if failed.
+    """
+    try:
+        # Step 1: Extract images from PDF
+        print(f"Step 1: Extracting images from {os.path.basename(pdf_path)}...")
+        extracted_images = extract_images_from_pdf(pdf_path, image_output_path)
+        
+        if not extracted_images:
+            print(f"Failed to extract images from {os.path.basename(pdf_path)}")
+            return None
+        
+        # Step 2: Process images to individual CSV files only
+        print(f"Step 2: Processing images to individual CSV files...")
+        individual_csvs = process_images_to_individual_csv(image_output_path, csv_output_path, [os.path.basename(pdf_path)])
+        
+        if not individual_csvs:
+            print(f"No CSV files were created from {os.path.basename(pdf_path)}")
+            return None
+        
+        print(f"Successfully created {len(individual_csvs)} individual CSV files from {os.path.basename(pdf_path)}")
+        return os.path.basename(pdf_path)
+        
+    except Exception as e:
+        print(f"Error in parse_pdf_to_individual_csv: {e}")
+        return None
+
+def extract_and_process_zip_images_only(zip_path, image_output_path, csv_output_path):
+    """
+    Extract ZIP file and process all PDF files inside it to individual CSVs only.
+    
+    Parameters:
+        zip_path (str): Path to the ZIP file.
+        image_output_path (str): Path to save extracted images.
+        csv_output_path (str): Path to save individual CSV files.
+    
+    Returns:
+        list: List of successfully processed PDF filenames.
+    """
+    processed_pdfs = []
+    
+    try:
+        # Create temporary directory for extraction
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Extract ZIP file
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(temp_dir)
+            
+            # Find all PDF files in extracted content (including subdirectories)
+            pdf_files = []
+            for root, dirs, files in os.walk(temp_dir):
+                for file in files:
+                    if file.lower().endswith('.pdf'):
+                        pdf_files.append(os.path.join(root, file))
+            
+            print(f"Found {len(pdf_files)} PDF files in ZIP")
+            
+            # Process each PDF file (extract images and create individual CSVs only)
+            for pdf_path in pdf_files:
+                try:
+                    result = parse_pdf_to_individual_csv(pdf_path, image_output_path, csv_output_path)
+                    if result:
+                        processed_pdfs.append(result)
+                    
+                except Exception as e:
+                    print(f"Error processing {os.path.basename(pdf_path)}: {e}")
+                    continue
+        
+        # Clean up the original ZIP file
+        try:
+            os.remove(zip_path)
+        except:
+            pass
+        
+        return processed_pdfs
+        
+    except Exception as e:
+        print(f"Error extracting ZIP file {zip_path}: {e}")
+        return []
+
+def process_images_to_individual_csv(image_folder_path: str, csv_output_path: str, processed_pdf_names: list = None) -> list:
+    """
+    Process images in the folder and convert them to individual CSV files only.
+    Only processes images that match the current PDF being processed.
+    
+    Parameters:
+        image_folder_path (str): Path to folder containing extracted images.
+        csv_output_path (str): Path to folder where CSV files will be saved.
+        processed_pdf_names (list): List of current PDF names being processed.
+    
+    Returns:
+        list: List of individual CSV file paths created.
+    """
+    try:
+        # Create CSV folder if it doesn't exist
+        os.makedirs(csv_output_path, exist_ok=True)
+        
+        # Get all image files
+        all_image_files = [f for f in os.listdir(image_folder_path) 
+                          if f.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.tiff'))]
+        
+        # Filter images that belong to current PDFs being processed
+        image_files = []
+        if processed_pdf_names:
+            for image_file in all_image_files:
+                for pdf_name in processed_pdf_names:
+                    # Clean PDF name for matching
+                    clean_pdf_name = os.path.splitext(pdf_name)[0]
+                    clean_pdf_name = re.sub(r'[^\w\-_.]', '_', clean_pdf_name)
+                    clean_pdf_name = re.sub(r'_+', '_', clean_pdf_name)
+                    
+                    if clean_pdf_name in image_file:
+                        image_files.append(image_file)
+                        break
+        else:
+            image_files = all_image_files
+        
+        if not image_files:
+            print("No matching image files found to process.")
+            return []
+        
+        processed_files = []
+        
+        # Loop through each image and process it
+        for image_file in image_files:
+            # Skip if CSV already exists for this image
+            csv_name = os.path.splitext(image_file)[0] + '.csv'
+            csv_path = os.path.join(csv_output_path, csv_name)
+            
+            if os.path.exists(csv_path):
+                print(f"CSV already exists for {image_file}, skipping...")
+                processed_files.append(csv_path)
+                continue
+            
+            image_path = os.path.join(image_folder_path, image_file)
+            image_path = os.path.abspath(image_path).replace("\\", "/")
+            print(f"Processing: {image_file}")
+            
+            try:
+                response = query_with_local_image(image_path)
+                if response and "choices" in response:
+                    content = response["choices"][0]["message"]['content']
+                    csv_file_path = save_transcript_to_csv(content, image_file, csv_output_path)
+                    if csv_file_path:
+                        processed_files.append(csv_file_path)
+                else:
+                    print(f"Invalid response for {image_file}")
+            except Exception as e:
+                print(f"Failed to process {image_file}: {e}")
+        
+        return processed_files
+            
+    except Exception as e:
+        print(f"Error processing images to individual CSVs: {e}")
+        return []
+    
+def extract_images_from_pdf(input_pdf_path, output_folder_path, dpi_width=800, dpi_height=600):
+    """
+    Extracts images from a PDF using fitz (PyMuPDF) and saves them in the specified resolution.
     """
     try:
         os.makedirs(output_folder_path, exist_ok=True)
         extracted_images = []
+        
+        # Get PDF filename without extension and clean it
+        pdf_name = os.path.splitext(os.path.basename(input_pdf_path))[0]
+        pdf_name = re.sub(r'[^\w\-_.]', '_', pdf_name)
+        pdf_name = re.sub(r'_+', '_', pdf_name)
+        pdf_name = pdf_name.replace(' ', '_')  # Replace spaces with underscores
 
         doc = fitz.open(input_pdf_path)
 
@@ -200,17 +577,17 @@ def extract_images_from_pdf(input_pdf_path, output_folder_path, dpi_width=1200, 
             zoom_x = dpi_width / rect.width
             zoom_y = dpi_height / rect.height
 
-            # Render page to image
+            # Render page to image with PDF name
             matrix = fitz.Matrix(zoom_x, zoom_y)
             pix = page.get_pixmap(matrix=matrix, alpha=False)
 
-            # Save image
-            output_path = os.path.join(output_folder_path, f"page_{page_number + 1}.png")
+            # Save image with PDF name prefix
+            output_path = os.path.join(output_folder_path, f"{pdf_name}_page_{page_number + 1}.png")
             pix.save(output_path)
             # Normalize to forward slashes for all downstream use
             output_path = os.path.normpath(output_path).replace("\\", "/")
             extracted_images.append(output_path)
-            print(f"Saved page {page_number + 1} to {output_path}")
+            print(f"Saved page {page_number + 1} to {os.path.basename(output_path)}")
 
         doc.close()
         return extracted_images
@@ -386,14 +763,16 @@ def save_transcript_to_csv(content: str, image_name: str, csv_output_path: str) 
         college_match = re.search(r"College Name:\s*(.*)", content)
 
         if not name_match or not college_match:
-            print(f"Warning: Could not extract student/college name from {image_name}")
+            print(f"Warning: Could not extract student/college name from {os.path.basename(image_name)}")
         
         # Extract CSV data from content
         csv_data = extract_csv_from_content(content)
         
         if csv_data:
-            # Create filename based on image name (remove extension)
-            base_name = os.path.splitext(image_name)[0]
+            # Create filename based on image name (remove extension and clean)
+            base_name = os.path.splitext(os.path.basename(image_name))[0]
+            base_name = re.sub(r'[^\w\-_.]', '_', base_name)  # Replace special chars
+            base_name = base_name.replace(' ', '_')  # Replace spaces
             csv_filename = f"{base_name}.csv"
             csv_filepath = os.path.join(csv_output_path, csv_filename)
             
@@ -401,24 +780,23 @@ def save_transcript_to_csv(content: str, image_name: str, csv_output_path: str) 
             with open(csv_filepath, 'w', newline='', encoding='utf-8') as csvfile:
                 csvfile.write(csv_data)
             
-            print(f"Saved CSV data to: {csv_filepath}")
+            print(f"Saved CSV data to: {os.path.basename(csv_filepath)}")
             return csv_filepath
         else:
-            print(f"No CSV data found in content for {image_name}")
+            print(f"No CSV data found in content for {os.path.basename(image_name)}")
             return None
 
     except Exception as e:
-        print(f"Error saving transcript for {image_name}: {e}")
+        print(f"Error saving transcript for {os.path.basename(image_name)}: {e}")
         return None
 
-def merge_all_csv_files(csv_output_path: str, pdf_filename: str = None) -> str:
+def merge_all_csv_files(csv_output_path: str, processed_pdf_names: list = None) -> str:
     """
-    Merges all CSV files in the csv_folder into a single CSV file named after the PDF.
-    Handles headers properly - uses the first file's header and skips headers in subsequent files.
+    Merges all CSV files in the csv_folder into a single CSV file.
     
     Parameters:
         csv_output_path (str): Path to the CSV output folder.
-        pdf_filename (str): Name of the original PDF file (optional).
+        processed_pdf_names (list): List of processed PDF names.
     
     Returns:
         str: Path to the merged CSV file.
@@ -430,14 +808,23 @@ def merge_all_csv_files(csv_output_path: str, pdf_filename: str = None) -> str:
             print("No CSV files found to merge.")
             return None
         
-        # Generate merged filename based on PDF name or default
-        if pdf_filename:
-            # Remove .pdf extension and add .csv
-            base_name = os.path.splitext(os.path.basename(pdf_filename))[0]
-            merged_filename = f"{base_name}.csv"
+        # Generate merged filename based on processed PDFs
+        if processed_pdf_names and len(processed_pdf_names) > 0:
+            # Clean PDF names and join them
+            clean_names = []
+            for pdf_name in processed_pdf_names:
+                base_name = os.path.splitext(os.path.basename(pdf_name))[0]
+                # Replace special characters with empty string, spaces with underscore
+                clean_name = re.sub(r'[^\w\s\-_.]', '', base_name).replace(' ', '_')
+                # Remove multiple underscores
+                clean_name = re.sub(r'_+', '_', clean_name)
+                clean_names.append(clean_name)
+            merged_filename = f"merged_{'_'.join(clean_names)}.csv"
         else:
-            merged_filename = 'student_transcript.csv'
-            
+            merged_filename = 'merged_student_transcript.csv'
+        
+        # Remove multiple underscores from final filename
+        merged_filename = re.sub(r'_+', '_', merged_filename)
         merged_filepath = os.path.join(csv_output_path, merged_filename)
         header_written = False
         total_rows = 0
@@ -446,8 +833,8 @@ def merge_all_csv_files(csv_output_path: str, pdf_filename: str = None) -> str:
             merged_writer = csv.writer(merged_file)
             
             for csv_file in csv_files:
-                # Skip the final merged file if it already exists
-                if csv_file == merged_filename:
+                # Skip any existing merged files
+                if csv_file.startswith('merged_'):
                     continue
                     
                 csv_filepath = os.path.join(csv_output_path, csv_file)
@@ -479,9 +866,9 @@ def merge_all_csv_files(csv_output_path: str, pdf_filename: str = None) -> str:
                     print(f"Error reading {csv_file}: {e}")
                     continue
         
-        print(f"Successfully merged {len(csv_files)} CSV files")
+        print(f"Successfully merged {len([f for f in csv_files if not f.startswith('merged_')])} CSV files")
         print(f"Total data rows merged: {total_rows}")
-        print(f"Final merged file: {merged_filepath}")
+        print(f"Final merged file: {os.path.basename(merged_filepath)}")
         
         return merged_filepath
         
@@ -489,14 +876,14 @@ def merge_all_csv_files(csv_output_path: str, pdf_filename: str = None) -> str:
         print(f"Error merging CSV files: {e}")
         return None
 
-def process_images_to_csv(image_folder_path: str, csv_output_path: str, pdf_filename: str = None) -> str:
+def process_images_to_csv(image_folder_path: str, csv_output_path: str, processed_pdf_names: list = None) -> str:
     """
     Process all images in the folder and convert them to CSV files.
     
     Parameters:
         image_folder_path (str): Path to folder containing extracted images.
         csv_output_path (str): Path to folder where CSV files will be saved.
-        pdf_filename (str): Name of the original PDF file (optional).
+        processed_pdf_names (list): List of processed PDF names.
     
     Returns:
         str: Path to the final merged CSV file.
@@ -519,7 +906,7 @@ def process_images_to_csv(image_folder_path: str, csv_output_path: str, pdf_file
         for image_file in image_files:
             image_path = os.path.join(image_folder_path, image_file)
             image_path = os.path.abspath(image_path).replace("\\", "/")
-            print(f"Processing: {image_path}")
+            print(f"Processing: {image_file}")
             try:
                 response = query_with_local_image(image_path)
                 if response and "choices" in response:
@@ -528,13 +915,13 @@ def process_images_to_csv(image_folder_path: str, csv_output_path: str, pdf_file
                     if csv_file_path:
                         processed_files.append(csv_file_path)
                 else:
-                    print(f"Invalid response for {image_path}")
+                    print(f"Invalid response for {image_file}")
             except Exception as e:
-                print(f"Failed to process {image_path}: {e}")
+                print(f"Failed to process {image_file}: {e}")
         
         # Merge all CSV files into one final file
         if processed_files:
-            merged_csv_path = merge_all_csv_files(csv_output_path, pdf_filename)
+            merged_csv_path = merge_all_csv_files(csv_output_path, processed_pdf_names)
             return merged_csv_path
         else:
             print("No CSV files were created to merge.")
@@ -737,17 +1124,23 @@ def parse_and_index_pdf(pdf_path, user, private):
             st.error("Failed to extract images from PDF")
             return None
         
-        # Step 2: Process images and create CSV files
-        print("Step 2: Processing images and creating CSV files...")
-        # Pass the PDF filename to process_images_to_csv
-        final_csv_path = process_images_to_csv(image_output_path, csv_output_path, pdf_path)
-
-        # clean data
-        if final_csv_path:
-            fix_term_career_totals(final_csv_path, final_csv_path)
-        else:
+        # Step 2: Process images to individual CSV files only (no merging yet)
+        print("Step 2: Processing images to individual CSV files...")
+        pdf_name = os.path.splitext(os.path.basename(pdf_path))[0]
+        individual_csvs = process_images_to_individual_csv(image_output_path, csv_output_path, [pdf_name])
+        
+        if not individual_csvs:
             st.error("No CSV files were created from the images")
             return None
+        
+        # Step 3: Create final merged CSV from all individual CSVs in the folder
+        print("Step 3: Creating final merged CSV...")
+        final_csv_path = create_final_merged_csv(csv_output_path)
+
+        # Clean data
+        if final_csv_path:
+            fix_term_career_totals(final_csv_path, final_csv_path)
+            print(f"Final processed CSV: {os.path.basename(final_csv_path)}")
         
         return final_csv_path
         

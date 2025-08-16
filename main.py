@@ -15,6 +15,7 @@ import re
 from dotenv import load_dotenv
 import secrets
 import logging
+from typing import List
 
 # Load environment variables
 load_dotenv()
@@ -177,18 +178,77 @@ async def delete_session(request: Request, session_id: int = Form(...)):
 
 # --- File Upload Endpoint ---
 @app.post("/upload")
-async def upload_pdf(request: Request, file: UploadFile = File(...), private: bool = Form(...)):
+async def upload_files(request: Request, files: List[UploadFile] = File(...), private: bool = Form(...)):
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    
     upload_folder = f"/secure_uploads/{username}" if private else "/secure_uploads/public"
     os.makedirs(upload_folder, exist_ok=True)
-    file_path = os.path.join(upload_folder, file.filename)
-    with open(file_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    logic.parse_and_index_pdf(file_path, user=username, private=private)
-    logging.info(f"User {username} uploaded file {file.filename} (private: {private})")
-    return {"success": True, "message": "File uploaded and processed."}
+    
+    processed_files = []
+    errors = []
+    
+    # Determine output folders based on private flag
+    if private:
+        base_output_path = f"data/user_uploads/{username}"
+        image_output_path = os.path.join(base_output_path, "extracted_images")
+        csv_output_path = os.path.join(base_output_path, "csv_files")
+    else:
+        base_output_path = "data/public_uploads"
+        image_output_path = os.path.join(base_output_path, "extracted_images")
+        csv_output_path = os.path.join(base_output_path, "csv_files")
+    
+    # Create base directories
+    os.makedirs(base_output_path, exist_ok=True)
+    
+    for file in files:
+        try:
+            file_path = os.path.join(upload_folder, file.filename)
+            with open(file_path, "wb") as f:
+                shutil.copyfileobj(file.file, f)
+            
+            # Check file extension
+            if file.filename.lower().endswith('.zip'):
+                # Process ZIP file (only extract images and create individual CSVs)
+                extracted_pdfs = logic.extract_and_process_zip_images_only(file_path, image_output_path, csv_output_path)
+                processed_files.extend(extracted_pdfs)
+                logging.info(f"User {username} uploaded and processed ZIP file {file.filename}")
+            elif file.filename.lower().endswith('.pdf'):
+                # Process single PDF (only extract images and create individual CSVs)
+                result = logic.parse_pdf_to_individual_csv(file_path, image_output_path, csv_output_path)
+                if result:
+                    processed_files.append(file.filename)
+                logging.info(f"User {username} uploaded PDF file {file.filename}")
+            else:
+                errors.append(f"Unsupported file type: {file.filename}")
+                
+        except Exception as e:
+            errors.append(f"Error processing {file.filename}: {str(e)}")
+            logging.error(f"Error processing file {file.filename}: {e}")
+    
+    # After processing all files, create ONE final merged CSV
+    if processed_files:
+        try:
+            print("Creating final merged CSV from all individual CSVs...")
+            final_merged_csv = logic.create_final_merged_csv(csv_output_path)
+            if final_merged_csv:
+                logic.fix_term_career_totals(final_merged_csv, final_merged_csv)
+                print(f"Final merged CSV created: {os.path.basename(final_merged_csv)}")
+        except Exception as e:
+            errors.append(f"Error creating final merged CSV: {str(e)}")
+            logging.error(f"Error creating final merged CSV: {e}")
+    
+    message = f"Processed {len(processed_files)} file(s) successfully."
+    if errors:
+        message += f" {len(errors)} error(s) occurred."
+    
+    return {
+        "success": True, 
+        "message": message,
+        "processed_files": processed_files,
+        "errors": errors
+    }
 
 # --- Query Endpoint ---
 @app.post("/query")

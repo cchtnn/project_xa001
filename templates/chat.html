@@ -30,11 +30,11 @@
         <hr class="my-3" style="border-color: #e5e7eb;">
         
         <!-- Chats Section -->
-        <div class="mb-3">
+        <div class="mb-3" style="flex: 1; display: flex; flex-direction: column;">
             <h6 class="text-muted small px-3 mb-2 sidebar-text" style="font-weight: 600; font-size: 0.75rem;">Chats</h6>
             
             <!-- Scrollable Chat Sessions Container -->
-            <div id="session-history-container" style="max-height: 300px; overflow-y: auto; overflow-x: visible; scrollbar-width: thin; scrollbar-color: #cbd5e0 transparent;">
+            <div id="session-history-container" style="flex: 1; overflow-y: auto; overflow-x: visible;">
                 <div id="session-list" class="d-flex flex-column gap-1">
                     <!-- Sessions will be loaded here -->
                 </div>
@@ -58,13 +58,13 @@
                         <textarea class="form-control" name="query" id="query-textarea" rows="1" placeholder="Ask a question..." required style="resize:none; min-height:40px; max-height:120px; overflow-y:auto;"></textarea>
                     </div>
                     <button type="button" class="btn btn-success ms-2" id="enter-btn" title="Send">Enter</button>
-                    <label for="file-upload" class="input-group-text bg-white border-end-0 ms-2" style="cursor:pointer;">
+                    <label for="file-upload" class="input-group-text bg-white border-end-0 ms-2" style="cursor:pointer;" title="Upload PDF(s) or ZIP">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="#0d6efd" class="bi bi-upload" viewBox="0 0 16 16">
-                          <path d="M.5 9.9a.5.5 0 0 1 .5.5v3.1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10.4a.5.5 0 0 1 1 0v3.1A2 2 0 0 1 14 15.5H2A2 2 0 0 1 0 13.5V10.4a.5.5 0 0 1 .5-.5z"/>
-                          <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V10.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 1-.708-.708l3-3z"/>
+                        <path d="M.5 9.9a.5.5 0 0 1 .5.5v3.1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10.4a.5.5 0 0 1 1 0v3.1A2 2 0 0 1 14 15.5H2A2 2 0 0 1 0 13.5V10.4a.5.5 0 0 1 .5-.5z"/>
+                        <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V10.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 1-.708-.708l3-3z"/>
                         </svg>
                     </label>
-                    <input id="file-upload" type="file" name="file" accept=".pdf" style="display:none;">
+                    <input id="file-upload" type="file" name="files" accept=".pdf,.zip" multiple style="display:none;">
                     <div class="input-group-text bg-white border-start-0 ms-2">
                         <input class="form-check-input mt-0" type="checkbox" name="private" id="private" title="Private Upload">
                         <label class="form-check-label ms-1" for="private" style="font-size:0.95em;">Private</label>
@@ -113,8 +113,18 @@
     height: 100vh;
     background-color: #f8f9fa;
     border-right: 1px solid #e5e7eb;
-    z-index: 1000;
-    overflow-x: hidden;
+    z-index: 2000;
+    overflow: visible !important; /* Important: allow overflow */
+}
+
+.sidebar-content {
+    height: calc(100vh - 110px);
+    overflow: visible !important;
+    padding-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 2001;
 }
 
 .sidebar-container.collapsed {
@@ -144,8 +154,18 @@
 }
 
 /* Custom scrollbar styles */
+#session-history-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: visible;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    position: relative;
+    z-index: 2002;
+}
+
 #session-history-container::-webkit-scrollbar {
-    width: 6px;
+    display: none;
 }
 
 #session-history-container::-webkit-scrollbar-track {
@@ -162,58 +182,70 @@
 }
 
 /* Session list dropdown styles */
+
+.session-item .dropdown-menu .dropdown-item {
+    padding: 8px 12px !important;
+    border-radius: 0 !important;
+    transition: all 0.2s ease !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+    display: flex !important;
+    align-items: center !important;
+    white-space: nowrap !important;
+}
+
+.session-item .dropdown-menu .dropdown-item:hover {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+}
+
+.session-item .dropdown-menu .dropdown-item.text-danger {
+    color: #dc2626 !important;
+}
+
+.session-item .dropdown-menu .dropdown-item.text-danger:hover {
+    background-color: #fef2f2 !important;
+    color: #dc2626 !important;
+}
+
+.session-item .dropdown-menu .dropdown-divider {
+    margin: 4px 0 !important;
+    border-color: #e5e7eb !important;
+}
+
 .session-item .dropdown-menu {
-    position: fixed !important;
-    top: auto !important;
-    left: auto !important;
-    right: 20px !important;
-    z-index: 9999 !important;
-    min-width: 110px !important;
-    margin: 0 !important;
-    transform: none !important;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+    position: absolute !important;
+    z-index: 20050 !important;
+    min-width: 150px !important;
+    margin-top: 5px !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
     border: 1px solid #dee2e6 !important;
-    background-color: white !important;
-    font-size: 0.85em !important;
-    border-radius: 6px !important;
+    background-color: #ffffff !important;
+    font-size: 0.9em !important;
+    border-radius: 8px !important;
+    padding: 8px 0 !important;
+    white-space: nowrap !important;
+}
+
+.session-item .dropdown-menu.show {
+    display: block !important;
+}
+
+.session-item .dropdown {
+    position: relative !important;
+    z-index: 9998;
 }
 
 .session-item {
     position: relative;
-}
-
-.session-item .dropdown {
-    position: relative;
-}
-/* Session item hover effects */
-.session-item:hover {
-    background-color: #f1f5f9 !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    z-index: 2003;
 }
 
 .session-item:hover .btn {
     opacity: 1 !important;
 }
 
-.dropdown-item:hover {
-    background-color: #f8f9fa;
-}
-
-.dropdown-item.text-danger:hover {
-    background-color: #fef2f2;
-    color: #dc2626 !important;
-}
-
-/* Fix dropdown positioning within scrollable container */
-#session-history-container {
-    max-height: 300px; 
-    overflow-y: auto; 
-    scrollbar-width: thin; 
-    scrollbar-color: #cbd5e0 transparent;
-    overflow-x: visible;
-}
-
-/* Ensure sidebar container allows overflow for dropdowns */
+/* Ensure sidebar allows overflow for dropdown */
 .sidebar-container {
     position: fixed;
     top: 0;
@@ -221,16 +253,30 @@
     height: 100vh;
     background-color: #f8f9fa;
     border-right: 1px solid #e5e7eb;
-    z-index: 1000;
-    overflow-x: visible;
-    overflow-y: hidden;
+    z-index: 2000;
+    overflow: visible !important;
 }
 
 .sidebar-content {
     height: calc(100vh - 110px);
-    overflow: visible;
+    overflow: visible !important;
     padding-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    z-index: 2001;
 }
+
+#session-history-container {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: visible;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    position: relative;
+    z-index: 2002;
+}
+
 </style>
 
 <script>
@@ -246,7 +292,7 @@ let currentSessionId = null;
 let userSessions = [];
 
 // Spinner HTML
-function showSpinner(msg="Please wait...") {
+function showSpinner(msg="Please wait while I am generating answer for you...") {
     statusArea.innerHTML = `<div class="d-flex align-items-center text-secondary">
         <span class="spinner-border spinner-border-sm me-2"></span> ${msg}
     </div>`;
@@ -257,27 +303,51 @@ function hideSpinner() {
     statusArea.innerHTML = "";
 }
 
-// Handle dropdown toggle with dynamic positioning
+// Replace your toggleDropdown function with this:
 function toggleDropdown(event, sessionId) {
     event.stopPropagation();
-    
-    // Close all other dropdowns first
-    document.querySelectorAll('.dropdown-menu.show').forEach(menu => {
-        menu.classList.remove('show');
-    });
-    
-    // Get current dropdown and button position
+
+    // Close all open dropdowns
+    document.querySelectorAll('.dropdown-menu.show').forEach(menu => menu.classList.remove('show'));
+
     const button = event.target.closest('button');
     const dropdown = event.target.closest('.dropdown').querySelector('.dropdown-menu');
-    const buttonRect = button.getBoundingClientRect();
-    
-    // Position dropdown near the button
-    dropdown.style.top = (buttonRect.top + buttonRect.height + 5) + 'px';
-    dropdown.style.right = '20px';
-    
-    // Toggle current dropdown
-    dropdown.classList.toggle('show');
+    const rect = button.getBoundingClientRect();
+    const sidebarRect = document.getElementById('sidebar-container').getBoundingClientRect();
+
+    // Position dropdown relative to sidebar, not viewport
+    dropdown.style.top = (rect.bottom + window.scrollY) + 'px';
+    dropdown.style.left = (rect.left - sidebarRect.left + rect.width + 5) + 'px';
+    dropdown.style.right = 'auto'; // Clear any right positioning
+    dropdown.classList.add('show');
 }
+
+
+// Handle file selection display
+fileInput.onchange = function() {
+    const files = Array.from(this.files);
+    const selectedFilesDiv = document.getElementById('selected-files');
+    const fileListDiv = document.getElementById('file-list');
+    
+    if (files.length > 0) {
+        selectedFilesDiv.style.display = 'block';
+        fileListDiv.innerHTML = files.map(file => {
+            const fileType = file.name.toLowerCase().endsWith('.zip') ? 'ZIP' : 'PDF';
+            const fileSize = (file.size / 1024 / 1024).toFixed(2);
+            return `
+                <div class="d-flex justify-content-between align-items-center py-1">
+                    <div>
+                        <span class="badge bg-${fileType === 'ZIP' ? 'warning' : 'primary'} me-2">${fileType}</span>
+                        <small>${file.name}</small>
+                    </div>
+                    <small class="text-muted">${fileSize} MB</small>
+                </div>
+            `;
+        }).join('');
+    } else {
+        selectedFilesDiv.style.display = 'none';
+    }
+};
 
 // Add event listener to handle dropdown show events
 document.addEventListener('show.bs.dropdown', function (e) {
@@ -287,6 +357,7 @@ document.addEventListener('show.bs.dropdown', function (e) {
 // Handle chat submit (question only)
 enterBtn.onclick = async function(e) {
     e.preventDefault();
+    uploadStatus.innerHTML = "";
     if (!queryTextarea.value.trim()) {
         queryTextarea.focus();
         return;
@@ -327,19 +398,42 @@ enterBtn.onclick = async function(e) {
 uploadBtn.onclick = async function(e) {
     e.preventDefault();
     if (!fileInput.files.length) {
-        uploadStatus.innerHTML = `<div class="alert alert-warning mb-0">Please select a PDF file to upload.</div>`;
+        uploadStatus.innerHTML = `<div class="alert alert-warning mb-0">Please select file(s) to upload.</div>`;
         return;
     }
-    showSpinner();
+    
+    showSpinner(`Uploading and processing ${fileInput.files.length} file(s)...`);
+    
     const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
+    for (let i = 0; i < fileInput.files.length; i++) {
+        formData.append('files', fileInput.files[i]);
+    }
     formData.append('private', document.getElementById('private').checked);
-    const resp = await fetch('/upload', {method: 'POST', body: formData});
-    const result = await resp.json();
-    hideSpinner();
-    uploadStatus.innerHTML = `<div class="alert alert-success mb-2">File uploaded successfully.</div>`;
-    setTimeout(() => { uploadStatus.innerHTML = ""; }, 5000);
-    fileInput.value = ""; // Reset file input
+    
+    try {
+        const resp = await fetch('/upload', {method: 'POST', body: formData});
+        const result = await resp.json();
+        hideSpinner();
+        
+        let statusHtml = `<div class="alert alert-success mb-2">
+            <strong>${result.message}</strong><br>
+        `;
+        
+        if (result.processed_files && result.processed_files.length > 0) {
+            statusHtml += `<small>Successfully processed: ${result.processed_files.join(', ')}</small><br>`;
+        }
+        
+        if (result.errors && result.errors.length > 0) {
+            statusHtml += `<small class="text-warning">Errors: ${result.errors.join('; ')}</small>`;
+        }
+        
+        statusHtml += `</div>`;
+        uploadStatus.innerHTML = statusHtml;
+        
+    } catch (error) {
+        hideSpinner();
+        uploadStatus.innerHTML = `<div class="alert alert-danger mb-2">Upload failed: ${error.message}</div>`;
+    }
 };
 
 // Create new session
@@ -430,9 +524,17 @@ function toggleDropdown(event, sessionId) {
         menu.classList.remove('show');
     });
     
+    // Get current dropdown and button position
+    const button = event.target.closest('button');
+    const dropdown = event.target.closest('.dropdown').querySelector('.dropdown-menu');
+    const buttonRect = button.getBoundingClientRect();
+    
+    // Position dropdown relative to button
+    dropdown.style.top = (buttonRect.bottom + 5) + 'px';
+    dropdown.style.right = '15px';
+    
     // Toggle current dropdown
-    const currentDropdown = event.target.closest('.dropdown').querySelector('.dropdown-menu');
-    currentDropdown.classList.toggle('show');
+    dropdown.classList.toggle('show');
 }
 
 // Render session list
@@ -444,8 +546,35 @@ function renderSessionList() {
     }
     
     sessionList.innerHTML = userSessions.map(session => `
-    <div class="position-relative session-item" style="border-radius: 8px; transition: all 0.2s ease;">
-        <button class="btn btn-light border-0 text-start d-flex align-items-center py-2 px-3 w-100 session-btn-custom ${session.session_id === currentSessionId ? 'active' : ''}" 
+    <div class="position-relative session-item d-flex align-items-center" style="border-radius: 8px; transition: all 0.2s ease; margin-bottom: 4px;">
+        <!-- Three dots button on the left -->
+        <div class="dropdown me-2 sidebar-text position-static">
+    <button class="btn btn-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" data-bs-boundary="viewport"
+            style="border: none; background: none; opacity: 0.7; padding: 4px 6px; margin-left: 8px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+            <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
+        </svg>
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end shadow">
+        <li><a class="dropdown-item rename-session d-flex align-items-center" href="#" data-session-id="${session.session_id}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-pencil me-2" viewBox="0 0 16 16">
+                <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L10.5 8.207l-3-3L12.146.146zM11.207 9.207l-3-3L2.5 12.914a.5.5 0 0 0-.146.353V14.5a.5.5 0 0 0 .5.5h1.233a.5.5 0 0 0 .353-.146l5.707-5.707z"/>
+            </svg>
+            Rename
+        </a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item delete-session text-danger d-flex align-items-center" href="#" data-session-id="${session.session_id}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-trash me-2" viewBox="0 0 16 16">
+                <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
+            <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
+            </svg>
+            Delete
+        </a></li>
+    </ul>
+</div>
+        
+        <!-- Chat button taking remaining space -->
+        <button class="btn btn-light border-0 text-start d-flex align-items-center py-2 px-3 flex-grow-1 session-btn-custom ${session.session_id === currentSessionId ? 'active' : ''}" 
                 data-session-id="${session.session_id}" 
                 style="background-color: #f8f9fa; border-radius: 8px; font-size: 0.9em; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chat-left me-2 flex-shrink-0" viewBox="0 0 16 16">
@@ -453,39 +582,10 @@ function renderSessionList() {
             </svg>
             <span class="flex-grow-1 sidebar-text" style="overflow: hidden; text-overflow: ellipsis;">${session.session_name || 'Untitled Chat'}</span>
         </button>
-        <div class="position-absolute top-50 end-0 translate-middle-y me-2 sidebar-text">
-    <div class="dropdown">
-        <button class="btn btn-sm" type="button" 
-                style="border: none; background: none; opacity: 0.7; padding: 2px 4px;" 
-                onclick="toggleDropdown(event, ${session.session_id})">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
-                <path d="M9.5 13a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm0-5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z"/>
-            </svg>
-        </button>
-        <div class="dropdown-menu">
-            <a class="dropdown-item rename-session d-flex align-items-center py-1 px-2" href="#" data-session-id="${session.session_id}" onclick="event.stopPropagation()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-pencil me-2" viewBox="0 0 16 16">
-                    <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708L10.5 8.207l-3-3L12.146.146zM11.207 9.207l-3-3L2.5 12.914a.5.5 0 0 0-.146.353V14.5a.5.5 0 0 0 .5.5h1.233a.5.5 0 0 0 .353-.146l5.707-5.707z"/>
-                </svg>
-                Rename
-            </a>
-            <hr class="dropdown-divider my-0">
-            <a class="dropdown-item delete-session text-danger d-flex align-items-center py-1 px-2" href="#" data-session-id="${session.session_id}" onclick="event.stopPropagation()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-trash me-2" viewBox="0 0 16 16">
-                    <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z"/>
-                    <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z"/>
-                    </svg>
-                Delete
-            </a>
-        </div>
-    </div>
-</div>
-    </div>
-</div>
     </div>
 `).join('');
     
-    // Re-attach event listeners (same as your existing code)
+     // Re-attach event listeners for chat buttons
     document.querySelectorAll('.session-btn-custom').forEach(btn => {
         btn.onclick = function() {
             const sessionId = parseInt(this.dataset.sessionId);
@@ -493,7 +593,7 @@ function renderSessionList() {
         };
     });
     
-    // Update rename and delete event listeners to close dropdown after click
+    // Update rename and delete event listeners
     document.querySelectorAll('.rename-session').forEach(btn => {
         btn.onclick = function(e) {
             e.preventDefault();
@@ -525,8 +625,37 @@ function renderSessionList() {
             
             deleteSession(sessionId);
         };
-});
+    });
 }
+
+// Handle dropdown positioning and z-index
+document.addEventListener('show.bs.dropdown', function (event) {
+    const dropdownMenu = event.target.nextElementSibling;
+    if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu')) {
+        // Move dropdown to body to escape z-index constraints
+        document.body.appendChild(dropdownMenu);
+        
+        // Position it correctly
+        const button = event.target;
+        const rect = button.getBoundingClientRect();
+        dropdownMenu.style.position = 'fixed';
+        dropdownMenu.style.top = (rect.bottom + 5) + 'px';
+        dropdownMenu.style.left = (rect.left + rect.width + 5) + 'px';
+        dropdownMenu.style.zIndex = '9999';
+    }
+});
+
+document.addEventListener('hide.bs.dropdown', function (event) {
+    const dropdownMenu = event.target.nextElementSibling;
+    if (dropdownMenu && dropdownMenu.classList.contains('dropdown-menu') && dropdownMenu.parentElement === document.body) {
+        // Move it back to original parent
+        event.target.parentElement.appendChild(dropdownMenu);
+        dropdownMenu.style.position = '';
+        dropdownMenu.style.top = '';
+        dropdownMenu.style.left = '';
+        dropdownMenu.style.zIndex = '';
+    }
+});
 
 // Switch to a different session
 async function switchToSession(sessionId) {
