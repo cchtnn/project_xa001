@@ -10,6 +10,7 @@ from query_classifier import classify_user_query, QueryType
 # Updated import - now using CSV handler instead of FAISS handler
 from student_transcript_csv_handler import process_transcript_query
 import logic
+import json
 import logging
 logging.getLogger("watchdog").setLevel(logging.ERROR)
 

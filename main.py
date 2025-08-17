@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from vectorstore_manager import initialize_vectorstore, get_collection
+from conversation_graph import create_conversation_graph
 import uvicorn
 import os
 import shutil
@@ -260,13 +261,17 @@ async def query(request: Request, query: str = Form(...), session_id: int = Form
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    
     query = query.strip()
     if not query or len(query) > 500:
         raise HTTPException(status_code=400, detail="Invalid query length")
     if re.search(r'[<>{};]', query):
         raise HTTPException(status_code=400, detail="Invalid characters in query")
+    
     logging.info(f"User {username} queried: {query} (session_id: {session_id})")
+    
     try:
+        # Initialize vectorstore and data
         index, metadata, tab_data = initialize_vectorstore()
         collection = get_collection()
         data_loading_error = None
@@ -275,20 +280,83 @@ async def query(request: Request, query: str = Form(...), session_id: int = Form
         logging.error(f"Error loading data for user {username}: {e}")
         index, metadata, tab_data = [], [], {}
         collection = None
-    handler = query_handler.create_query_handler(collection, tab_data)
+    
     if len(query.split()) > 100:
         raise HTTPException(status_code=400, detail="Query too complex")
-    answer_obj, query_type, confidence_score = handler.process_query(query, language="English")
+    
     try:
-        history = session_db.load_qa_history(session_id)
-        if len(history) == 0:
+        # Get conversation history for context
+        chat_history = session_db.get_contextual_history(session_id, limit=5)
+        
+        # Create user context
+        user_context = {
+            "username": username,
+            "session_id": session_id,
+            "language": "English",  # You can make this dynamic
+            "active_transcript_csv_path": None  # Add logic to set this if needed
+        }
+        
+        # Create and use conversation graph
+        conv_graph = create_conversation_graph(collection, tab_data)
+        result = conv_graph.process_conversation(query, chat_history, user_context)
+        
+        # Extract response and metadata
+        response_content = result["response"]
+        query_type = result["query_type"]
+        confidence_score = result["confidence_score"]
+        contextual_query = result.get("contextual_query", query)
+        entities = result.get("entities", {})
+        
+        # Save conversation context for future use
+        session_db.save_conversation_context(session_id, entities, contextual_query)
+        
+        # Handle session naming for new sessions
+        if len(chat_history) == 0:
             session_name = generate_session_name(query)
             session_db.rename_session(session_id, session_name)
-        history.append({"question": query, "answer": answer_obj.content})
-        session_db.save_qa_history(session_id, history)
+        
+        # Save Q&A to history
+        success = session_db.add_single_qa_to_history(session_id, query, response_content)
+        if not success:
+            # Fallback to old method if new method fails
+            history = session_db.load_qa_history(session_id)
+            history.append({"question": query, "answer": response_content})
+            session_db.save_qa_history(session_id, history)
+        
+        print(f"Processed query with context - Type: {query_type}, Confidence: {confidence_score:.2f}, contextual: {len(chat_history)}")
+        
+        return {
+            "answer": response_content, 
+            "session_id": session_id,
+            "query_type": query_type,
+            "confidence_score": confidence_score,
+            "contextual": len(chat_history) > 0  # Indicate if context was used
+        }
+        
     except Exception as e:
-        logging.error(f"Error saving history for user {username}: {e}")
-    return {"answer": answer_obj.content, "session_id": session_id}
+        print(f"Error processing contextual query for user {username}: {e}")
+        
+        # Fallback to original query handler
+        try:
+            handler = query_handler.create_query_handler(collection, tab_data)
+            answer_obj, query_type, confidence_score = handler.process_query(query, language="English")
+            
+            # Save using original method
+            history = session_db.load_qa_history(session_id)
+            if len(history) == 0:
+                session_name = generate_session_name(query)
+                session_db.rename_session(session_id, session_name)
+            history.append({"question": query, "answer": answer_obj.content})
+            session_db.save_qa_history(session_id, history)
+            
+            return {"answer": answer_obj.content, "session_id": session_id}
+            
+        except Exception as fallback_error:
+            logging.error(f"Fallback query processing failed for user {username}: {fallback_error}")
+            return {
+                "answer": "I apologize, but I'm experiencing technical difficulties. Please try again later.",
+                "session_id": session_id
+            }
 
 # --- History Endpoint ---
 @app.get("/history")

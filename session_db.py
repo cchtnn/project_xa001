@@ -1,5 +1,6 @@
 import sqlite3
 import os
+import json
 import logging
 logging.getLogger("watchdog").setLevel(logging.ERROR)
 
@@ -61,6 +62,113 @@ def init_db():
     
     conn.commit()
     conn.close()
+
+# Add these methods to your existing session_db.py file
+
+def get_contextual_history(session_id, limit=5):
+    """Get recent chat history for context with enhanced metadata"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            SELECT question, answer, timestamp, id
+            FROM session_history 
+            WHERE session_id = ? 
+            ORDER BY timestamp DESC 
+            LIMIT ?
+        """, (session_id, limit))
+        
+        rows = c.fetchall()
+        conn.close()
+        
+        # Return in chronological order (oldest first)
+        history = []
+        for q, a, t, msg_id in reversed(rows):
+            history.append({
+                "question": q,
+                "answer": a, 
+                "timestamp": t,
+                "message_id": msg_id
+            })
+        
+        return history
+    except sqlite3.OperationalError as e:
+        print(f"Database error in get_contextual_history: {e}")
+        return []
+
+def save_conversation_context(session_id, entities, contextual_query):
+    """Save extracted conversation context for future reference"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        
+        # Create context table if it doesn't exist
+        c.execute("""
+            CREATE TABLE IF NOT EXISTS conversation_context (
+                session_id INTEGER,
+                entities TEXT,
+                contextual_query TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES chat_sessions(session_id) ON DELETE CASCADE
+            )
+        """)
+        
+        # Insert context (keep only latest for each session)
+        c.execute("DELETE FROM conversation_context WHERE session_id = ?", (session_id,))
+        c.execute("""
+            INSERT INTO conversation_context (session_id, entities, contextual_query) 
+            VALUES (?, ?, ?)
+        """, (session_id, json.dumps(entities), contextual_query))
+        
+        conn.commit()
+        conn.close()
+    except sqlite3.OperationalError as e:
+        print(f"Database error in save_conversation_context: {e}")
+
+def load_conversation_context(session_id):
+    """Load saved conversation context"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            SELECT entities, contextual_query, created_at 
+            FROM conversation_context 
+            WHERE session_id = ?
+        """, (session_id,))
+        
+        row = c.fetchone()
+        conn.close()
+        
+        if row:
+            return {
+                "entities": json.loads(row[0]),
+                "contextual_query": row[1],
+                "created_at": row[2]
+            }
+        return None
+    except (sqlite3.OperationalError, json.JSONDecodeError) as e:
+        print(f"Database error in load_conversation_context: {e}")
+        return None
+
+def add_single_qa_to_history(session_id, question, answer):
+    """Add a single Q&A to history without rewriting everything"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            INSERT INTO session_history (session_id, question, answer) 
+            VALUES (?, ?, ?)
+        """, (session_id, question, answer))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.OperationalError as e:
+        print(f"Database error in add_single_qa_to_history: {e}")
+        return False
 
 def get_all_active_sessions():
     """Get all active sessions for admin view"""

@@ -573,7 +573,10 @@ class StudentTranscriptCSVHandler:
         try:
             # Use the summarizer LLM
             summary_response = self.summarizer_llm.invoke(prompt)
-            summary_response = re.sub(r":\s*<table>", ":<table>", summary_response)
+            try:
+                summary_response = re.sub(r":\s*<table>", ":<table>", summary_response)
+            except Exception as e:
+                print(f"⚠️ Error cleaning response: {str(e)}")
             
             # Extract the content from the response
             if hasattr(summary_response, 'content'):

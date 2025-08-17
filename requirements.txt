@@ -31,3 +31,4 @@ python-multipart
 PyJWT
 filetype
 clamd
+langgraph>=0.0.40
