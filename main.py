@@ -6,6 +6,7 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from vectorstore_manager import initialize_vectorstore, get_collection
 from conversation_graph import create_conversation_graph
 import uvicorn
+import sqlite3
 import os
 import shutil
 import auth_db
@@ -373,21 +374,26 @@ async def history(request: Request, session_id: int):
 
 # --- Admin Endpoints ---
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request, access_token: str = Cookie(None)):
-    payload = decode_access_token(access_token)
-    if not payload or not auth_db.validate_admin(payload["sub"]):
+async def admin_page(request: Request):
+    username = get_username_from_token(request)
+    if not username or not auth_db.validate_admin(username):
         return RedirectResponse(url="/admin/login", status_code=302)
     users_raw = auth_db.list_users()
     users = [{"username": u[0], "role": u[1]} for u in users_raw]
     active_sessions = session_db.get_all_active_sessions()
     csrf_token = secrets.token_urlsafe(32)
-    session_db.save_meta(f"csrf_{payload['sub']}", csrf_token)
+    session_db.save_meta(f"csrf_{username}", csrf_token)
+    
+    # Check for success/error parameters
+    add_success = request.query_params.get("add_success") == "true"
+    
     return templates.TemplateResponse("admin.html", {
         "request": request,
         "user_authenticated": True,
         "users": users,
         "active_sessions": active_sessions,
-        "csrf_token": csrf_token
+        "csrf_token": csrf_token,
+        "add_success": add_success
     })
 
 @app.get("/admin/login", response_class=HTMLResponse)
@@ -408,6 +414,61 @@ async def admin_login_post(request: Request, username: str = Form(...), password
     logging.info(f"Admin {username} logged in")
     return response
 
+@app.get("/admin/add_user")
+async def admin_add_user_get(request: Request):
+    """Redirect GET requests to admin page"""
+    username = get_username_from_token(request)
+    if not username or not auth_db.validate_admin(username):
+        return RedirectResponse(url="/admin/login", status_code=302)
+    return RedirectResponse(url="/admin", status_code=302)
+
+@app.get("/admin/delete_user")
+async def admin_delete_user_get(request: Request):
+    """Redirect GET requests to admin page"""
+    username = get_username_from_token(request)
+    if not username or not auth_db.validate_admin(username):
+        return RedirectResponse(url="/admin/login", status_code=302)
+    return RedirectResponse(url="/admin", status_code=302)
+
+@app.get("/admin/edit_user")
+async def admin_edit_user_get(request: Request):
+    """Redirect GET requests to admin page"""
+    username = get_username_from_token(request)
+    if not username or not auth_db.validate_admin(username):
+        return RedirectResponse(url="/admin/login", status_code=302)
+    return RedirectResponse(url="/admin", status_code=302)
+
+@app.post("/admin/refresh_sessions")
+async def refresh_sessions(request: Request, csrf_token: str = Form(...)):
+    admin_username = get_username_from_token(request)
+    if not admin_username or not auth_db.validate_admin(admin_username):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    if session_db.load_meta(f"csrf_{admin_username}") != csrf_token:
+        raise HTTPException(status_code=403, detail="Invalid CSRF token")
+    
+    try:
+        # Clean up inactive sessions first
+        session_db.cleanup_inactive_sessions()
+        
+        # Get fresh session data
+        active_sessions = session_db.get_all_active_sessions()
+        
+        logging.info(f"Admin {admin_username} refreshed active sessions - found {len(active_sessions)} sessions")
+        
+        return {"success": True, "session_count": len(active_sessions)}
+        
+    except Exception as e:
+        logging.error(f"Error refreshing sessions for admin {admin_username}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to refresh sessions")
+
+@app.get("/admin/kill_session")
+async def admin_kill_session_get(request: Request):
+    """Redirect GET requests to admin page"""
+    username = get_username_from_token(request)
+    if not username or not auth_db.validate_admin(username):
+        return RedirectResponse(url="/admin/login", status_code=302)
+    return RedirectResponse(url="/admin", status_code=302)
+
 @app.post("/admin/add_user")
 async def add_user(request: Request, username: str = Form(...), password: str = Form(...), role: str = Form(...), csrf_token: str = Form(...)):
     admin_username = get_username_from_token(request)
@@ -418,12 +479,16 @@ async def add_user(request: Request, username: str = Form(...), password: str = 
     try:
         auth_db.add_user(username, password, role, created_by=admin_username)
         logging.info(f"Admin {admin_username} added user {username} with role {role}")
+        return RedirectResponse(url="/admin?add_success=true", status_code=302)
+    
+    except sqlite3.IntegrityError:
         return templates.TemplateResponse("admin.html", {
             "request": request,
             "user_authenticated": True,
             "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
+            "active_sessions": session_db.get_all_active_sessions(),
             "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-            "add_success": True
+            "error": f"Username '{username}' already exists. Please choose a different username."
         })
     except ValueError as e:
         if STRONG_PASSWORD:
@@ -431,19 +496,31 @@ async def add_user(request: Request, username: str = Form(...), password: str = 
                 "request": request,
                 "user_authenticated": True,
                 "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
+                "active_sessions": session_db.get_all_active_sessions(),
                 "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
                 "error": str(e)
             })
         else:
-            logging.warning(f"Admin {admin_username} added user {username} with weak password")
-            auth_db.add_user(username, password, role, created_by=admin_username, bypass_password_validation=True)
-            return templates.TemplateResponse("admin.html", {
-                "request": request,
-                "user_authenticated": True,
-                "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-                "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-                "add_success": True
-            })
+            try:
+                logging.warning(f"Admin {admin_username} added user {username} with weak password")
+                auth_db.add_user(username, password, role, created_by=admin_username, bypass_password_validation=True)
+                return templates.TemplateResponse("admin.html", {
+                    "request": request,
+                    "user_authenticated": True,
+                    "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
+                    "active_sessions": session_db.get_all_active_sessions(),
+                    "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
+                    "add_success": True
+                })
+            except sqlite3.IntegrityError:
+                return templates.TemplateResponse("admin.html", {
+                    "request": request,
+                    "user_authenticated": True,
+                    "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
+                    "active_sessions": session_db.get_all_sessions(),
+                    "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
+                    "error": f"Username '{username}' already exists. Please choose a different username."
+                })
 
 @app.post("/admin/edit_user")
 async def edit_user(request: Request, original_username: str = Form(...), username: str = Form(...), role: str = Form(...), csrf_token: str = Form(...)):
@@ -515,14 +592,14 @@ async def kill_session(request: Request, session_id: int = Form(...), csrf_token
             users_raw = auth_db.list_users()
             users = [{"username": u[0], "role": u[1]} for u in users_raw]
             active_sessions = session_db.get_all_active_sessions()
-            
+            add_success = request.query_params.get("add_success") == "true"
             return templates.TemplateResponse("admin.html", {
                 "request": request,
                 "user_authenticated": True,
                 "users": users,
                 "active_sessions": active_sessions,
-                "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-                "session_kill_success": True
+                "csrf_token": csrf_token,
+                "add_success": add_success
             })
         else:
             raise Exception("Session not found")

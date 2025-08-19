@@ -345,16 +345,35 @@ def get_active_sessions(username):
         print(f"Database error in get_active_sessions: {e}")
         return []
     
-def cleanup_inactive_sessions():
+def cleanup_inactive_sessions(days_inactive=30):
+    """Clean up sessions older than specified days"""
     init_db()
     try:
         conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
-        c.execute("DELETE FROM chat_sessions WHERE created_at < datetime('now', '-30 days')")
+        
+        # Delete sessions with no recent activity
+        c.execute("""
+            DELETE FROM chat_sessions 
+            WHERE session_id NOT IN (
+                SELECT DISTINCT cs.session_id 
+                FROM chat_sessions cs
+                LEFT JOIN session_history sh ON cs.session_id = sh.session_id
+                WHERE cs.created_at > datetime('now', '-{} days') 
+                   OR sh.timestamp > datetime('now', '-{} days')
+            )
+        """.format(days_inactive, days_inactive))
+        
+        deleted_count = c.rowcount
         conn.commit()
         conn.close()
+        
+        logging.info(f"Cleaned up {deleted_count} inactive sessions")
+        return deleted_count
+        
     except sqlite3.OperationalError as e:
-        print(f"Database error in cleanup_inactive_sessions: {e}")
+        logging.error(f"Database error in cleanup_inactive_sessions: {e}")
+        return 0
 
 def validate_admin(username):
     conn = sqlite3.connect(DB_PATH)
