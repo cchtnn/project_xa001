@@ -34,6 +34,7 @@ class StudentTranscriptCSVHandler:
         self.query_reformulator = None
         self.is_initialized = False
         self.csv_structure = None
+        self.frequent_queries = self._load_frequent_queries()
         
     def initialize(self):
         """Initialize the CSV handler with LLM, agent, and query reformulator"""
@@ -68,6 +69,61 @@ class StudentTranscriptCSVHandler:
             traceback.print_exc()
             return False
     
+    def _load_frequent_queries(self) -> Dict[str, str]:
+        """Load frequently asked questions and their pre-reformulated queries"""
+        return {
+            # GPA related queries
+            "Sort students in descending order of GPA": "calculate mean GPA for each student from 'Student Name' and 'GPA' columns, sort in descending order by GPA value",
+            "highest gpa student": "find student with maximum GPA value from 'Student Name' and 'GPA' columns",
+            "lowest gpa student": "find student with minimum GPA value from 'Student Name' and 'GPA' columns", 
+            "average gpa": "calculate overall mean of all GPA values from 'GPA' column",
+            "students with gpa above": "filter students from 'Student Name' column where 'GPA' column value is greater than specified threshold",
+            
+            # Student information queries
+            "student at college": "show student names from 'Student Name' column where 'College Name' or 'Organization Name' column matches specified college",
+            "all students": "show all unique student names from 'Student Name' column",
+            "student count": "count unique students from 'Student Name' column",
+            
+            # Course related queries  
+            "courses for student": "show all course information from course-related columns where 'Student Name' column equals specified student name",
+            "course count": "count total courses or course entries in the dataset",
+            
+            # Grade related queries
+            "students with grade": "filter students from 'Student Name' column where grade-related column equals specified grade",
+            "grade distribution": "show distribution of grades from grade-related columns",
+            
+            # Advisor related queries
+            "advisor for student": "show advisor information from advisor-related columns where 'Student Name' column equals specified student name",
+            "students by advisor": "show students from 'Student Name' column grouped by advisor from advisor-related columns"
+        }
+
+    def _find_matching_frequent_query(self, user_query: str) -> str:
+        """Find if user query matches any frequent query pattern"""
+        user_query_lower = user_query.lower().strip()
+        
+        # Direct keyword matching - check both directions
+        for pattern, reformulated in self.frequent_queries.items():
+            pattern_lower = pattern.lower()
+            # Check if pattern matches user query or user query matches pattern
+            if (pattern_lower in user_query_lower) or (user_query_lower in pattern_lower):
+                print(f"🎯 Found matching frequent query pattern: '{pattern}'")
+                return reformulated
+        
+        # Additional exact phrase matching for common variations
+        query_variations = {
+            "sort students in descending order of gpa": "Sort students in descending order of GPA",
+            "sort students by gpa descending": "Sort students in descending order of GPA", 
+            "order students by gpa desc": "Sort students in descending order of GPA",
+            "rank students by gpa": "Sort students in descending order of GPA",
+            "list students by gpa highest first": "Sort students in descending order of GPA"
+        }
+        
+        for variation, pattern in query_variations.items():
+            if variation in user_query_lower:
+                if pattern in self.frequent_queries:
+                    print(f"🎯 Found matching query variation: '{variation}' -> '{pattern}'")
+                    return self.frequent_queries[pattern]
+
     def _setup_llm(self):
         """Setup the ChatGroq LLM for query reformulation"""
         try:
@@ -82,7 +138,7 @@ class StudentTranscriptCSVHandler:
                 temperature=0,
                 max_tokens=4096,
                 streaming=False,
-                request_timeout=30
+                request_timeout=60
             )
             print("✅ Query Reformulator LLM setup completed")
         except Exception as e:
@@ -179,17 +235,16 @@ class StudentTranscriptCSVHandler:
 
                 3. NEVER use descriptive text as the Action name
                 4. NEVER say "Use the python_repl_ast to..." - just use "python_repl_ast"
-                5. After getting results from an action, IMMEDIATELY provide the Final Answer
+                5. After getting results from an action, IMMEDIATELY provide the full pandas dataframe as Final Answer
                 6. Do NOT execute additional actions after finding the answer
                 7. For unique values, use .unique() or .drop_duplicates()
                 8. Give unique rows only - do not repeat rows in your answers.
                 
                 RESPONSE FORMAT:
-                9. When you find data, extract the unique value and provide ONLY that as Final Answer
+                9. When you find data, Give unique rows only - do not repeat rows in your answers. Write result of the agent after fixed text "Final Answer"
                 10. For advisor queries: if multiple rows have same advisor, show unique advisor name only
-                11. For student lists: show unique student names only
-                12. Use pandas methods like .iloc[0] to get single values when appropriate
-                13. When None is coming as answer then in that case mention "No data found" instead of None.
+                11. show unique column rows or columns only
+                12. When None is coming as answer then in that case mention "No data found" instead of None.
                 
                 DATA HANDLING RULES:
                 13. pandas is already imported as 'pd' - you don't need to import it again
@@ -264,7 +319,16 @@ class StudentTranscriptCSVHandler:
         if self.llm is None:
             print("⚠️ LLM not available for query reformulation, returning original query")
             return user_query
+        # First check if query matches any frequent query pattern
+        frequent_match = self._find_matching_frequent_query(user_query)
+        if frequent_match:
+            print(f"🔄 Using pre-reformulated frequent query:")
+            print(f"   Original: {user_query}")
+            print(f"   Pre-reformulated: {frequent_match}")
+            return frequent_match
         
+        print("🔄 No frequent query match found, using LLM reformulation...")
+
         try:
             # FIX: Use the reformulator's prompt creator
             system_prompt = self.query_reformulator.create_reformulation_prompt(csv_structure)
@@ -475,131 +539,72 @@ class StudentTranscriptCSVHandler:
         if "Agent stopped due to iteration limit or time limit" in raw_response:
             return "I encountered a timeout while processing your query. This usually means the data was found but the system took too long to format it. Please try rephrasing your question or contact support."
         
+        prompt = f"""
+            You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
+
+            Original Question: {original_question}
+            
+            Raw Data Response: {raw_response}
+
+            **CRITICAL DATA INTERPRETATION RULES:**
+            - Extract ALL numeric values EXACTLY as they appear in the raw data
+            - Do NOT round, modify, or change any numbers unless explicitly showing the original value first
+            - The raw data contains the ACTUAL answer - use those exact values
+
+            **DATA PRESENTATION RULES:**
+            - Present ALL data found in the raw response
+            - Use clear, professional academic language
+
+            **FORMATTING RULES - CHOOSE BEST FORMAT:**
+
+            **Option 1: Simple List Format (Default for single-column data like advisors):**
+            * For advisor lists, use this format:
+            **Advisor(s) for Student 'Student Name'**
+            - Advisor Name 1
+            - Advisor Name 2
+            - Advisor Name 3
+
+            **Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
+            * When data has multiple columns or comparative information, use HTML table format
+            * For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
+            <table>
+            <tr><th>Column Header 1</th><th>Column Header 2</th></tr>
+            <tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
+            <tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
+            </table>
+
+            **ABSOLUTE TABLE RULES - MUST FOLLOW:**
+            * NEVER use markdown table format with pipes (|) and dashes (---)
+            * ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
+            * FORBIDDEN: Any use of |---|, ---, or pipe separators
+            * Every <tr> after the header must contain actual student names, GPA values, or real information
+            * If you see raw data, immediately put that real data in <td> cells
+            * REQUIRED: Start immediately with real data in table rows after the header row
+
+            **FORMAT SELECTION GUIDE:**
+            - Use simple list format for: advisor names, course lists, single-column data
+            - Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
+
+            - Be accurate about what the data shows
+            - Round GPA values to 2 decimal places for display
+
+            **CRITICAL FORMATTING REQUIREMENTS:**
+            - Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
+            - Example format (this exact structure must be followed — no blank lines or line breaks between sentence and table):
+            Here are the students sorted by GPA:<table>
+            <tr><th>Student Name</th><th>GPA</th></tr>
+            <tr><td>Example Student</td><td>3.50</td></tr>
+            </table>
+            - FORBIDDEN: Any blank line or whitespace between the colon and <table>
+            - FORBIDDEN: Markdown bolding using ** for headers
+            - FORBIDDEN: Any introductory phrasing like “I will present…” or “Here is…” followed by a blank line
+            - Keep content compact, professional, and minimal with no extra spacing
+            """
         if format_type == "auto":
-            prompt = f"""
-            You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
+            prompt
 
-            Original Question: {original_question}
-            
-            Raw Data Response: {raw_response}
-
-            **CRITICAL DATA INTERPRETATION RULES:**
-            1. The raw data contains the ACTUAL ANSWER - format it properly, don't question its validity
-
-            **DATA PRESENTATION RULES:**
-            - Present ALL data found in the raw response
-            - Use clear, professional academic language
-
-            **FORMATTING RULES - CHOOSE BEST FORMAT:**
-
-            **Option 1: Simple List Format (Default for single-column data like advisors):**
-            * For advisor lists, use this format:
-            **Advisor(s) for Student 'Student Name'**
-            - Advisor Name 1
-            - Advisor Name 2
-            - Advisor Name 3
-
-            **Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
-            * When data has multiple columns or comparative information, use HTML table format
-            * For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
-            <table>
-            <tr><th>Column Header 1</th><th>Column Header 2</th></tr>
-            <tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
-            <tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
-            </table>
-
-            **ABSOLUTE TABLE RULES - MUST FOLLOW:**
-            * NEVER use markdown table format with pipes (|) and dashes (---)
-            * ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
-            * FORBIDDEN: Any use of |---|, ---, or pipe separators
-            * Every <tr> after the header must contain actual student names, GPA values, or real information
-            * If you see raw data, immediately put that real data in <td> cells
-            * REQUIRED: Start immediately with real data in table rows after the header row
-
-            **FORMAT SELECTION GUIDE:**
-            - Use simple list format for: advisor names, course lists, single-column data
-            - Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
-
-            - Be accurate about what the data shows
-            - Round GPA values to 2 decimal places for display
-            - Add a brief explanatory note when helpful for context
-
-            **CRITICAL FORMATTING REQUIREMENTS:**
-            - Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
-            - Example format (this exact structure must be followed — no blank lines or line breaks between sentence and table):
-            Here are the students sorted by GPA:<table>
-            <tr><th>Student Name</th><th>GPA</th></tr>
-            <tr><td>Example Student</td><td>3.50</td></tr>
-            </table>
-            - FORBIDDEN: Any blank line or whitespace between the colon and <table>
-            - FORBIDDEN: Markdown bolding using ** for headers
-            - FORBIDDEN: Any introductory phrasing like “I will present…” or “Here is…” followed by a blank line
-            - Keep content compact, professional, and minimal with no extra spacing
-            """
-
-        else:  # clean format
-            prompt = f"""
-            You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
-
-            Original Question: {original_question}
-            
-            Raw Data Response: {raw_response}
-
-            **CRITICAL DATA INTERPRETATION RULES:**
-            1. The raw data contains the ACTUAL ANSWER - format it properly, don't question its validity
-
-            **DATA PRESENTATION RULES:**
-            - Present ALL data found in the raw response
-            - Use clear, professional academic language
-
-            **FORMATTING RULES - CHOOSE BEST FORMAT:**
-
-            **Option 1: Simple List Format (Default for single-column data like advisors):**
-            * For advisor lists, use this format:
-            **Advisor(s) for Student 'Student Name'**
-            - Advisor Name 1
-            - Advisor Name 2
-            - Advisor Name 3
-
-            **Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
-            * When data has multiple columns or comparative information, use HTML table format
-            * For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
-            <table>
-            <tr><th>Column Header 1</th><th>Column Header 2</th></tr>
-            <tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
-            <tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
-            </table>
-
-            **ABSOLUTE TABLE RULES - MUST FOLLOW:**
-            * NEVER use markdown table format with pipes (|) and dashes (---)
-            * ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
-            * FORBIDDEN: Any use of |---|, ---, or pipe separators
-            * Every <tr> after the header must contain actual student names, GPA values, or real information
-            * If you see raw data, immediately put that real data in <td> cells
-            * REQUIRED: Start immediately with real data in table rows after the header row
-
-            **FORMAT SELECTION GUIDE:**
-            - Use simple list format for: advisor names, course lists, single-column data
-            - Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
-
-            - Be accurate about what the data shows
-            - Round GPA values to 2 decimal places for display
-            - Add a brief explanatory note when helpful for context
-
-            **IMPORTANT:** The raw data shows the actual query results. Do not contradict what the data clearly shows.
-
-            **CRITICAL FORMATTING REQUIREMENTS:**
-            - Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
-            - Example format (this exact structure must be followed — no blank lines or line breaks between sentence and table):
-            Here are the students sorted by GPA:<table>
-            <tr><th>Student Name</th><th>GPA</th></tr>
-            <tr><td>Example Student</td><td>3.50</td></tr>
-            </table>
-            - FORBIDDEN: Any blank line or whitespace between the colon and <table>
-            - FORBIDDEN: Markdown bolding using ** for headers
-            - FORBIDDEN: Any introductory phrasing like “I will present…” or “Here is…” followed by a blank line
-            - Keep content compact, professional, and minimal with no extra spacing
-            """
+        else:
+            prompt 
 
         try:
             # Use the summarizer LLM
