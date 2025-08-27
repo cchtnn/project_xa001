@@ -124,7 +124,7 @@ Now reformulate the following user query to be more specific and actionable for 
 """
         return prompt
     
-    def reformulate_query(self, user_query: str, csv_structure: Dict[str, Any] = None) -> str:
+    def _reformulate_query(self, user_query: str, csv_structure: Dict[str, Any] = None) -> str:
         """
         Reformulate user query to be more specific for CSV agent
         """
@@ -137,14 +137,22 @@ Now reformulate the following user query to be more specific and actionable for 
         
         try:
             system_prompt = self.create_reformulation_prompt(csv_structure)
-            
             messages = [
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=f"User Query: {user_query}\n\nProvide only the reformulated query, no explanations or prefixes.")
             ]
-            
             response = self.llm.invoke(messages)
+            print(f"🔄 LLM reformulator raw response: {response.content}")
             reformulated_query = response.content.strip()
+            
+            # Try to parse as JSON if it looks like JSON
+            if reformulated_query.startswith("{") and reformulated_query.endswith("}"):
+                try:
+                    data = json.loads(reformulated_query)
+                    if "reformulated_query" in data:
+                        reformulated_query = data["reformulated_query"]
+                except json.JSONDecodeError as json_e:
+                    print(f"⚠️ Could not parse reformulator response as JSON: {json_e}")
             
             # Clean up any prefixes that might be added
             prefixes_to_remove = ["Reformulated:", "Reformulated Query:", "Query:", "Answer:", "Response:"]
@@ -160,7 +168,10 @@ Now reformulate the following user query to be more specific and actionable for 
             
         except Exception as e:
             print(f"❌ Error reformulating query: {str(e)}")
+            print(f"   Error type: {type(e).__name__}")
             print(f"   Returning original query: {user_query}")
+            import traceback
+            traceback.print_exc()
             return user_query
     
     def validate_query_feasibility(self, user_query: str, csv_structure: Dict[str, Any] = None) -> Dict[str, Any]:
@@ -219,11 +230,11 @@ Respond with a JSON object containing:
     def process_student_query(self, user_query: str, csv_path: str = None) -> Dict[str, Any]:
         """
         Complete pipeline: analyze CSV (if needed), validate, and reformulate query
-        
+
         Args:
             user_query (str): Original user query
             csv_path (str, optional): Path to CSV file for structure analysis
-            
+
         Returns:
             Dict containing reformulated query and metadata
         """
@@ -234,7 +245,7 @@ Respond with a JSON object containing:
             "validation": None,
             "csv_structure_available": False
         }
-        
+
         try:
             # Analyze CSV structure if path provided and not already analyzed
             if csv_path and self.csv_structure is None:
@@ -243,30 +254,50 @@ Respond with a JSON object containing:
                     result["csv_structure_available"] = True
             elif self.csv_structure:
                 result["csv_structure_available"] = True
-            
+
+            # Skip validation and reformulation if LLM is not available
+            if self.llm is None:
+                print("⚠️ LLM not available, skipping query reformulation")
+                result["message"] = "Query reformulation skipped - LLM not available"
+                return result
+
             # Validate query feasibility if structure is available
             if self.csv_structure:
-                validation = self.validate_query_feasibility(user_query)
-                result["validation"] = validation
-                
-                # If confidence is very low, provide feedback
-                if validation.get("confidence") == "low" and not validation.get("can_answer", True):
-                    result["success"] = False
-                    result["message"] = "Query may not be answerable with available data"
-                    result["suggestions"] = validation.get("suggestions", [])
-                    return result
-            
+                try:
+                    validation = self.validate_query_feasibility(user_query)
+                    result["validation"] = validation
+
+                    # If confidence is very low, provide feedback
+                    if validation.get("confidence") == "low" and not validation.get("can_answer", True):
+                        result["success"] = False
+                        result["message"] = "Query may not be answerable with available data"
+                        result["suggestions"] = validation.get("suggestions", [])
+                        return result
+                except Exception as val_e:
+                    print(f"⚠️ Query validation failed: {str(val_e)}")
+                    # Continue with reformulation even if validation fails
+
             # Reformulate the query
-            reformulated = self.reformulate_query(user_query)
+            reformulated = self._reformulate_query(user_query)
+            # If reformulated is empty or None, fallback to original query
+            if not reformulated or not reformulated.strip():
+                print("⚠️ Reformulator returned empty result, using original query")
+                reformulated = user_query
             result["reformulated_query"] = reformulated
-            
+
             print(f"✅ Query processing completed successfully")
             return result
-            
+
         except Exception as e:
             print(f"❌ Error processing student query: {str(e)}")
-            result["success"] = False
+            print(f"   Error type: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            # Return original query as fallback
+            result["success"] = True  # Set to True so system continues with original query
             result["error"] = str(e)
+            result["reformulated_query"] = user_query
+            result["message"] = "Query reformulation failed, using original query"
             return result
 
 

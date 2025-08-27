@@ -308,6 +308,134 @@ const queryTextarea = document.getElementById('query-textarea');
 let currentSessionId = null;
 let userSessions = [];
 
+// Load session when clicked
+function loadSession(sessionId, sessionName) {
+    currentSessionId = sessionId;
+    
+    // Update UI to show selected session
+    document.querySelectorAll('.session-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[data-session-id="${sessionId}"]`).classList.add('active');
+    
+    // Load session history
+    fetch(`/history?session_id=${sessionId}`)
+        .then(response => response.json())
+        .then(data => {
+            chatHistory = data.history || [];
+            displayChatHistory();
+        })
+        .catch(error => {
+            console.error('Error loading session:', error);
+        });
+}
+
+// Display chat history in the main area
+function displayChatHistory() {
+    const chatContainer = document.getElementById('chat-messages');
+    chatContainer.innerHTML = '';
+    
+    if (chatHistory.length === 0) {
+        chatContainer.innerHTML = '<div class="text-muted text-center">No chat history yet.</div>';
+        return;
+    }
+    
+    chatHistory.forEach(item => {
+        // User message
+        const userDiv = document.createElement('div');
+        userDiv.className = 'mb-3';
+        userDiv.innerHTML = `
+            <div class="d-flex justify-content-end">
+                <div class="bg-primary text-white p-3 rounded-3 max-width-70">
+                    ${item.question}
+                </div>
+            </div>
+        `;
+        chatContainer.appendChild(userDiv);
+        
+        // Assistant response
+        const assistantDiv = document.createElement('div');
+        assistantDiv.className = 'mb-3';
+        assistantDiv.innerHTML = `
+            <div class="d-flex justify-content-start">
+                <div class="bg-light p-3 rounded-3 max-width-70">
+                    ${item.answer}
+                </div>
+            </div>
+        `;
+        chatContainer.appendChild(assistantDiv);
+    });
+    
+    // Scroll to bottom
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// Update session list after rename
+function updateSessionInSidebar(sessionId, newName) {
+    const sessionElement = document.querySelector(`[data-session-id="${sessionId}"] .session-name`);
+    if (sessionElement) {
+        sessionElement.textContent = newName;
+    }
+}
+
+// Modify your existing query submission to update the sidebar
+function submitQuery() {
+    // ... your existing query submission code ...
+    
+    // After successful query, if session name was updated, refresh the sidebar
+    if (response.session_name_updated) {
+        loadUserSessions(); // Refresh the session list
+    }
+}
+
+// Load user sessions for sidebar
+function loadUserSessions() {
+    fetch('/user_sessions')
+        .then(response => response.json())
+        .then(data => {
+            updateSessionsSidebar(data.sessions);
+        })
+        .catch(error => {
+            console.error('Error loading sessions:', error);
+        });
+}
+
+function updateSessionsSidebar(sessions) {
+    const sessionsList = document.getElementById('sessions-list');
+    sessionsList.innerHTML = '';
+    
+    sessions.forEach(session => {
+        const sessionDiv = document.createElement('div');
+        sessionDiv.className = 'session-item p-2 mb-1 rounded cursor-pointer';
+        sessionDiv.setAttribute('data-session-id', session.session_id);
+        sessionDiv.onclick = () => loadSession(session.session_id, session.session_name);
+        
+        sessionDiv.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="bi bi-chat-left me-2"></i>
+                <span class="session-name flex-grow-1">${session.session_name}</span>
+                <div class="dropdown">
+                    <button class="btn btn-sm" data-bs-toggle="dropdown">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="renameSession(${session.session_id})">Rename</a></li>
+                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteSession(${session.session_id})">Delete</a></li>
+                    </ul>
+                </div>
+            </div>
+        `;
+        
+        sessionsList.appendChild(sessionDiv);
+    });
+}
+
+// Load sessions on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserSessions();
+});
+
+
 // Spinner HTML
 function showSpinner(msg="Please wait while I am generating answer for you...") {
     statusArea.innerHTML = `<div class="d-flex align-items-center text-secondary">
@@ -389,6 +517,7 @@ enterBtn.onclick = async function(e) {
     const formData = new FormData();
     formData.append('query', queryTextarea.value.trim());
     formData.append('session_id', currentSessionId);
+    formData.append('private', document.getElementById('private').checked);
     
     const resp = await fetch('/query', {method: 'POST', body: formData});
     const result = await resp.json();
@@ -403,12 +532,14 @@ enterBtn.onclick = async function(e) {
 `;
     
     queryTextarea.value = '';
-    loadCurrentSessionHistory();
     
-    // Refresh session list to show updated name (especially for first question)
-    setTimeout(() => {
-        loadUserSessions();
-    }, 500);
+    // Refresh session list if name was updated
+    if (result.session_name_updated) {
+        await loadUserSessions();
+    }
+    
+    // Load history after the query
+    await loadCurrentSessionHistory();
 };
 
 // Handle file upload independently
@@ -482,23 +613,28 @@ async function loadUserSessions() {
         const result = await resp.json();
         userSessions = result.sessions || [];
         
+        console.log('Loaded sessions:', userSessions);
+        
         // If no sessions exist, create one
         if (userSessions.length === 0) {
+            console.log('No sessions found, creating new one');
             await createNewSession();
             // Reload sessions after creating the first one
             const resp2 = await fetch('/user_sessions');
             const result2 = await resp2.json();
             userSessions = result2.sessions || [];
-        } else if (!currentSessionId) {
-            // If sessions exist but no current session, use the most recent one
+        }
+        
+        // Set current session if not already set
+        if (!currentSessionId && userSessions.length > 0) {
             currentSessionId = userSessions[0].session_id;
+            console.log('Set current session to:', currentSessionId);
             await loadCurrentSessionHistory();
         }
         
         renderSessionList();
     } catch (error) {
         console.error('Error loading sessions:', error);
-        // If there's an error, create a new session
         await createNewSession();
     }
 }
@@ -597,17 +733,20 @@ function renderSessionList() {
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" class="bi bi-chat-left me-2 flex-shrink-0" viewBox="0 0 16 16">
                 <path d="M14 1a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H4.414A2 2 0 0 0 3 11.586l-2 2V2a1 1 0 0 1 1-1h12zM2 0a2 2 0 0 0-2 2v12.793a.5.5 0 0 0 .854.353l2.853-2.853A1 1 0 0 1 4.414 12H14a2 2 0 0 0 2-2V2a2 2 0 0 0-2-2H2z"/>
             </svg>
-            <span class="flex-grow-1 sidebar-text" style="overflow: hidden; text-overflow: ellipsis;">${session.session_name || 'Untitled Chat'}</span>
+            <span class="flex-grow-1 sidebar-text" style="overflow: hidden; text-overflow: ellipsis; max-width: 150px;">${session.session_name || 'Untitled Chat'}</span>
         </button>
     </div>
 `).join('');
     
-     // Re-attach event listeners for chat buttons
+    // Re-attach event listeners for chat buttons
     document.querySelectorAll('.session-btn-custom').forEach(btn => {
-        btn.onclick = function() {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             const sessionId = parseInt(this.dataset.sessionId);
+            console.log('Switching to session:', sessionId);
             switchToSession(sessionId);
-        };
+        });
     });
     
     // Update rename and delete event listeners
@@ -677,18 +816,22 @@ document.addEventListener('hide.bs.dropdown', function (event) {
 // Switch to a different session
 async function switchToSession(sessionId) {
     currentSessionId = sessionId;
+    
+    // Clear current answer area first
+    document.getElementById('chat-answer').innerHTML = '';
+    
+    // Load session history
     await loadCurrentSessionHistory();
     
     // Update active session in UI
     document.querySelectorAll('.session-btn-custom').forEach(btn => {
         btn.classList.remove('active');
+        btn.style.backgroundColor = '#f8f9fa';
         if (parseInt(btn.dataset.sessionId) === sessionId) {
             btn.classList.add('active');
+            btn.style.backgroundColor = '#e3f2fd';
         }
     });
-    
-    // Clear current answer area
-    document.getElementById('chat-answer').innerHTML = '';
 }
 
 // Rename session
@@ -730,48 +873,76 @@ async function deleteSession(sessionId) {
 
 // Load current session history
 async function loadCurrentSessionHistory() {
+    console.log('Loading history for session:', currentSessionId);
+    
     if (!currentSessionId) {
-        document.getElementById('chat-history').innerHTML = '<em>No chat history yet.</em>';
+        document.getElementById('chat-history').innerHTML = '<em class="text-muted">No chat history yet.</em>';
         return;
     }
     
-    const resp = await fetch(`/history?session_id=${currentSessionId}`);
-    const result = await resp.json();
-    const historyDiv = document.getElementById('chat-history');
-    
-    if (result.history && result.history.length > 0) {
-        // Get current date in dd-mmm-yyyy HH:MM:SS format
-        const currentDate = new Date();
-        const formatDate = (date) => {
-            const day = String(date.getDate()).padStart(2, '0');
-            const month = date.toLocaleString('en-US', { month: 'short' });
-            const year = date.getFullYear();
-            const hours = String(date.getHours()).padStart(2, '0');
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const seconds = String(date.getSeconds()).padStart(2, '0');
-            return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
-        };
+    try {
+        const resp = await fetch(`/history?session_id=${currentSessionId}`);
+        if (!resp.ok) {
+            console.error('History fetch failed:', resp.status, resp.statusText);
+            throw new Error(`Failed to load history: ${resp.status}`);
+        }
         
-        historyDiv.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Chat History</h4>
-                <span class="text-muted small">${formatDate(currentDate)}</span>
-            </div>
-            ${result.history.map(
-                qa => `<div class="mb-2 p-3 border rounded bg-light">
-                    <div class="mb-1"><span class="fw-bold text-primary small">Q:</span> <span class="fw-semibold small">${qa.question}</span></div>
-                    <div><span class="fw-bold text-success small">A:</span> ${formatAnswer(qa.answer)}</div>
-                </div>`
-            ).join('')}
-        `;
-    } else {
-        historyDiv.innerHTML = `
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Chat History</h4>
-                <span class="text-muted small">${formatDate(new Date())}</span>
-            </div>
-            <em>No chat history yet.</em>
-        `;
+        const result = await resp.json();
+        console.log('History result:', result);
+        
+        const historyDiv = document.getElementById('chat-history');
+        
+        if (result.history && result.history.length > 0) {
+            const currentDate = new Date();
+            const formatDate = (date) => {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = date.toLocaleString('en-US', { month: 'short' });
+                const year = date.getFullYear();
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+            };
+            
+            historyDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 text-dark">Chat History</h4>
+                    <span class="text-muted small">${formatDate(currentDate)}</span>
+                </div>
+                <div class="chat-history-content">
+                    ${result.history.map(
+                        qa => `<div class="mb-3 p-3 border rounded" style="background-color: #f8f9fa;">
+                            <div class="mb-2"><span class="fw-bold text-primary">Q:</span> <span class="text-dark">${qa.question}</span></div>
+                            <div><span class="fw-bold text-success">A:</span> <div class="mt-1">${formatAnswer(qa.answer)}</div></div>
+                        </div>`
+                    ).join('')}
+                </div>
+            `;
+            console.log(`Loaded ${result.history.length} history items`);
+        } else {
+            const currentDate = new Date();
+            const formatDate = (date) => {
+                const day = String(date.getDate()).padStart(2, '0');
+                const month = date.toLocaleString('en-US', { month: 'short' });
+                const year = date.getFullYear();
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                const seconds = String(date.getSeconds()).padStart(2, '0');
+                return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+            };
+            
+            historyDiv.innerHTML = `
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="mb-0 text-dark">Chat History</h4>
+                    <span class="text-muted small">${formatDate(currentDate)}</span>
+                </div>
+                <em class="text-muted">No chat history yet. Start a conversation!</em>
+            `;
+            console.log('No history found for session');
+        }
+    } catch (error) {
+        console.error('Error loading history:', error);
+        document.getElementById('chat-history').innerHTML = '<div class="alert alert-warning">Failed to load chat history. Please try refreshing the page.</div>';
     }
 }
 

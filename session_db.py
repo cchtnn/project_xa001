@@ -375,6 +375,20 @@ def cleanup_inactive_sessions(days_inactive=30):
         logging.error(f"Database error in cleanup_inactive_sessions: {e}")
         return 0
 
+def get_session_message_count(session_id):
+    """Get the number of messages in a session"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM session_history WHERE session_id = ?", (session_id,))
+        count = c.fetchone()[0]
+        conn.close()
+        return count
+    except sqlite3.OperationalError as e:
+        print(f"Database error in get_session_message_count: {e}")
+        return 0
+    
 def validate_admin(username):
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()

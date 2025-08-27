@@ -258,119 +258,146 @@ async def upload_files(request: Request, files: List[UploadFile] = File(...), pr
 
 # --- Query Endpoint ---
 @app.post("/query")
-async def query(request: Request, query: str = Form(...), session_id: int = Form(...)):
+async def query(
+    request: Request,
+    query: str = Form(...),
+    session_id: int = Form(...),
+    private: bool = Form(False)
+):
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    
-    query = query.strip()
-    if not query or len(query) > 500:
-        raise HTTPException(status_code=400, detail="Invalid query length")
-    if re.search(r'[<>{};]', query):
-        raise HTTPException(status_code=400, detail="Invalid characters in query")
-    
-    logging.info(f"User {username} queried: {query} (session_id: {session_id})")
-    
-    try:
-        # Initialize vectorstore and data
-        index, metadata, tab_data = initialize_vectorstore()
-        collection = get_collection()
-        data_loading_error = None
-    except Exception as e:
-        data_loading_error = str(e)
-        logging.error(f"Error loading data for user {username}: {e}")
-        index, metadata, tab_data = [], [], {}
-        collection = None
-    
-    if len(query.split()) > 100:
-        raise HTTPException(status_code=400, detail="Query too complex")
-    
-    try:
-        # Get conversation history for context
-        chat_history = session_db.get_contextual_history(session_id, limit=5)
+
+    # Scenario a: Private checked - use only user's private data
+    print("Private flag is", private)
+    if private:
+        user_upload_folder = f"data/user_uploads/{username}"
+        user_csv_folder = os.path.join(user_upload_folder, "csv_files")
+        has_csv = False
         
-        # Create user context
-        user_context = {
-            "username": username,
-            "session_id": session_id,
-            "language": "English",  # You can make this dynamic
-            "active_transcript_csv_path": None  # Add logic to set this if needed
-        }
+        if os.path.exists(user_csv_folder):
+            csv_files = [f for f in os.listdir(user_csv_folder) if f.lower().endswith('.csv')]
+            if csv_files:
+                has_csv = True
         
-        # Create and use conversation graph
-        conv_graph = create_conversation_graph(collection, tab_data)
-        result = conv_graph.process_conversation(query, chat_history, user_context)
-        
-        # Extract response and metadata
-        response_content = result["response"]
-        query_type = result["query_type"]
-        confidence_score = result["confidence_score"]
-        contextual_query = result.get("contextual_query", query)
-        entities = result.get("entities", {})
-        
-        # Save conversation context for future use
-        session_db.save_conversation_context(session_id, entities, contextual_query)
-        
-        # Handle session naming for new sessions
-        if len(chat_history) == 0:
-            session_name = generate_session_name(query)
-            session_db.rename_session(session_id, session_name)
-        
-        # Save Q&A to history
-        success = session_db.add_single_qa_to_history(session_id, query, response_content)
-        if not success:
-            # Fallback to old method if new method fails
-            history = session_db.load_qa_history(session_id)
-            history.append({"question": query, "answer": response_content})
-            session_db.save_qa_history(session_id, history)
-        
-        print(f"Processed query with context - Type: {query_type}, Confidence: {confidence_score:.2f}, contextual: {len(chat_history)}")
-        
-        return {
-            "answer": response_content, 
-            "session_id": session_id,
-            "query_type": query_type,
-            "confidence_score": confidence_score,
-            "contextual": len(chat_history) > 0  # Indicate if context was used
-        }
-        
-    except Exception as e:
-        print(f"Error processing contextual query for user {username}: {e}")
-        
-        # Fallback to original query handler
-        try:
-            handler = query_handler.create_query_handler(collection, tab_data)
-            answer_obj, query_type, confidence_score = handler.process_query(query, language="English")
-            
-            # Save using original method
-            history = session_db.load_qa_history(session_id)
-            if len(history) == 0:
-                session_name = generate_session_name(query)
-                session_db.rename_session(session_id, session_name)
-            history.append({"question": query, "answer": answer_obj.content})
-            session_db.save_qa_history(session_id, history)
-            
-            return {"answer": answer_obj.content, "session_id": session_id}
-            
-        except Exception as fallback_error:
-            logging.error(f"Fallback query processing failed for user {username}: {fallback_error}")
+        if not has_csv:
             return {
-                "answer": "I apologize, but I'm experiencing technical difficulties. Please try again later.",
+                "answer": "Based on the document you uploaded I did not find the answer. Kindly upload the specific document.",
                 "session_id": session_id
             }
+        
+        csv_files = sorted([f for f in os.listdir(user_csv_folder) if f.lower().endswith('.csv')])
+        csv_path = os.path.join(user_csv_folder, csv_files[-1])
+        print("Using private CSV for query:", csv_path)
+        answer = student_transcript_csv_handler.process_transcript_query(
+            query, csv_path=csv_path
+        )
+        
+        # Check if this is the first question in the session BEFORE adding to history
+        history_before = session_db.get_session_message_count(session_id)
+        session_db.add_single_qa_to_history(session_id, query, answer)
 
-# --- History Endpoint ---
+        # If this was the first question, update the session name
+        if history_before == 0:
+            session_name = generate_session_name(query)
+            session_db.rename_session(session_id, session_name)
+            logging.info(f"Updated session {session_id} name to: {session_name}")
+
+        return {
+            "answer": answer, 
+            "session_id": session_id,
+            "session_name_updated": history_before == 0
+        }
+
+    # Check if user has uploaded files to public folder
+    public_upload_folder = "data/public_uploads"
+    public_csv_folder = os.path.join(public_upload_folder, "csv_files")
+    has_public_csv = False
+    
+    if os.path.exists(public_csv_folder):
+        csv_files = [f for f in os.listdir(public_csv_folder) if f.lower().endswith('.csv')]
+        if csv_files:
+            has_public_csv = True
+
+    print("User has public CSV:", has_public_csv)
+    if has_public_csv:
+        csv_files = sorted([f for f in os.listdir(public_csv_folder) if f.lower().endswith('.csv')])
+        csv_path = os.path.join(public_csv_folder, csv_files[-1])
+        answer = student_transcript_csv_handler.process_transcript_query(
+            query, csv_path=csv_path
+        )
+        
+        # Check if this is the first question in the session BEFORE adding to history
+        history_before = session_db.get_session_message_count(session_id)
+        session_db.add_single_qa_to_history(session_id, query, answer)
+
+        # If this was the first question, update the session name
+        if history_before == 0:
+            session_name = generate_session_name(query)
+            session_db.rename_session(session_id, session_name)
+            logging.info(f"Updated session {session_id} name to: {session_name}")
+
+        return {
+            "answer": answer, 
+            "session_id": session_id,
+            "session_name_updated": history_before == 0
+        }
+
+    # Scenario c: No uploads found, use common data (existing vectorstore logic)
+    logging.info(f"User {username} queried: {query} (session_id: {session_id})")
+    try:
+        index, metadata, tab_data = initialize_vectorstore()
+        collection = get_collection()
+    except Exception as e:
+        logging.error(f"Error loading data for user {username}: {e}")
+        collection, tab_data = None, {}
+
+    # Existing logic for chat_history, user_context, conversation graph
+    chat_history = session_db.get_contextual_history(session_id, limit=5)
+    user_context = {
+        "username": username,
+        "session_id": session_id,
+        "language": "English",
+        "active_transcript_csv_path": None
+    }
+    conv_graph = create_conversation_graph(collection, tab_data)
+    result = conv_graph.process_conversation(query, chat_history, user_context)
+    response_content = result["response"]
+
+    # Check if this is the first question in the session BEFORE adding to history
+    history_before = session_db.get_session_message_count(session_id)
+    session_db.add_single_qa_to_history(session_id, query, response_content)
+
+    # If this was the first question, update the session name
+    if history_before == 0:
+        session_name = generate_session_name(query)
+        session_db.rename_session(session_id, session_name)
+        logging.info(f"Updated session {session_id} name to: {session_name}")
+
+    return {
+        "answer": response_content,
+        "session_id": session_id,
+        "query_type": result.get("query_type"),
+        "confidence_score": result.get("confidence_score"),
+        "contextual": len(chat_history) > 0,
+        "session_name_updated": history_before == 0
+    }
+
 @app.get("/history")
-async def history(request: Request, session_id: int):
+async def get_history(request: Request, session_id: int):
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    try:
-        history = session_db.load_qa_history(session_id)
-        return {"history": history}
-    except Exception as e:
-        logging.error(f"Error loading history for user {username}: {e}")
-        return {"history": []}
+    
+    # Verify user owns this session
+    user_sessions = session_db.get_user_sessions(username)
+    session_ids = [s["session_id"] for s in user_sessions]
+    
+    if session_id not in session_ids:
+        raise HTTPException(status_code=403, detail="Access denied")
+    
+    history = session_db.load_qa_history(session_id)
+    return {"history": history}
 
 # --- Admin Endpoints ---
 @app.get("/admin", response_class=HTMLResponse)
@@ -617,6 +644,6 @@ async def kill_session(request: Request, session_id: int = Form(...), csrf_token
             "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
             "session_kill_error": True
         })
-
+    
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

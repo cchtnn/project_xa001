@@ -10,6 +10,9 @@ from dotenv import load_dotenv
 from student_query_reformulator import get_query_reformulator
 import re
 import logging
+import json
+from typing import Dict, Any
+from langchain_core.messages import HumanMessage, SystemMessage
 logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 warnings.filterwarnings("ignore")
@@ -30,6 +33,7 @@ class StudentTranscriptCSVHandler:
         self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
         self.query_reformulator = None
         self.is_initialized = False
+        self.csv_structure = None
         
     def initialize(self):
         """Initialize the CSV handler with LLM, agent, and query reformulator"""
@@ -65,19 +69,25 @@ class StudentTranscriptCSVHandler:
             return False
     
     def _setup_llm(self):
-        """Setup the ChatGroq LLM"""
+        """Setup the ChatGroq LLM for query reformulation"""
         try:
+            if not self.groq_api_key:
+                print("⚠️ GROQ_API_KEY not found, query reformulation will be disabled")
+                self.llm = None
+                return
+                
             self.llm = ChatGroq(
                 groq_api_key=self.groq_api_key,
                 model_name=self.model_name,
                 temperature=0,
                 max_tokens=4096,
                 streaming=False,
-                request_timeout=60
+                request_timeout=30
             )
-            print("✅ LLM setup completed")
+            print("✅ Query Reformulator LLM setup completed")
         except Exception as e:
-            raise Exception(f"Error initializing LLM: {str(e)}")
+            print(f"⚠️ Query Reformulator LLM setup failed: {str(e)}")
+            self.llm = None
     
     def _setup_summarizer(self):
         """Setup a separate LLM for summarization"""
@@ -102,6 +112,7 @@ class StudentTranscriptCSVHandler:
             
             # Analyze the CSV structure for the reformulator
             csv_structure = self.query_reformulator.analyze_csv_structure(self.csv_path)
+            self.csv_structure = csv_structure  # <-- ADD THIS LINE
             
             if csv_structure:
                 print("✅ Query Reformulator setup completed with CSV structure analysis")
@@ -152,7 +163,7 @@ class StudentTranscriptCSVHandler:
                 agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                 allow_dangerous_code=True,
                 handle_parsing_errors=True,
-                max_iterations=5,
+                max_iterations=3,
                 max_execution_time=60,
                 return_intermediate_steps=False,
                 include_df_in_prompt=False,
@@ -160,7 +171,6 @@ class StudentTranscriptCSVHandler:
                 You are working with a pandas DataFrame in Python. The DataFrame is loaded from a CSV file.
                 You should use the tools below to answer the question posed about the DataFrame.
 
-                IMPORTANT INSTRUCTIONS:
                 CRITICAL INSTRUCTIONS FOR TOOL USAGE:
                 1. You have access to ONLY ONE tool: python_repl_ast
                 2. ALWAYS use this EXACT format for actions:
@@ -169,23 +179,24 @@ class StudentTranscriptCSVHandler:
 
                 3. NEVER use descriptive text as the Action name
                 4. NEVER say "Use the python_repl_ast to..." - just use "python_repl_ast"
-                5. When you find the answer, provide it immediately as the Final Answer
-                6. Do NOT continue searching for more data once you have the answer
-                7. Do NOT try to find "the next" item unless specifically asked for multiple items
+                5. After getting results from an action, IMMEDIATELY provide the Final Answer
+                6. Do NOT execute additional actions after finding the answer
+                7. For unique values, use .unique() or .drop_duplicates()
                 8. Give unique rows only - do not repeat rows in your answers.
                 
+                RESPONSE FORMAT:
+                9. When you find data, extract the unique value and provide ONLY that as Final Answer
+                10. For advisor queries: if multiple rows have same advisor, show unique advisor name only
+                11. For student lists: show unique student names only
+                12. Use pandas methods like .iloc[0] to get single values when appropriate
+                13. When None is coming as answer then in that case mention "No data found" instead of None.
+                
                 DATA HANDLING RULES:
-                9. pandas is already imported as 'pd' - you don't need to import it again
-                10. For GPA calculations, use .mean() method and handle NaN values properly
-                11. For groupby operations, use .dropna() if needed to exclude null values
-                12. Always check data types before performing operations
-                13. Use .sort_values(ascending=False) for descending order sorting
-                14. Display results clearly with proper formatting
-
-                EXAMPLE FOR GPA CALCULATIONS:
-                # Group by student name and calculate average GPA
-                result = df.groupby('Student Name')['GPA'].mean().sort_values(ascending=False)
-                print(result)
+                13. pandas is already imported as 'pd' - you don't need to import it again
+                14. For GPA calculations, use .mean() method and handle NaN values properly
+                15. For groupby operations, use .dropna() if needed to exclude null values
+                16. Always check data types before performing operations
+                17. Use .sort_values(ascending=False) for descending order sorting
 
                 The DataFrame columns and their types are automatically detected by pandas.
                 The GPA column has been pre-processed to be numeric (float type).
@@ -238,50 +249,70 @@ class StudentTranscriptCSVHandler:
             info_str += f"- {col}: {info['logical_type']} (pandas: {info['pandas_dtype']}, nulls: {info['null_count']}/{total_count} = {info['null_percentage']}%)\n"
         
         return info_str
-    
-    def _reformulate_query(self, user_query: str) -> str:
+
+    def _reformulate_query(self, user_query: str, csv_structure: Dict[str, Any] = None) -> str:
         """
-        Reformulate user query using the StudentQueryReformulator
-        
-        Args:
-            user_query (str): Original user query
+        Reformulate user query to be more specific for CSV agent
+        """
+        if csv_structure is None:
+            csv_structure = self.csv_structure
             
-        Returns:
-            str: Reformulated query or original query if reformulation fails
-        """
-        if not self.query_reformulator:
-            print("⚠️ Query reformulator not available, using original query")
+        if csv_structure is None:
+            print("⚠️ No CSV structure available, returning original query")
+            return user_query
+        
+        if self.llm is None:
+            print("⚠️ LLM not available for query reformulation, returning original query")
             return user_query
         
         try:
-            # Process the query with full pipeline (validation + reformulation)
-            result = self.query_reformulator.process_student_query(user_query, self.csv_path)
+            # FIX: Use the reformulator's prompt creator
+            system_prompt = self.query_reformulator.create_reformulation_prompt(csv_structure)
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=f"User Query: {user_query}\n\nProvide only the reformulated query, no explanations or prefixes.")
+            ]
+            response = self.llm.invoke(messages)
+            print(f"🔄 LLM reformulator raw response: {response.content}")
+            reformulated_query = response.content.strip()
             
-            if result["success"]:
-                reformulated_query = result["reformulated_query"]
-                
-                # Log validation information if available
-                if result.get("validation"):
-                    validation = result["validation"]
-                    print(f"📋 Query validation:")
-                    print(f"   Can answer: {validation.get('can_answer', 'unknown')}")
-                    print(f"   Confidence: {validation.get('confidence', 'unknown')}")
-                    
-                    # If validation suggests the query might not be answerable
-                    if validation.get("confidence") == "low" and not validation.get("can_answer", True):
-                        print(f"⚠️ Low confidence in query answerability")
-                        if validation.get("suggestions"):
-                            print(f"   Suggestions: {validation['suggestions']}")
-                
-                return reformulated_query
-            else:
-                print(f"⚠️ Query reformulation failed: {result.get('error', 'Unknown error')}")
-                if result.get("suggestions"):
-                    print(f"   Suggestions: {result['suggestions']}")
+            # Try to parse as JSON if it looks like JSON
+            if reformulated_query.startswith("{") and reformulated_query.endswith("}"):
+                try:
+                    data = json.loads(reformulated_query)
+                    if "reformulated_query" in data:
+                        reformulated_query = data["reformulated_query"]
+                except json.JSONDecodeError as json_e:
+                    print(f"⚠️ Could not parse reformulator response as JSON: {json_e}")
+            
+            # Clean up any prefixes that might be added
+            prefixes_to_remove = ["Reformulated:", "Reformulated Query:", "Query:", "Answer:", "Response:"]
+            for prefix in prefixes_to_remove:
+                if reformulated_query.startswith(prefix):
+                    reformulated_query = reformulated_query.replace(prefix, "").strip()
+            
+            # Remove quotes if the entire response is wrapped in quotes
+            if (reformulated_query.startswith('"') and reformulated_query.endswith('"')) or \
+            (reformulated_query.startswith("'") and reformulated_query.endswith("'")):
+                reformulated_query = reformulated_query[1:-1]
+            
+            # Validate the reformulated query is not empty
+            if not reformulated_query or not reformulated_query.strip():
+                print("⚠️ Reformulated query is empty, using original query")
                 return user_query
                 
+            print(f"🔄 Query reformulated:")
+            print(f"   Original: {user_query}")
+            print(f"   Reformulated: {reformulated_query}")
+            
+            return reformulated_query
+            
         except Exception as e:
-            print(f"⚠️ Error during query reformulation: {str(e)}")
+            print(f"❌ Error reformulating query: {str(e)}")
+            print(f"   Error type: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            print(f"   Returning original query: {user_query}")
             return user_query
     
     def _extract_raw_data(self, response: str) -> str:
@@ -905,7 +936,7 @@ class StudentTranscriptCSVHandler:
             if not init_success:
                 error_messages = {
                     "English": "Student transcript system is not available. Please ensure the CSV file exists and is accessible.",
-                    "Spanish": "El sistema de expedientes académicos no está disponible. Asegúrate de que el archivo CSV existe y es accesible.",
+                    "Spanish": "El sistema de expedientes académicos no está disponible. Asegúrate de que el archivo CSV existe y está accesible.",
                     "French": "Le système de relevés de notes n'est pas disponible. Assurez-vous que le fichier CSV existe et est accessible.",
                     "Navajo": "Óltaʼgi bééhániih éí doo áhólł̥ǫ́ǫ da."
                 }
@@ -963,4 +994,15 @@ def process_transcript_query(user_query: str, language='English', use_summarizer
         str: Generated answer
     """
     handler = get_csv_transcript_handler(csv_path)
-    return handler.process_query(user_query, language, use_summarizer, format_type)
+    print("CSV Path from process_transcript_query function:-", csv_path)
+    answer = handler.process_query(user_query, language, use_summarizer, format_type)
+    # Out-of-scope detection
+    if not answer or answer.strip().lower() in [
+        "no relevant data found", 
+        "no answer found", 
+        "i don't know", 
+        "unable to answer", 
+        "no data"
+    ] or "no relevant" in answer.lower() or "not found" in answer.lower():
+        return "Based on the document you uploaded I did not find the answer. Kindly upload the specific document."
+    return answer
