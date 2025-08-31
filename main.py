@@ -179,34 +179,45 @@ async def delete_session(request: Request, session_id: int = Form(...)):
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
+    # Delete from DB
     session_db.delete_session(session_id)
+    # Delete session folder (private uploads)
+    session_folder = f"data/user_uploads/{username}/session_{session_id}"
+    if os.path.exists(session_folder):
+        shutil.rmtree(session_folder)
+    # Optionally, delete public uploads if you support public sessions
+    public_folder = f"data/public_uploads/session_{session_id}"
+    if os.path.exists(public_folder):
+        shutil.rmtree(public_folder)
     return {"success": True}
 
 # --- File Upload Endpoint ---
 @app.post("/upload")
-async def upload_files(request: Request, files: List[UploadFile] = File(...), private: bool = Form(...)):
+async def upload_files(request: Request, session_id: int = Form(...), files: List[UploadFile] = File(...), private: bool = Form(...)):
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    upload_folder = f"/secure_uploads/{username}" if private else "/secure_uploads/public"
-    os.makedirs(upload_folder, exist_ok=True)
-    
+    if private:
+        base_output_path = f"data/user_uploads/{username}/session_{session_id}"
+    else:
+        base_output_path = f"data/public_uploads/session_{session_id}"
+
+    image_output_path = os.path.join(base_output_path, "extracted_images")
+    csv_output_path = os.path.join(base_output_path, "csv_files")
+    os.makedirs(csv_output_path, exist_ok=True)
+    upload_folder = base_output_path  # Always upload to the base_output_path
+
     processed_files = []
     errors = []
     
     # Determine output folders based on private flag
     if private:
-        base_output_path = f"data/user_uploads/{username}"
-        image_output_path = os.path.join(base_output_path, "extracted_images")
-        csv_output_path = os.path.join(base_output_path, "csv_files")
+        upload_folder = f"data/user_uploads/{username}/session_{session_id}"
+        os.makedirs(upload_folder, exist_ok=True)
     else:
-        base_output_path = "data/public_uploads"
-        image_output_path = os.path.join(base_output_path, "extracted_images")
-        csv_output_path = os.path.join(base_output_path, "csv_files")
-    
-    # Create base directories
-    os.makedirs(base_output_path, exist_ok=True)
+        upload_folder = f"data/public_uploads/session_{session_id}"
+        os.makedirs(upload_folder, exist_ok=True)
     
     for file in files:
         try:
@@ -245,6 +256,9 @@ async def upload_files(request: Request, files: List[UploadFile] = File(...), pr
             errors.append(f"Error creating final merged CSV: {str(e)}")
             logging.error(f"Error creating final merged CSV: {e}")
     
+    # After upload, update session_db with file paths
+    session_db.update_upload_paths(session_id, processed_files)
+    
     message = f"Processed {len(processed_files)} file(s) successfully."
     if errors:
         message += f" {len(errors)} error(s) occurred."
@@ -268,24 +282,28 @@ async def query(
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+    session_info = session_db.get_session_info(session_id)
+    csv_folder = session_info['upload_paths']  # or parse JSON
+    embedding_index = session_info['embedding_index_path']
+
     # Scenario a: Private checked - use only user's private data
     print("Private flag is", private)
     if private:
-        user_upload_folder = f"data/user_uploads/{username}"
-        user_csv_folder = os.path.join(user_upload_folder, "csv_files")
+        # FIX: Use session-specific folder for CSVs
+        user_csv_folder = f"data/user_uploads/{username}/session_{session_id}/csv_files"
         has_csv = False
-        
+
         if os.path.exists(user_csv_folder):
             csv_files = [f for f in os.listdir(user_csv_folder) if f.lower().endswith('.csv')]
             if csv_files:
                 has_csv = True
-        
+
         if not has_csv:
             return {
                 "answer": "Based on the document you uploaded I did not find the answer. Kindly upload the specific document.",
                 "session_id": session_id
             }
-        
+
         csv_files = sorted([f for f in os.listdir(user_csv_folder) if f.lower().endswith('.csv')])
         csv_path = os.path.join(user_csv_folder, csv_files[-1])
         print("Using private CSV for query:", csv_path)
@@ -644,6 +662,17 @@ async def kill_session(request: Request, session_id: int = Form(...), csrf_token
             "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
             "session_kill_error": True
         })
+    
+# Add this to main.py for quick debugging (remove after use)
+@app.get("/debug/sessions")
+async def debug_sessions():
+    import sqlite3
+    conn = sqlite3.connect("data/session_state.db")
+    c = conn.cursor()
+    c.execute("SELECT session_id, username, session_name, upload_paths, embedding_index_path FROM chat_sessions")
+    rows = c.fetchall()
+    conn.close()
+    return {"sessions": rows}
     
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)

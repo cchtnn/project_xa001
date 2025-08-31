@@ -17,7 +17,9 @@ def init_db():
             session_id INTEGER PRIMARY KEY AUTOINCREMENT,
             username TEXT,
             session_name TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            upload_paths TEXT,
+            embedding_index_path TEXT
         )
     """)
     
@@ -59,6 +61,15 @@ def init_db():
                 FOREIGN KEY (session_id) REFERENCES chat_sessions(session_id) ON DELETE CASCADE
             )
         """)
+    
+    # --- Add this block to ensure upload_paths column exists ---
+    c.execute("PRAGMA table_info(chat_sessions)")
+    columns = [col[1] for col in c.fetchall()]
+    if "upload_paths" not in columns:
+        c.execute("ALTER TABLE chat_sessions ADD COLUMN upload_paths TEXT")
+    if "embedding_index_path" not in columns:
+        c.execute("ALTER TABLE chat_sessions ADD COLUMN embedding_index_path TEXT")
+    # ----------------------------------------------------------
     
     conn.commit()
     conn.close()
@@ -396,6 +407,48 @@ def validate_admin(username):
     user = c.fetchone()
     conn.close()
     return user and user[0] == "admin"
+
+def update_upload_paths(session_id, upload_paths):
+    """Update the upload_paths column for a session (store as JSON string)"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        # Store as JSON string
+        c.execute(
+            "UPDATE chat_sessions SET upload_paths = ? WHERE session_id = ?",
+            (json.dumps(upload_paths), session_id)
+        )
+        conn.commit()
+        conn.close()
+    except sqlite3.OperationalError as e:
+        print(f"Database error in update_upload_paths: {e}")
+
+def get_session_info(session_id):
+    """Return all info for a session as a dict (including upload_paths and embedding_index_path)"""
+    init_db()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+        c.execute("""
+            SELECT session_id, username, session_name, created_at, upload_paths, embedding_index_path
+            FROM chat_sessions WHERE session_id = ?
+        """, (session_id,))
+        row = c.fetchone()
+        conn.close()
+        if row:
+            return {
+                "session_id": row[0],
+                "username": row[1],
+                "session_name": row[2],
+                "created_at": row[3],
+                "upload_paths": json.loads(row[4]) if row[4] else [],
+                "embedding_index_path": row[5]
+            }
+        return None
+    except Exception as e:
+        print(f"Database error in get_session_info: {e}")
+        return None
 
 # Force database initialization on import
 init_db()

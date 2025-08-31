@@ -943,7 +943,7 @@ class StudentTranscriptCSVHandler:
                     "English": "Student transcript system is not available. Please ensure the CSV file exists and is accessible.",
                     "Spanish": "El sistema de expedientes académicos no está disponible. Asegúrate de que el archivo CSV existe y está accesible.",
                     "French": "Le système de relevés de notes n'est pas disponible. Assurez-vous que le fichier CSV existe et est accessible.",
-                    "Navajo": "Óltaʼgi bééhániih éí doo áhólł̥ǫ́ǫ da."
+                    "Navajo": "Óltaʼgi bééhaniih éí doo áhólł̥ǫ́ǫ da."
                 }
                 return error_messages.get(language, error_messages["English"])
         
@@ -998,8 +998,8 @@ def process_transcript_query(user_query: str, language='English', use_summarizer
     Returns:
         str: Generated answer
     """
+    print("DEBUG: process_transcript_query csv_path =", csv_path)
     handler = get_csv_transcript_handler(csv_path)
-    print("CSV Path from process_transcript_query function:-", csv_path)
     answer = handler.process_query(user_query, language, use_summarizer, format_type)
     # Out-of-scope detection
     if not answer or answer.strip().lower() in [

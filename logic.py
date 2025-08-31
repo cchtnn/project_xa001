@@ -1083,11 +1083,12 @@ def fix_term_career_totals(csv_path, output_path):
                     df.iloc[idx, col_idx] = value
                     
     unwanted_values = ["Term Totals", "Career Totals", "Subterm Totals", "Division Career Totals"]
-    # Create a boolean mask using str.startswith for multiple values
-    mask = df["Course Title"].astype(str).apply(lambda x: any(x.startswith(val) for val in unwanted_values))
-    # Replace matching rows with blank
-    df.loc[mask, "Course Title"] = ''
-    df.loc[mask, "Course Number"] = ''
+    if "Course Title" in df.columns and "Course Number" in df.columns:
+        mask = df["Course Title"].astype(str).apply(
+            lambda x: any(str(x).startswith(val) for val in unwanted_values) if isinstance(x, str) else False
+        )
+        df.loc[mask, "Course Title"] = ''
+        df.loc[mask, "Course Number"] = ''
     df.to_csv(output_path, index=False)
 
 def parse_and_index_pdf(pdf_path, user, private):

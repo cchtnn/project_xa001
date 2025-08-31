@@ -549,35 +549,41 @@ uploadBtn.onclick = async function(e) {
         uploadStatus.innerHTML = `<div class="alert alert-warning mb-0">Please select file(s) to upload.</div>`;
         return;
     }
-    
+
     showSpinner(`Uploading and processing ${fileInput.files.length} file(s)...`);
-    
+
     const formData = new FormData();
     for (let i = 0; i < fileInput.files.length; i++) {
         formData.append('files', fileInput.files[i]);
     }
     formData.append('private', document.getElementById('private').checked);
-    
+
+    // FIX: Always send session_id with upload
+    if (!currentSessionId) {
+        await createNewSession();
+    }
+    formData.append('session_id', currentSessionId);
+
     try {
         const resp = await fetch('/upload', {method: 'POST', body: formData});
         const result = await resp.json();
         hideSpinner();
-        
+
         let statusHtml = `<div class="alert alert-success mb-2">
             <strong>${result.message}</strong><br>
         `;
-        
+
         if (result.processed_files && result.processed_files.length > 0) {
             statusHtml += `<small>Successfully processed: ${result.processed_files.join(', ')}</small><br>`;
         }
-        
+
         if (result.errors && result.errors.length > 0) {
             statusHtml += `<small class="text-warning">Errors: ${result.errors.join('; ')}</small>`;
         }
-        
+
         statusHtml += `</div>`;
         uploadStatus.innerHTML = statusHtml;
-        
+
     } catch (error) {
         hideSpinner();
         uploadStatus.innerHTML = `<div class="alert alert-danger mb-2">Upload failed: ${error.message}</div>`;
