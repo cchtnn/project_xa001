@@ -11,6 +11,7 @@ import os
 import shutil
 import auth_db
 import session_db, session_manager, student_transcript_csv_handler, query_handler, logic, config
+from query_classifier import classify_user_query, QueryType
 import jwt
 from datetime import datetime, timedelta
 import re
@@ -270,7 +271,7 @@ async def upload_files(request: Request, session_id: int = Form(...), files: Lis
         "errors": errors
     }
 
-# --- Query Endpoint ---
+# --- Query Endpoint (FIXED) ---
 @app.post("/query")
 async def query(
     request: Request,
@@ -286,7 +287,12 @@ async def query(
     csv_folder = session_info['upload_paths']  # or parse JSON
     embedding_index = session_info['embedding_index_path']
 
-    # Scenario a: Private checked - use only user's private data
+    # CLASSIFICATION FIRST - Always classify the query regardless of uploaded data
+    from query_classifier import classify_user_query, QueryType
+    query_type, confidence_score = classify_user_query(query)
+    print(f"Query classified as: {query_type} (confidence: {confidence_score:.3f})")
+
+    # Scenario a: Private checked - use ONLY user's private data (no fallback to common pool)
     print("Private flag is", private)
     if private:
         # FIX: Use session-specific folder for CSVs
@@ -298,36 +304,60 @@ async def query(
             if csv_files:
                 has_csv = True
 
-        if not has_csv:
-            return {
-                "answer": "Based on the document you uploaded I did not find the answer. Kindly upload the specific document.",
-                "session_id": session_id
-            }
+        # NEW LOGIC: Check if it's actually a transcript query
+        if query_type == QueryType.STUDENT_TRANSCRIPT and has_csv:
+            # Use private CSV for transcript queries
+            csv_files = sorted([f for f in os.listdir(user_csv_folder) if f.lower().endswith('.csv')])
+            csv_path = os.path.join(user_csv_folder, csv_files[-1])
+            print("Using private CSV for transcript query:", csv_path)
+            answer = student_transcript_csv_handler.process_transcript_query(
+                query, csv_path=csv_path
+            )
+            
+            # Check if this is the first question in the session BEFORE adding to history
+            history_before = session_db.get_session_message_count(session_id)
+            session_db.add_single_qa_to_history(session_id, query, answer)
 
-        csv_files = sorted([f for f in os.listdir(user_csv_folder) if f.lower().endswith('.csv')])
-        csv_path = os.path.join(user_csv_folder, csv_files[-1])
-        print("Using private CSV for query:", csv_path)
-        answer = student_transcript_csv_handler.process_transcript_query(
-            query, csv_path=csv_path
-        )
+            # If this was the first question, update the session name
+            if history_before == 0:
+                session_name = generate_session_name(query)
+                session_db.rename_session(session_id, session_name)
+                logging.info(f"Updated session {session_id} name to: {session_name}")
+
+            return {
+                "answer": answer, 
+                "session_id": session_id,
+                "query_type": query_type,
+                "confidence_score": confidence_score,
+                "session_name_updated": history_before == 0
+            }
         
-        # Check if this is the first question in the session BEFORE adding to history
+        # UPDATED LOGIC: If private is checked, ALWAYS stay within private scope
+        # Don't fall through to common pool - return out of scope message
+        if query_type == QueryType.STUDENT_TRANSCRIPT and not has_csv:
+            answer = "Based on the document you uploaded I did not find the answer. Kindly upload the specific document."
+        elif query_type == QueryType.POLICY:
+            answer = "I can only answer questions based on your private uploaded documents when private mode is enabled. Please uncheck the private option to access general policy information, or upload relevant documents to get answers from your private data."
+        else:
+            answer = "I can only provide answers based on your private uploaded documents when private mode is enabled. Please upload relevant documents or uncheck the private option."
+        
         history_before = session_db.get_session_message_count(session_id)
         session_db.add_single_qa_to_history(session_id, query, answer)
 
-        # If this was the first question, update the session name
         if history_before == 0:
             session_name = generate_session_name(query)
             session_db.rename_session(session_id, session_name)
             logging.info(f"Updated session {session_id} name to: {session_name}")
 
         return {
-            "answer": answer, 
+            "answer": answer,
             "session_id": session_id,
+            "query_type": query_type,
+            "confidence_score": confidence_score,
             "session_name_updated": history_before == 0
         }
 
-    # Check if user has uploaded files to public folder
+    # Check if user has uploaded files to public folder (only for transcript queries)
     public_upload_folder = "data/public_uploads"
     public_csv_folder = os.path.join(public_upload_folder, "csv_files")
     has_public_csv = False
@@ -338,7 +368,9 @@ async def query(
             has_public_csv = True
 
     print("User has public CSV:", has_public_csv)
-    if has_public_csv:
+    
+    # NEW LOGIC: Only use public CSV if it's actually a transcript query
+    if query_type == QueryType.STUDENT_TRANSCRIPT and has_public_csv and not private:
         csv_files = sorted([f for f in os.listdir(public_csv_folder) if f.lower().endswith('.csv')])
         csv_path = os.path.join(public_csv_folder, csv_files[-1])
         answer = student_transcript_csv_handler.process_transcript_query(
@@ -358,11 +390,13 @@ async def query(
         return {
             "answer": answer, 
             "session_id": session_id,
+            "query_type": query_type,
+            "confidence_score": confidence_score,
             "session_name_updated": history_before == 0
         }
 
-    # Scenario c: No uploads found, use common data (existing vectorstore logic)
-    logging.info(f"User {username} queried: {query} (session_id: {session_id})")
+    # Scenario c: Either no uploads found OR it's a POLICY query - use common data (existing vectorstore logic)
+    logging.info(f"User {username} queried: {query} (session_id: {session_id}) - Using vectorstore for {query_type} query")
     try:
         index, metadata, tab_data = initialize_vectorstore()
         collection = get_collection()
@@ -395,8 +429,8 @@ async def query(
     return {
         "answer": response_content,
         "session_id": session_id,
-        "query_type": result.get("query_type"),
-        "confidence_score": result.get("confidence_score"),
+        "query_type": query_type,  # Now returns the actual classified type
+        "confidence_score": confidence_score,  # Now returns the actual confidence
         "contextual": len(chat_history) > 0,
         "session_name_updated": history_before == 0
     }
