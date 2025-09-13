@@ -22,7 +22,7 @@ load_dotenv()
 class StudentQueryReformulator:
     """Reformulates student transcript queries for better CSV agent performance"""
     
-    def __init__(self, groq_api_key: str = None, model_name: str = "llama3-8b-8192"):
+    def __init__(self, groq_api_key: str = None, model_name: str = "llama-3.1-8b-instant"):
         self.groq_api_key = groq_api_key or os.getenv('GROQ_API_KEY')
         self.model_name = model_name
         self.llm = None

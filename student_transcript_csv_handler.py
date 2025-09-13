@@ -22,7 +22,7 @@ load_dotenv()
 class StudentTranscriptCSVHandler:
     """Handles student transcript queries using CSV Agent with query reformulation"""
     
-    def __init__(self, csv_path=None, model_name="llama3-8b-8192"):
+    def __init__(self, csv_path=None, model_name="llama-3.1-8b-instant"):
         self.csv_path = csv_path or st.session_state.get("active_transcript_csv_path", "data/csv_folder/student_transcript.csv")
         self.model_name = model_name
         self.groq_api_key = os.getenv('GROQ_API_KEY')
@@ -219,8 +219,8 @@ class StudentTranscriptCSVHandler:
                 agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                 allow_dangerous_code=True,
                 handle_parsing_errors=True,
-                max_iterations=3,
-                max_execution_time=60,
+                max_iterations=5,
+                max_execution_time=90,
                 return_intermediate_steps=False,
                 include_df_in_prompt=False,
                 prefix="""
@@ -236,23 +236,25 @@ class StudentTranscriptCSVHandler:
                 3. NEVER use descriptive text as the Action name
                 4. NEVER say "Use the python_repl_ast to..." - just use "python_repl_ast"
                 5. After getting results from an action, IMMEDIATELY provide the full pandas dataframe as Final Answer
-                6. Do NOT execute additional actions after finding the answer
+                6. Only provide Final Answer after you have the complete result
                 7. For unique values, use .unique() or .drop_duplicates()
                 8. Give unique rows only - do not repeat rows in your answers.
+                9. Execute ONE action at a time and wait for the result
                 
                 RESPONSE FORMAT:
-                9. When you find data, Give unique rows only - do not repeat rows in your answers. Write result of the agent after fixed text "Final Answer"
-                10. For advisor queries: if multiple rows have same advisor, show unique advisor name only
-                11. show unique column rows or columns only
-                12. When None is coming as answer then in that case mention "No data found" instead of None.
+                10. When you find data, Give unique rows only - do not repeat rows in your answers. Write result of the agent after fixed text "Final Answer"
+                11. For advisor queries: if multiple rows have same advisor, show unique advisor name only
+                12. show unique column rows or columns only
+                13. When None is coming as answer then in that case mention "No data found" instead of None.
                 
                 DATA HANDLING RULES:
-                13. pandas is already imported as 'pd' - you don't need to import it again
-                14. For GPA calculations, use .mean() method and handle NaN values properly
-                15. For groupby operations, use .dropna() if needed to exclude null values
-                16. Always check data types before performing operations
-                17. Use .sort_values(ascending=False) for descending order sorting
-
+                14. pandas is already imported as 'pd' - you don't need to import it again
+                15. For GPA calculations, use .mean() method and handle NaN values properly
+                16. For groupby operations, use .dropna() if needed to exclude null values
+                17. Always check data types before performing operations
+                18. Use .sort_values(ascending=False) for descending order sorting
+                19. Convert Series results to DataFrame with .reset_index() if needed for better display
+                
                 The DataFrame columns and their types are automatically detected by pandas.
                 The GPA column has been pre-processed to be numeric (float type).
                 """
@@ -886,11 +888,45 @@ class StudentTranscriptCSVHandler:
                     return response
                 
             except Exception as e:
-                print(f"❌ Attempt {attempt + 1} failed: {str(e)}")
+                error_msg = str(e)
+                print(f"⚠️ Attempt {attempt + 1} encountered error: {error_msg}")
+                
+                # Check if it's a parsing error but we can extract the result
+                if "OUTPUT_PARSING_FAILURE" in error_msg or "output parsing error" in error_msg.lower():
+                    print("🔧 Detected parsing error, attempting to extract data from error message...")
+                    
+                    # Try to extract the actual data from the error message
+                    try:
+                        # The error message often contains the actual result
+                        if "Final Answer:" in error_msg:
+                            # Extract everything after "Final Answer:"
+                            result_part = error_msg.split("Final Answer:")[-1].strip()
+                            
+                            # Clean up the result part
+                            lines = result_part.split('\n')
+                            cleaned_lines = []
+                            for line in lines:
+                                line = line.strip()
+                                if line and not line.startswith('For troubleshooting'):
+                                    cleaned_lines.append(line)
+                            
+                            if cleaned_lines:
+                                extracted_result = '\n'.join(cleaned_lines)
+                                print(f"✅ Successfully extracted result from parsing error")
+                                
+                                if use_summarizer:
+                                    print("🔄 Formatting extracted result with summarizer...")
+                                    formatted_response = self._summarize_response(extracted_result, question, format_type)
+                                    return formatted_response
+                                else:
+                                    return extracted_result
+                                    
+                    except Exception as extract_error:
+                        print(f"❌ Failed to extract result from error: {extract_error}")
+                
+                # If it's the last attempt or not a parsing error, fail
                 if attempt == max_retries - 1:
                     return f"I encountered an error while processing your transcript query. Please try rephrasing your question or contact support for assistance."
-        
-        return "Unable to process the query after multiple attempts."
     
     def _generate_multilingual_response(self, csv_response: str, user_query: str, language: str):
         """Generate response in the requested language"""

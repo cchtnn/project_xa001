@@ -308,7 +308,7 @@ def generate_answer(user_query, retrieved_chunks, tab_data, communication_langua
                 """
 
     llm = ChatGroq(
-        model="Llama3-8b-8192",
+        model="llama-3.1-8b-instant",
         api_key=os.getenv("GROQ_API_KEY"),
         temperature=0,
         max_tokens=4192,
