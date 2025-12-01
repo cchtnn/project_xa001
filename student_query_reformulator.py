@@ -13,6 +13,7 @@ import json
 import warnings
 from dotenv import load_dotenv
 import logging
+import re
 logging.getLogger("watchdog").setLevel(logging.ERROR)
 
 warnings.filterwarnings("ignore")
@@ -73,6 +74,54 @@ class StudentQueryReformulator:
             print(f"❌ Error analyzing CSV structure: {str(e)}")
             return None
     
+    def _detect_ranking_query(self, user_query: str) -> Dict[str, Any]:
+        """
+        Detect if query is asking for specific ranking/position (1st, 2nd, 3rd, etc.)
+        Returns dict with ranking info if detected, None otherwise
+        """
+        query_lower = user_query.lower()
+        
+        # Patterns for ranking queries
+        ranking_patterns = [
+            (r'\b(\d+)(?:st|nd|rd|th)\s+(?:highest|lowest|best|worst|top|bottom)', 'position'),
+            (r'\b(first|second|third|fourth|fifth|top|bottom)\s+(?:highest|lowest|best|worst)', 'word'),
+            (r'\btop\s+(\d+)', 'top_n'),
+            (r'\bbottom\s+(\d+)', 'bottom_n'),
+        ]
+        
+        for pattern, pattern_type in ranking_patterns:
+            match = re.search(pattern, query_lower)
+            if match:
+                position_str = match.group(1)
+                
+                # Convert words to numbers
+                word_to_num = {
+                    'first': 1, 'second': 2, 'third': 3, 'fourth': 4, 'fifth': 5,
+                    'top': 1, 'bottom': 1
+                }
+                
+                if pattern_type == 'position':
+                    position = int(position_str)
+                    is_ascending = 'lowest' in query_lower or 'worst' in query_lower or 'bottom' in query_lower
+                elif pattern_type == 'word':
+                    position = word_to_num.get(position_str, 1)
+                    is_ascending = 'lowest' in query_lower or 'worst' in query_lower or 'bottom' in query_lower
+                elif pattern_type == 'top_n':
+                    position = int(position_str)
+                    is_ascending = False
+                elif pattern_type == 'bottom_n':
+                    position = int(position_str)
+                    is_ascending = True
+                
+                return {
+                    'has_ranking': True,
+                    'position': position,
+                    'is_ascending': is_ascending,
+                    'original_match': match.group(0)
+                }
+        
+        return {'has_ranking': False}
+    
     def create_reformulation_prompt(self, csv_structure: Dict[str, Any]) -> str:
         """
         Create a detailed prompt for query reformulation based on CSV structure
@@ -103,12 +152,16 @@ REFORMULATION RULES:
 8. When looking for students, always reference the student name column specifically
 9. When looking for courses, reference course-related columns specifically
 10. When looking for grades, reference grade-related columns specifically
+11. CRITICAL: For ranking queries (1st, 2nd, 3rd, nth highest/lowest), preserve the exact position requirement
+12. For ranking queries, use explicit instructions like "get the row at index N-1 after sorting"
 
 COMMON QUERY PATTERNS:
 - "student who studies at X" → "student name from the 'Student Name' column where the 'College Name' or 'Organization Name' column equals 'X'"
 - "courses for student X" → "course information from relevant course columns where 'Student Name' column equals 'X'"
 - "students with grade X" → "student names from 'Student Name' column where grade column equals 'X'"
 - "GPA information" → "GPA values from 'GPA' column for specified conditions"
+- "2nd highest GPA" → "calculate mean GPA for each student from 'Student Name' and 'GPA' columns, sort in descending order by GPA, then get the row at index 1 (second position)"
+- "top 3 students by GPA" → "calculate mean GPA for each student from 'Student Name' and 'GPA' columns, sort in descending order by GPA, then get the first 3 rows"
 
 EXAMPLES:
 Original: "Tell me the student who is studying in college xyz"
@@ -119,6 +172,12 @@ Reformulated: "Give me the unique student names from the 'Student Name' column w
 
 Original: "What courses did John take?"
 Reformulated: "Show me all course information from course-related columns where the 'Student Name' column equals 'John'"
+
+Original: "2nd highest GPA student"
+Reformulated: "calculate mean GPA for each student from 'Student Name' and 'GPA' columns, sort in descending order by GPA value, then select the row at index 1 to get the 2nd highest"
+
+Original: "student with 3rd lowest GPA"
+Reformulated: "calculate mean GPA for each student from 'Student Name' and 'GPA' columns, sort in ascending order by GPA value, then select the row at index 2 to get the 3rd lowest"
 
 Now reformulate the following user query to be more specific and actionable for the CSV agent:
 """
@@ -136,7 +195,27 @@ Now reformulate the following user query to be more specific and actionable for 
             return user_query
         
         try:
-            system_prompt = self.create_reformulation_prompt(csv_structure)
+            # Check if this is a ranking query
+            ranking_info = self._detect_ranking_query(user_query)
+            
+            # Enhanced prompt if ranking detected
+            if ranking_info.get('has_ranking'):
+                position = ranking_info['position']
+                is_ascending = ranking_info['is_ascending']
+                order = "ascending" if is_ascending else "descending"
+                
+                print(f"🎯 Detected ranking query: Position {position}, Order: {order}")
+                
+                # Add specific context for ranking queries
+                ranking_context = f"""
+IMPORTANT: This query asks for the {position}{'st' if position == 1 else 'nd' if position == 2 else 'rd' if position == 3 else 'th'} {'lowest' if is_ascending else 'highest'} value.
+You MUST preserve this exact position requirement in the reformulation.
+Use: "sort in {order} order, then select the row at index {position-1}" to get the exact position.
+"""
+            else:
+                ranking_context = ""
+            
+            system_prompt = self.create_reformulation_prompt(csv_structure) + ranking_context
             messages = [
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=f"User Query: {user_query}\n\nProvide only the reformulated query, no explanations or prefixes.")

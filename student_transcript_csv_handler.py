@@ -72,10 +72,25 @@ class StudentTranscriptCSVHandler:
     def _load_frequent_queries(self) -> Dict[str, str]:
         """Load frequently asked questions and their pre-reformulated queries"""
         return {
-            # GPA related queries
-            "Sort students in descending order of GPA": "calculate mean GPA for each student from 'Student Name' and 'GPA' columns, sort in descending order by GPA value",
-            "highest gpa student": "find student with maximum GPA value from 'Student Name' and 'GPA' columns",
-            "lowest gpa student": "find student with minimum GPA value from 'Student Name' and 'GPA' columns", 
+            # RANKING QUERIES (MUST BE FIRST - checked before generic sorting)
+            "2nd highest gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, then select the row at index 1 to get the 2nd highest, return only 'Student Name' and mean GPA",
+            "3rd highest gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, then select the row at index 2 to get the 3rd highest, return only 'Student Name' and mean GPA",
+            "4th highest gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, then select the row at index 3 to get the 4th highest, return only 'Student Name' and mean GPA",
+            "5th highest gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, then select the row at index 4 to get the 5th highest, return only 'Student Name' and mean GPA",
+            "2nd lowest gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in ascending order by GPA value, then select the row at index 1 to get the 2nd lowest, return only 'Student Name' and mean GPA",
+            "3rd lowest gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in ascending order by GPA value, then select the row at index 2 to get the 3rd lowest, return only 'Student Name' and mean GPA",
+            "second highest gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, then select the row at index 1 to get the 2nd highest, return only 'Student Name' and mean GPA",
+            "third highest gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, then select the row at index 2 to get the 3rd highest, return only 'Student Name' and mean GPA",
+            "top 3 students": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, then select the first 3 rows, return only 'Student Name' and mean GPA",
+            "top 5 students": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, then select the first 5 rows, return only 'Student Name' and mean GPA",
+            "bottom 3 students": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in ascending order by GPA value, then select the first 3 rows, return only 'Student Name' and mean GPA",
+            
+            # GPA related queries (GENERIC - checked after ranking queries)
+            "sort students in descending order of gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, return only 'Student Name' and mean GPA columns",
+            "sort students by gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, return only 'Student Name' and mean GPA columns",
+            "sort students in ascending order of gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in ascending order by GPA value, return only 'Student Name' and mean GPA columns",
+            "highest gpa student": "group by 'Student Name' column, calculate mean of 'GPA' column, find student with maximum mean GPA value, return only 'Student Name' and mean GPA",
+            "lowest gpa student": "group by 'Student Name' column, calculate mean of 'GPA' column, find student with minimum mean GPA value, return only 'Student Name' and mean GPA", 
             "average gpa": "calculate overall mean of all GPA values from 'GPA' column",
             "students with gpa above": "filter students from 'Student Name' column where 'GPA' column value is greater than specified threshold",
             
@@ -98,31 +113,141 @@ class StudentTranscriptCSVHandler:
         }
 
     def _find_matching_frequent_query(self, user_query: str) -> str:
-        """Find if user query matches any frequent query pattern"""
+        """Find if user query matches any frequent query pattern - checks specific patterns before generic ones"""
         user_query_lower = user_query.lower().strip()
         
-        # Direct keyword matching - check both directions
-        for pattern, reformulated in self.frequent_queries.items():
-            pattern_lower = pattern.lower()
-            # Check if pattern matches user query or user query matches pattern
-            if (pattern_lower in user_query_lower) or (user_query_lower in pattern_lower):
-                print(f"🎯 Found matching frequent query pattern: '{pattern}'")
-                return reformulated
+        print(f"🔍 DEBUG: Starting frequent query matching for: '{user_query_lower}'")
+        print(f"🔍 DEBUG: Available frequent queries: {list(self.frequent_queries.keys())}")
         
-        # Additional exact phrase matching for common variations
+        # PHASE 1: Check for ranking patterns FIRST (most specific)
+        ranking_keywords = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th',
+                        'first', 'second', 'third', 'fourth', 'fifth',
+                        'top 3', 'top 5', 'top 10', 'bottom 3', 'bottom 5']
+        
+        has_ranking_keyword = any(keyword in user_query_lower for keyword in ranking_keywords)
+        print(f"🔍 DEBUG: Has ranking keyword: {has_ranking_keyword}")
+        
+        if has_ranking_keyword:
+            # Only check ranking patterns if query contains ranking keywords
+            ranking_patterns = [
+                r'\b(\d+)(?:st|nd|rd|th)\s+(?:highest|lowest)',
+                r'\b(first|second|third|fourth|fifth)\s+(?:highest|lowest)',
+                r'\btop\s+(\d+)\s+students?',
+                r'\bbottom\s+(\d+)\s+students?'
+            ]
+            
+            for pattern in ranking_patterns:
+                if re.search(pattern, user_query_lower):
+                    # Check if there's a direct match in frequent queries
+                    for freq_pattern, reformulated in self.frequent_queries.items():
+                        freq_lower = freq_pattern.lower()
+                        # For ranking queries, require stricter matching
+                        if freq_lower in user_query_lower or user_query_lower in freq_lower:
+                            # Make sure it's actually a ranking pattern match
+                            if any(re.search(rp, freq_lower) for rp in ranking_patterns):
+                                print(f"🎯 Found matching ranking query pattern: '{freq_pattern}'")
+                                return reformulated
+        
+        # PHASE 2: Check for EXACT or HIGH-OVERLAP phrase matching
+        # Sort patterns by length (longer patterns first for more specific matching)
+        sorted_patterns = sorted(self.frequent_queries.items(), key=lambda x: len(x[0]), reverse=True)
+        
+        print(f"🔍 DEBUG: Checking {len(sorted_patterns)} patterns for matches...")
+        
+        for pattern, reformulated in sorted_patterns:
+            pattern_lower = pattern.lower()
+            
+            print(f"🔍 DEBUG: Comparing with pattern: '{pattern_lower}'")
+            
+            # Skip ranking patterns in this phase if no ranking keywords present
+            if not has_ranking_keyword:
+                if any(rk in pattern_lower for rk in ['2nd', '3rd', '4th', '5th', 'second', 'third', 'top', 'bottom']):
+                    print(f"🔍 DEBUG: Skipping ranking pattern (no ranking keyword in query)")
+                    continue
+            
+            # Method 1: Exact match (most reliable)
+            if pattern_lower == user_query_lower:
+                print(f"🎯 Found exact matching frequent query pattern: '{pattern}'")
+                return reformulated
+            
+            # Method 2: Pattern is substring of query (pattern must be significant portion)
+            if pattern_lower in user_query_lower:
+                # Calculate overlap percentage
+                overlap = len(pattern_lower) / len(user_query_lower)
+                print(f"🔍 DEBUG: Pattern in query - overlap: {overlap:.0%}")
+                if overlap >= 0.7:  # Pattern covers at least 70% of query
+                    print(f"🎯 Found high-overlap matching pattern: '{pattern}' (overlap: {overlap:.0%})")
+                    return reformulated
+            
+            # Method 3: Query is substring of pattern (query must match significant portion)
+            if user_query_lower in pattern_lower:
+                overlap = len(user_query_lower) / len(pattern_lower)
+                print(f"🔍 DEBUG: Query in pattern - overlap: {overlap:.0%}")
+                if overlap >= 0.7:  # Query covers at least 70% of pattern
+                    print(f"🎯 Found high-overlap matching pattern: '{pattern}' (overlap: {overlap:.0%})")
+                    return reformulated
+        
+        # PHASE 3: Additional exact phrase matching for common variations
+        print(f"🔍 DEBUG: Checking query variations...")
         query_variations = {
-            "sort students in descending order of gpa": "Sort students in descending order of GPA",
-            "sort students by gpa descending": "Sort students in descending order of GPA", 
-            "order students by gpa desc": "Sort students in descending order of GPA",
-            "rank students by gpa": "Sort students in descending order of GPA",
-            "list students by gpa highest first": "Sort students in descending order of GPA"
+            "sort students in descending order of gpa": "sort students in descending order of gpa",
+            "sort students by gpa descending": "sort students in descending order of gpa",
+            "sort students by gpa desc": "sort students in descending order of gpa",
+            "order students by gpa desc": "sort students in descending order of gpa",
+            "rank students by gpa": "sort students in descending order of gpa",
+            "list students by gpa highest first": "sort students in descending order of gpa",
+            "show all students by gpa": "sort students in descending order of gpa",
+            "sort students by gpa": "sort students in descending order of gpa",
+            # 2nd highest variations
+            "2nd highest gpa secured by student": "2nd highest gpa",
+            "2nd highest gpa secured by the student": "2nd highest gpa",
+            "student name and gpa of 2nd highest gpa secured by the student": "2nd highest gpa",
+            "student name and gpa of 2nd highest gpa": "2nd highest gpa",
+            "give me the student name and gpa of 2nd highest gpa": "2nd highest gpa",
+            "student with 2nd highest gpa": "2nd highest gpa",
+            "who has 2nd highest gpa": "2nd highest gpa",
+            "give me 2nd highest gpa": "2nd highest gpa",
+            "show 2nd highest gpa": "2nd highest gpa",
+            "2nd highest gpa student": "2nd highest gpa",
+            # 3rd highest variations
+            "3rd highest gpa secured by student": "3rd highest gpa",
+            "3rd highest gpa secured by the student": "3rd highest gpa",
+            "student name and gpa of 3rd highest gpa": "3rd highest gpa",
+            "student with 3rd highest gpa": "3rd highest gpa",
+            "3rd highest gpa student": "3rd highest gpa"
         }
         
-        for variation, pattern in query_variations.items():
-            if variation in user_query_lower:
-                if pattern in self.frequent_queries:
-                    print(f"🎯 Found matching query variation: '{variation}' -> '{pattern}'")
-                    return self.frequent_queries[pattern]
+        for variation, pattern_key in query_variations.items():
+            print(f"🔍 DEBUG: Checking variation: '{variation}'")
+            # Check for exact match first
+            if variation == user_query_lower:
+                print(f"🔍 DEBUG: EXACT MATCH with variation!")
+                if pattern_key in self.frequent_queries:
+                    print(f"🎯 Found matching query variation: '{variation}' -> '{pattern_key}'")
+                    return self.frequent_queries[pattern_key]
+            # Check if variation is contained in query (for longer user queries)
+            elif variation in user_query_lower:
+                print(f"🔍 DEBUG: Variation found in query")
+                if pattern_key in self.frequent_queries:
+                    print(f"🎯 Found matching query variation: '{variation}' -> '{pattern_key}'")
+                    return self.frequent_queries[pattern_key]
+            # NEW: Check if query contains the key pattern (more flexible matching)
+            elif pattern_key in user_query_lower:
+                # Extract pattern keywords and check for presence
+                pattern_words = pattern_key.lower().split()
+                query_words = user_query_lower.split()
+                # Check if majority of pattern words are in query
+                matching_words = sum(1 for word in pattern_words if word in query_words)
+                match_percentage = matching_words / len(pattern_words) if pattern_words else 0
+                
+                print(f"🔍 DEBUG: Pattern '{pattern_key}' word match: {match_percentage:.0%}")
+                
+                if match_percentage >= 0.8:  # 80% of pattern words must be present
+                    print(f"🎯 Found matching pattern by word overlap: '{pattern_key}'")
+                    return self.frequent_queries[pattern_key]
+        
+        print("🔍 No frequent query match found")
+        return None
 
     def _setup_llm(self):
         """Setup the ChatGroq LLM for query reformulation"""
@@ -168,7 +293,7 @@ class StudentTranscriptCSVHandler:
             
             # Analyze the CSV structure for the reformulator
             csv_structure = self.query_reformulator.analyze_csv_structure(self.csv_path)
-            self.csv_structure = csv_structure  # <-- ADD THIS LINE
+            self.csv_structure = csv_structure
             
             if csv_structure:
                 print("✅ Query Reformulator setup completed with CSV structure analysis")
@@ -195,7 +320,6 @@ class StudentTranscriptCSVHandler:
                 self.df['GPA'] = self.df['GPA'].replace('nan', pd.NA)
                 
                 # Convert to numeric, coercing errors to NaN
-                self.df['GPA'] = pd.to_numeric(self.df['GPA'], errors='coerce')
                 self.df['GPA'] = pd.to_numeric(self.df['GPA'], errors='coerce')
                 
                 # Save the cleaned CSV back for the agent to use
@@ -224,40 +348,48 @@ class StudentTranscriptCSVHandler:
                 return_intermediate_steps=False,
                 include_df_in_prompt=False,
                 prefix="""
-                You are working with a pandas DataFrame in Python. The DataFrame is loaded from a CSV file.
-                You should use the tools below to answer the question posed about the DataFrame.
+You are working with a pandas DataFrame in Python. The DataFrame is loaded from a CSV file.
+You should use the tools below to answer the question posed about the DataFrame.
 
-                CRITICAL INSTRUCTIONS FOR TOOL USAGE:
-                1. You have access to ONLY ONE tool: python_repl_ast
-                2. ALWAYS use this EXACT format for actions:
-                    Action: python_repl_ast
-                    Action Input: your_python_code_here
+CRITICAL INSTRUCTIONS FOR TOOL USAGE:
+1. You have access to ONLY ONE tool: python_repl_ast
+2. ALWAYS use this EXACT format for actions:
+    Action: python_repl_ast
+    Action Input: your_python_code_here
 
-                3. NEVER use descriptive text as the Action name
-                4. NEVER say "Use the python_repl_ast to..." - just use "python_repl_ast"
-                5. After getting results from an action, IMMEDIATELY provide the full pandas dataframe as Final Answer
-                6. Only provide Final Answer after you have the complete result
-                7. For unique values, use .unique() or .drop_duplicates()
-                8. Give unique rows only - do not repeat rows in your answers.
-                9. Execute ONE action at a time and wait for the result
-                
-                RESPONSE FORMAT:
-                10. When you find data, Give unique rows only - do not repeat rows in your answers. Write result of the agent after fixed text "Final Answer"
-                11. For advisor queries: if multiple rows have same advisor, show unique advisor name only
-                12. show unique column rows or columns only
-                13. When None is coming as answer then in that case mention "No data found" instead of None.
-                
-                DATA HANDLING RULES:
-                14. pandas is already imported as 'pd' - you don't need to import it again
-                15. For GPA calculations, use .mean() method and handle NaN values properly
-                16. For groupby operations, use .dropna() if needed to exclude null values
-                17. Always check data types before performing operations
-                18. Use .sort_values(ascending=False) for descending order sorting
-                19. Convert Series results to DataFrame with .reset_index() if needed for better display
-                
-                The DataFrame columns and their types are automatically detected by pandas.
-                The GPA column has been pre-processed to be numeric (float type).
-                """
+3. NEVER use descriptive text as the Action name
+4. NEVER say "Use the python_repl_ast to..." - just use "python_repl_ast"
+5. After getting results from an action, IMMEDIATELY provide the full pandas dataframe as Final Answer
+6. Only provide Final Answer after you have the complete result
+7. For unique values, use .unique() or .drop_duplicates()
+8. Give unique rows only - do not repeat rows in your answers.
+9. Execute ONE action at a time and wait for the result
+
+CRITICAL GPA COLUMN RULES:
+10. ALWAYS use 'GPA' column for GPA calculations, NEVER use 'Hours GPA' or other GPA-related columns
+11. The 'GPA' column is already cleaned and converted to numeric float type
+12. For GPA queries, ALWAYS return only 'Student Name' and 'GPA' (or mean GPA) columns
+
+DATA TYPE HANDLING:
+13. pandas is already imported as 'pd'
+14. numpy is already imported as 'np' 
+15. If you encounter dtype errors with GPA column, use: pd.to_numeric(df['GPA'], errors='coerce')
+16. To handle empty strings in numeric columns: df['Column'].replace('', np.nan)
+17. Always check data types before operations using: df['Column'].dtype
+
+RESPONSE FORMAT:
+18. When you find data, Give unique rows only - do not repeat rows in your answers. Write result of the agent after fixed text "Final Answer"
+19. For advisor queries: if multiple rows have same advisor, show unique advisor name only
+20. show unique column rows or columns only
+21. When None is coming as answer then in that case mention "No data found" instead of None.
+
+GPA CALCULATION EXAMPLE:
+For sorting students by GPA:
+Action: python_repl_ast
+Action Input: df.groupby('Student Name')['GPA'].mean().sort_values(ascending=False).reset_index()
+
+The GPA column has been pre-processed to be numeric (float type).
+"""
             )
             
             print("✅ CSV Agent created successfully")
@@ -311,6 +443,8 @@ class StudentTranscriptCSVHandler:
         """
         Reformulate user query to be more specific for CSV agent
         """
+        print(f"🔍 DEBUG: _reformulate_query called with query: '{user_query}'")
+        
         if csv_structure is None:
             csv_structure = self.csv_structure
             
@@ -321,7 +455,9 @@ class StudentTranscriptCSVHandler:
         if self.llm is None:
             print("⚠️ LLM not available for query reformulation, returning original query")
             return user_query
+        
         # First check if query matches any frequent query pattern
+        print(f"🔍 DEBUG: Checking frequent query patterns...")
         frequent_match = self._find_matching_frequent_query(user_query)
         if frequent_match:
             print(f"🔄 Using pre-reformulated frequent query:")
@@ -332,12 +468,59 @@ class StudentTranscriptCSVHandler:
         print("🔄 No frequent query match found, using LLM reformulation...")
 
         try:
-            # FIX: Use the reformulator's prompt creator
-            system_prompt = self.query_reformulator.create_reformulation_prompt(csv_structure)
+            # Create a simplified, focused prompt that prevents hallucination
+            columns_info = ", ".join(csv_structure["columns"])
+            
+            # Check if 'GPA' column exists
+            has_gpa_column = 'GPA' in csv_structure["columns"]
+            
+            gpa_instruction = ""
+            if has_gpa_column:
+                gpa_instruction = """
+CRITICAL GPA COLUMN RULE:
+- ALWAYS use 'GPA' column for GPA-related queries
+- NEVER use 'Hours GPA', 'Term GPA', or any other GPA-related columns
+- The 'GPA' column is the PRIMARY and CORRECT column for all GPA calculations
+- When the query mentions "GPA", "grade point average", or "grades", use ONLY the 'GPA' column
+"""
+            
+            system_prompt = f"""You are a query reformulator for CSV data analysis. Your ONLY job is to make queries more explicit by referencing exact column names.
+
+AVAILABLE COLUMNS: {columns_info}
+{gpa_instruction}
+
+CRITICAL RULES:
+1. DO NOT add any filters, conditions, or WHERE clauses that are not in the original query
+2. DO NOT mention specific values like college names, terms, or dates unless they are in the original query
+3. ONLY replace vague column references with exact column names from the available columns
+4. Keep the query intent EXACTLY the same as the original
+5. For sorting/ranking queries, specify to return ONLY 'Student Name' and 'GPA' columns in the result
+6. Always use groupby on 'Student Name' first, then calculate mean of 'GPA', then sort
+7. ALWAYS use 'GPA' column for GPA queries, never 'Hours GPA' or other variants
+
+EXAMPLES:
+Original: "Sort students by GPA"
+Reformulated: "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, return only 'Student Name' and calculated mean GPA columns"
+
+Original: "Sort students in descending order of GPA"
+Reformulated: "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, return only 'Student Name' and calculated mean GPA columns"
+
+Original: "highest GPA student"
+Reformulated: "group by 'Student Name' column, calculate mean of 'GPA' column, find student with maximum mean GPA value, return only 'Student Name' and mean GPA"
+
+Original: "students at NEWMAN UNIVERSITY"
+Reformulated: "show student names from 'Student Name' column where 'College Name' or 'Organization Name' column equals 'NEWMAN UNIVERSITY'"
+
+Original: "2nd highest GPA"
+Reformulated: "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by mean GPA value, select the row at index 1 to get the 2nd highest, return only 'Student Name' and mean GPA"
+
+Now reformulate this query by ONLY making column references explicit. Do NOT add any filters or conditions:"""
+            
             messages = [
                 SystemMessage(content=system_prompt),
-                HumanMessage(content=f"User Query: {user_query}\n\nProvide only the reformulated query, no explanations or prefixes.")
+                HumanMessage(content=f"Original query: {user_query}\n\nProvide ONLY the reformulated query, no other text:")
             ]
+            
             response = self.llm.invoke(messages)
             print(f"🔄 LLM reformulator raw response: {response.content}")
             reformulated_query = response.content.strip()
@@ -352,7 +535,7 @@ class StudentTranscriptCSVHandler:
                     print(f"⚠️ Could not parse reformulator response as JSON: {json_e}")
             
             # Clean up any prefixes that might be added
-            prefixes_to_remove = ["Reformulated:", "Reformulated Query:", "Query:", "Answer:", "Response:"]
+            prefixes_to_remove = ["Reformulated:", "Reformulated Query:", "Query:", "Answer:", "Response:", "Reformulated query:"]
             for prefix in prefixes_to_remove:
                 if reformulated_query.startswith(prefix):
                     reformulated_query = reformulated_query.replace(prefix, "").strip()
@@ -362,9 +545,54 @@ class StudentTranscriptCSVHandler:
             (reformulated_query.startswith("'") and reformulated_query.endswith("'")):
                 reformulated_query = reformulated_query[1:-1]
             
-            # Validate the reformulated query is not empty
-            if not reformulated_query or not reformulated_query.strip():
-                print("⚠️ Reformulated query is empty, using original query")
+            # Validate the reformulated query is not empty or just a conversational response
+            if not reformulated_query or not reformulated_query.strip() or \
+            "ready to reformulate" in reformulated_query.lower() or \
+            "please go ahead" in reformulated_query.lower():
+                print("⚠️ Reformulated query is invalid, using original query")
+                return user_query
+            
+            # CRITICAL VALIDATION: Check if reformulated query added unwanted filters
+            user_query_lower = user_query.lower()
+            reformulated_lower = reformulated_query.lower()
+            
+            # List of filter keywords that should only appear if in original query
+            suspicious_filters = [
+                'newman university', 'murray state', 'jericho college',
+                'fall', 'spring', 'term', 'subterm', '8 weeks', '1st 8', '2nd 8',
+                '2024-2025', 'organization name equals'
+            ]
+            
+            # Check if any suspicious filters were added
+            hallucinated = False
+            for filter_term in suspicious_filters:
+                if filter_term in reformulated_lower and filter_term not in user_query_lower:
+                    print(f"⚠️ HALLUCINATION DETECTED: '{filter_term}' was added but not in original query")
+                    hallucinated = True
+                    break
+            
+            # CRITICAL: Check if wrong GPA column was used
+            print(f"🔍 DEBUG: Checking for wrong GPA column usage...")
+            print(f"🔍 DEBUG: has_gpa_column = {has_gpa_column}")
+            print(f"🔍 DEBUG: 'gpa' in user_query_lower = {'gpa' in user_query_lower}")
+            print(f"🔍 DEBUG: 'hours gpa' in reformulated_lower = {'hours gpa' in reformulated_lower}")
+            print(f"🔍 DEBUG: 'hours gpa' in user_query_lower = {'hours gpa' in user_query_lower}")
+            
+            if has_gpa_column and 'gpa' in user_query_lower:
+                if 'hours gpa' in reformulated_lower and 'hours gpa' not in user_query_lower:
+                    print(f"⚠️ WRONG COLUMN DETECTED: 'Hours GPA' was used instead of 'GPA'")
+                    # Fix it by replacing Hours GPA with GPA
+                    original_reformulated = reformulated_query
+                    reformulated_query = re.sub(r"'Hours GPA'", "'GPA'", reformulated_query, flags=re.IGNORECASE)
+                    reformulated_query = re.sub(r'"Hours GPA"', '"GPA"', reformulated_query, flags=re.IGNORECASE)
+                    reformulated_query = re.sub(r'Hours GPA', 'GPA', reformulated_query, flags=re.IGNORECASE)
+                    print(f"✅ CORRECTED:")
+                    print(f"   Before: {original_reformulated}")
+                    print(f"   After: {reformulated_query}")
+                    reformulated_lower = reformulated_query.lower()
+            
+            if hallucinated:
+                print("⚠️ Reformulation added unwanted filters, using original query")
                 return user_query
                 
             print(f"🔄 Query reformulated:")
@@ -444,7 +672,7 @@ class StudentTranscriptCSVHandler:
                 # Course codes
                 re.search(r'[A-Z]{2,}\d+', line_stripped) or
                 # Pandas Series output (Name: student_name, value)
-                re.search(r'^[A-Za-z\s]+\s+\d+\.\d+$', line_stripped) or
+                re.search(r'^[A-Za-z\s]+\s+\d+\.\d+', line_stripped) or
                 # Series metadata
                 re.search(r'Name:\s+\w+|dtype:\s+float', line_stripped) or
                 # Data with consistent structure
@@ -491,7 +719,7 @@ class StudentTranscriptCSVHandler:
                         score += 1
                     if re.search(r'^\s*\d+\s+', line.strip()):  # Indexed data
                         score += 1
-                    if re.search(r'^[A-Za-z\s]+\s+\d+\.\d+$', line.strip()):  # Student GPA pairs
+                    if re.search(r'^[A-Za-z\s]+\s+\d+\.\d+', line.strip()):  # Student GPA pairs
                         score += 4
                     if re.search(r'Name:\s+\w+|dtype:\s+float', line):  # Pandas Series
                         score += 2
@@ -535,79 +763,74 @@ class StudentTranscriptCSVHandler:
         """Use separate LLM to summarize and format the response with improved data interpretation"""
         
         print(f"🔄 DEBUG: Summarizing response. Raw response length: {len(raw_response)}")
-        print(f"🔄 DEBUG: First 200 chars of raw response: {raw_response}...")
+        print(f"🔄 DEBUG: First 200 chars of raw response: {raw_response[:200]}...")
         
         # Check if the raw response indicates an error or timeout
         if "Agent stopped due to iteration limit or time limit" in raw_response:
             return "I encountered a timeout while processing your query. This usually means the data was found but the system took too long to format it. Please try rephrasing your question or contact support."
         
         prompt = f"""
-            You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
+You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
 
-            Original Question: {original_question}
-            
-            Raw Data Response: {raw_response}
+Original Question: {original_question}
 
-            **CRITICAL DATA INTERPRETATION RULES:**
-            - Extract ALL numeric values EXACTLY as they appear in the raw data
-            - Do NOT round, modify, or change any numbers unless explicitly showing the original value first
-            - The raw data contains the ACTUAL answer - use those exact values
+Raw Data Response: {raw_response}
 
-            **DATA PRESENTATION RULES:**
-            - Present ALL data found in the raw response
-            - Use clear, professional academic language
+**CRITICAL DATA INTERPRETATION RULES:**
+- Extract ALL numeric values EXACTLY as they appear in the raw data
+- Do NOT round, modify, or change any numbers unless explicitly showing the original value first
+- The raw data contains the ACTUAL answer - use those exact values
 
-            **FORMATTING RULES - CHOOSE BEST FORMAT:**
+**DATA PRESENTATION RULES:**
+- Present ALL data found in the raw response
+- Use clear, professional academic language
 
-            **Option 1: Simple List Format (Default for single-column data like advisors):**
-            * For advisor lists, use this format:
-            **Advisor(s) for Student 'Student Name'**
-            - Advisor Name 1
-            - Advisor Name 2
-            - Advisor Name 3
+**FORMATTING RULES - CHOOSE BEST FORMAT:**
 
-            **Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
-            * When data has multiple columns or comparative information, use HTML table format
-            * For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
-            <table>
-            <tr><th>Column Header 1</th><th>Column Header 2</th></tr>
-            <tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
-            <tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
-            </table>
+**Option 1: Simple List Format (Default for single-column data like advisors):**
+* For advisor lists, use this format:
+**Advisor(s) for Student 'Student Name'**
+- Advisor Name 1
+- Advisor Name 2
+- Advisor Name 3
 
-            **ABSOLUTE TABLE RULES - MUST FOLLOW:**
-            * NEVER use markdown table format with pipes (|) and dashes (---)
-            * ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
-            * FORBIDDEN: Any use of |---|, ---, or pipe separators
-            * Every <tr> after the header must contain actual student names, GPA values, or real information
-            * If you see raw data, immediately put that real data in <td> cells
-            * REQUIRED: Start immediately with real data in table rows after the header row
+**Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
+* When data has multiple columns or comparative information, use HTML table format
+* For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
+<table>
+<tr><th>Column Header 1</th><th>Column Header 2</th></tr>
+<tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
+<tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
+</table>
 
-            **FORMAT SELECTION GUIDE:**
-            - Use simple list format for: advisor names, course lists, single-column data
-            - Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
+**ABSOLUTE TABLE RULES - MUST FOLLOW:**
+* NEVER use markdown table format with pipes (|) and dashes (---)
+* ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
+* FORBIDDEN: Any use of |---|, ---, or pipe separators
+* Every <tr> after the header must contain actual student names, GPA values, or real information
+* If you see raw data, immediately put that real data in <td> cells
+* REQUIRED: Start immediately with real data in table rows after the header row
 
-            - Be accurate about what the data shows
-            - Round GPA values to 2 decimal places for display
+**FORMAT SELECTION GUIDE:**
+- Use simple list format for: advisor names, course lists, single-column data
+- Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
 
-            **CRITICAL FORMATTING REQUIREMENTS:**
-            - Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
-            - Example format (this exact structure must be followed — no blank lines or line breaks between sentence and table):
-            Here are the students sorted by GPA:<table>
-            <tr><th>Student Name</th><th>GPA</th></tr>
-            <tr><td>Example Student</td><td>3.50</td></tr>
-            </table>
-            - FORBIDDEN: Any blank line or whitespace between the colon and <table>
-            - FORBIDDEN: Markdown bolding using ** for headers
-            - FORBIDDEN: Any introductory phrasing like “I will present…” or “Here is…” followed by a blank line
-            - Keep content compact, professional, and minimal with no extra spacing
-            """
-        if format_type == "auto":
-            prompt
+- Be accurate about what the data shows
+- Round GPA values to 2 decimal places for display
 
-        else:
-            prompt 
-
+**CRITICAL FORMATTING REQUIREMENTS:**
+- Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
+- Example format (this exact structure must be followed – no blank lines or line breaks between sentence and table):
+Here are the students sorted by GPA:<table>
+<tr><th>Student Name</th><th>GPA</th></tr>
+<tr><td>Example Student</td><td>3.50</td></tr>
+</table>
+- FORBIDDEN: Any blank line or whitespace between the colon and <table>
+- FORBIDDEN: Markdown bolding using ** for headers
+- FORBIDDEN: Any introductory phrasing like "I will present…" or "Here is…" followed by a blank line
+- Keep content compact, professional, and minimal with no extra spacing
+"""
+        
         try:
             # Use the summarizer LLM
             summary_response = self.summarizer_llm.invoke(prompt)
@@ -651,27 +874,9 @@ class StudentTranscriptCSVHandler:
             if not formatted_lines:
                 return f"📋 **Query Results:**\n\n{raw_response}"
             
-            # Try different formatting strategies based on content patterns
-            
-            # Strategy 1: GPA Analysis
+            # Check if this is GPA data
             if self._is_gpa_data(formatted_lines):
                 return self._format_gpa_data(formatted_lines)
-            
-            # Strategy 2: Academic Records (Course data)
-            if self._is_academic_records(formatted_lines):
-                return self._format_academic_records(formatted_lines)
-            
-            # Strategy 3: Tabular Data (general table format)
-            if self._is_tabular_data(formatted_lines):
-                return self._format_tabular_data(formatted_lines)
-            
-            # Strategy 4: List-based Data
-            if self._is_list_data(formatted_lines):
-                return self._format_list_data(formatted_lines)
-            
-            # Strategy 5: Statistical/Numerical Data
-            if self._is_statistical_data(formatted_lines):
-                return self._format_statistical_data(formatted_lines)
             
             # General fallback
             return self._format_general_data(formatted_lines)
@@ -682,169 +887,35 @@ class StudentTranscriptCSVHandler:
 
     def _is_gpa_data(self, lines):
         """Check if data contains GPA information"""
-        return any(re.search(r'GPA|\d+\.\d+$', line, re.IGNORECASE) for line in lines)
+        return any(re.search(r'GPA|\d+\.\d+', line, re.IGNORECASE) for line in lines)
 
     def _format_gpa_data(self, lines):
         """Format GPA-related data"""
         gpa_lines = []
         for line in lines:
-            if re.search(r'^[A-Za-z\s]+\s+\d+\.\d+$', line.strip()):
+            if re.search(r'^[A-Za-z\s]+\s+\d+\.\d+', line.strip()):
                 gpa_lines.append(line.strip())
         
         if gpa_lines:
             result = f"📊 Student GPA Analysis ({len(gpa_lines)} records):<table>"
-        result += "<tr><th>Student Name</th><th>Average GPA</th></tr>"
+            result += "<tr><th>Student Name</th><th>Average GPA</th></tr>"
 
-        for line in gpa_lines:
-            parts = line.rsplit(' ', 1)
-            if len(parts) == 2:
-                student_name = parts[0].strip()
-                gpa_value = parts[1].strip()
-                # round GPA to 2 decimals for display
-                try:
-                    gpa_value = f"{float(gpa_value):.2f}"
-                except:
-                    pass
-                result += f"<tr><td>{student_name}</td><td>{gpa_value}</td></tr>"
+            for line in gpa_lines:
+                parts = line.rsplit(' ', 1)
+                if len(parts) == 2:
+                    student_name = parts[0].strip()
+                    gpa_value = parts[1].strip()
+                    # round GPA to 2 decimals for display
+                    try:
+                        gpa_value = f"{float(gpa_value):.2f}"
+                    except:
+                        pass
+                    result += f"<tr><td>{student_name}</td><td>{gpa_value}</td></tr>"
 
-        result += "</table>"
-        return result
-
+            result += "</table>"
+            return result
         
         return self._format_general_data(lines)
-
-    def _is_academic_records(self, lines):
-        """Check if data contains academic course information"""
-        return any(re.search(r'Course Number|ART\d+|BM\d+|CD\d+|[A-Z]{2,4}\d+', line, re.IGNORECASE) for line in lines)
-
-    def _format_academic_records(self, lines):
-        """Format academic course records"""
-        # Count actual data rows
-        data_rows = [line for line in lines if re.search(r'^\s*\d+\s+[A-Z]', line)]
-        count = len(data_rows)
-        
-        result = f"📚 **Academic Records Found ({count} records):**\n\n"
-        
-        # Check if it's tabular course data
-        if any('Course Number' in line for line in lines):
-            result += "| Course Number | Term |\n"
-            result += "|---------------|------|\n"
-            
-            for line in lines:
-                if re.search(r'^\s*\d+\s+([A-Z]+\d+)\s+(.+)', line):
-                    match = re.search(r'^\s*\d+\s+([A-Z]+\d+)\s+(.+)', line)
-                    if match:
-                        course = match.group(1)
-                        term = match.group(2)
-                        result += f"| {course} | {term} |\n"
-        else:
-            result += '\n'.join(lines)
-        
-        # Add contextual notes
-        if "Transfer Term" in ' '.join(lines):
-            result += "\n\n*Note: Transfer Term indicates courses transferred from other institutions.*"
-        
-        return result
-
-    def _is_tabular_data(self, lines):
-        """Check if data appears to be in tabular format"""
-        # Look for common table indicators
-        header_indicators = ['Name', 'ID', 'Date', 'Score', 'Grade', 'Total', 'Count']
-        pipe_separated = any('|' in line for line in lines)
-        comma_separated = any(line.count(',') >= 2 for line in lines)
-        has_headers = any(any(header in line for header in header_indicators) for line in lines)
-        
-        return pipe_separated or (comma_separated and has_headers)
-
-    def _format_tabular_data(self, lines):
-        """Format general tabular data as HTML table"""
-        result = "📊 Data Table:<table>"
-        
-        # Try to detect delimiter
-        if any('|' in line for line in lines):
-            # Pipe-separated
-            rows = [line.split('|') for line in lines if '|' in line]
-            for i, row in enumerate(rows):
-                if not row:
-                    continue
-                cells = [cell.strip() for cell in row if cell.strip()]
-                if not cells:
-                    continue
-                if i == 0:  # header row
-                    result += "<tr>" + "".join(f"<th>{c}</th>" for c in cells) + "</tr>"
-                else:
-                    result += "<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>"
-        
-        elif any(line.count(',') >= 1 for line in lines):
-            # CSV-like format
-            rows = [line.split(',') for line in lines if ',' in line]
-            for i, row in enumerate(rows):
-                cells = [c.strip() for c in row]
-                if i == 0:
-                    result += "<tr>" + "".join(f"<th>{c}</th>" for c in cells) + "</tr>"
-                else:
-                    result += "<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>"
-        else:
-            # fallback: plain rows
-            for line in lines:
-                result += f"<tr><td>{line}</td></tr>"
-        
-        result += "</table>"
-        return result
-
-
-    def _is_list_data(self, lines):
-        """Check if data appears to be a list"""
-        # Look for numbered lists, bullet points, or consistent patterns
-        numbered = any(re.search(r'^\d+\.', line) for line in lines)
-        bulleted = any(re.search(r'^[-*•]', line) for line in lines)
-        consistent_format = len(set(len(line.split()) for line in lines if line)) <= 2
-        
-        return numbered or bulleted or (len(lines) > 3 and consistent_format)
-
-    def _format_list_data(self, lines):
-        """Format list-based data"""
-        result = f"📋 **List Results ({len(lines)} items):**\n\n"
-        
-        # If not already formatted as a list, format it
-        if not any(re.search(r'^[-*•\d+\.]', line) for line in lines):
-            for i, line in enumerate(lines, 1):
-                result += f"{i}. {line}\n"
-        else:
-            result += '\n'.join(lines)
-        
-        return result
-
-    def _is_statistical_data(self, lines):
-        """Check if data contains statistical information"""
-        stat_keywords = ['average', 'mean', 'median', 'total', 'count', 'sum', 'min', 'max', 'std']
-        return any(any(keyword in line.lower() for keyword in stat_keywords) for line in lines)
-
-    def _format_statistical_data(self, lines):
-        """Format statistical/numerical data"""
-        result = "📈 **Statistical Analysis:**\n\n"
-        
-        # Group statistical lines
-        stats = []
-        data = []
-        
-        for line in lines:
-            if any(keyword in line.lower() for keyword in ['average', 'mean', 'total', 'count', 'sum']):
-                stats.append(line)
-            else:
-                data.append(line)
-        
-        if stats:
-            result += "**Summary Statistics:**\n"
-            for stat in stats:
-                result += f"- {stat}\n"
-            result += "\n"
-        
-        if data:
-            result += "**Data:**\n"
-            result += '\n'.join(data)
-        
-        return result
 
     def _format_general_data(self, lines):
         """General formatting for unstructured data"""
@@ -948,7 +1019,7 @@ class StudentTranscriptCSVHandler:
             language_notes = {
                 "Spanish": "\n\n*Nota: Los datos se muestran en inglés por ser el idioma original de los registros.*",
                 "French": "\n\n*Note: Les données sont affichées en anglais car c'est la langue originale des dossiers.*",
-                "Navajo": "\n\n*Béhániih: Bilagáana bizaad ílį́ bééhózin áko bílaʼashdlaʼii bee.*"
+                "Navajo": "\n\n*Béhániih: Bilagáana bizaad ílį́į́ béehózin áko bílaʼashdlaʼii bee.*"
             }
             note = language_notes.get(language, "")
             return header + csv_response + note
@@ -979,7 +1050,7 @@ class StudentTranscriptCSVHandler:
                     "English": "Student transcript system is not available. Please ensure the CSV file exists and is accessible.",
                     "Spanish": "El sistema de expedientes académicos no está disponible. Asegúrate de que el archivo CSV existe y está accesible.",
                     "French": "Le système de relevés de notes n'est pas disponible. Assurez-vous que le fichier CSV existe et est accessible.",
-                    "Navajo": "Óltaʼgi bééhaniih éí doo áhólł̥ǫ́ǫ da."
+                    "Navajo": "Óltaʼgi bééhaniih éí doo áhółł̥įį́ da."
                 }
                 return error_messages.get(language, error_messages["English"])
         
@@ -1006,7 +1077,7 @@ class StudentTranscriptCSVHandler:
                 "English": "I encountered an error while processing your transcript query. Please try again or rephrase your question.",
                 "Spanish": "Encontré un error al procesar tu consulta del expediente académico. Por favor, inténtalo de nuevo o reformula tu pregunta.",
                 "French": "J'ai rencontré une erreur lors du traitement de votre requête de relevé de notes. Veuillez réessayer ou reformuler votre question.",
-                "Navajo": "Bééhániih ályaa éí átʼé. Náábah ílį́ éí doodaii' saad naaltsoos."
+                "Navajo": "Bééhániih ályaa éí átʼé. Náábah ílį́į́ éí doodaií saad naaltsoos."
             }
             return error_messages.get(language, error_messages["English"])
 
@@ -1034,9 +1105,26 @@ def process_transcript_query(user_query: str, language='English', use_summarizer
     Returns:
         str: Generated answer
     """
-    print("DEBUG: process_transcript_query csv_path =", csv_path)
+    print(f"🔍 DEBUG: process_transcript_query called with:")
+    import traceback
+    print("=" * 80)
+    print("🔍 process_transcript_query CALLED")
+    print(f"   user_query = '{user_query}'")
+    print(f"   language = {language}")
+    print(f"   csv_path = {csv_path}")
+    print("   CALL STACK:")
+    for line in traceback.format_stack()[:-1]:
+        print(line.strip())
+    print("=" * 80)
+    
+    # CRITICAL: Validate user_query is not empty
+    if not user_query or not user_query.strip():
+        print("❌ ERROR: Empty or None user_query received in process_transcript_query!")
+        return "I didn't receive a valid question. Please ask a question about student transcripts."
+    
     handler = get_csv_transcript_handler(csv_path)
     answer = handler.process_query(user_query, language, use_summarizer, format_type)
+    
     # Out-of-scope detection
     if not answer or answer.strip().lower() in [
         "no relevant data found", 

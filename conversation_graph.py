@@ -241,7 +241,10 @@ class ConversationGraph:
             language = state["user_context"].get("language", "English")
             
             # For transcript queries, we might still want some context
-            query_to_use = state["contextual_query"] if state["requires_history"] else state["current_query"]
+            # query_to_use = state["contextual_query"] if state["requires_history"] else state["current_query"]
+            query_to_use = state["current_query"]
+        
+            print(f"🔍 DEBUG: Processing transcript query: '{query_to_use}'")
             
             response = process_transcript_query(query_to_use, language, csv_path=csv_path)
             state["response"] = response
