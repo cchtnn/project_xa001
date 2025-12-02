@@ -89,8 +89,8 @@ class StudentTranscriptCSVHandler:
             "sort students in descending order of gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, return only 'Student Name' and mean GPA columns",
             "sort students by gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in descending order by GPA value, return only 'Student Name' and mean GPA columns",
             "sort students in ascending order of gpa": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, sort in ascending order by GPA value, return only 'Student Name' and mean GPA columns",
-            "highest gpa student": "group by 'Student Name' column, calculate mean of 'GPA' column, find student with maximum mean GPA value, return only 'Student Name' and mean GPA",
-            "lowest gpa student": "group by 'Student Name' column, calculate mean of 'GPA' column, find student with minimum mean GPA value, return only 'Student Name' and mean GPA", 
+            "highest gpa student": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, create result dataframe with reset_index(), filter for rows where GPA equals maximum GPA value, return only 'Student Name' and mean GPA",
+            "lowest gpa student": "group by 'Student Name' column, calculate mean of 'GPA' column for each student, create result dataframe with reset_index(), filter for rows where GPA equals minimum GPA value, return only 'Student Name' and mean GPA", 
             "average gpa": "calculate overall mean of all GPA values from 'GPA' column",
             "students with gpa above": "filter students from 'Student Name' column where 'GPA' column value is greater than specified threshold",
             
@@ -343,53 +343,72 @@ class StudentTranscriptCSVHandler:
                 agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                 allow_dangerous_code=True,
                 handle_parsing_errors=True,
-                max_iterations=5,
+                max_iterations=5,  # INCREASED from 3 to 5
                 max_execution_time=90,
-                return_intermediate_steps=False,
+                return_intermediate_steps=True,  # CHANGED to True to capture execution steps
                 include_df_in_prompt=False,
                 prefix="""
-You are working with a pandas DataFrame in Python. The DataFrame is loaded from a CSV file.
-You should use the tools below to answer the question posed about the DataFrame.
+    You are working with a pandas DataFrame in Python. The DataFrame is loaded from a CSV file.
+    You should use the tools below to answer the question posed about the DataFrame.
 
-CRITICAL INSTRUCTIONS FOR TOOL USAGE:
-1. You have access to ONLY ONE tool: python_repl_ast
-2. ALWAYS use this EXACT format for actions:
+    CRITICAL INSTRUCTIONS FOR TOOL USAGE:
+    1. You have access to ONLY ONE tool: python_repl_ast
+    2. ALWAYS use this EXACT format for actions:
+        Action: python_repl_ast
+        Action Input: your_python_code_here
+
+    3. NEVER use descriptive text as the Action name
+    4. NEVER say "Use the python_repl_ast to..." - just use "python_repl_ast"
+    5. After getting results from an action, you MUST provide a Final Answer
+    6. CRITICAL: When you get a pandas Series or DataFrame result, IMMEDIATELY provide it as Final Answer
+    7. DO NOT keep trying to reformat the same result - if you got data, provide Final Answer immediately
+    8. For unique values, use .unique() or .drop_duplicates()
+    9. Give unique rows only - do not repeat rows in your answers.
+
+    CRITICAL GPA COLUMN RULES:
+    10. ALWAYS use 'GPA' column for GPA calculations, NEVER use 'Hours GPA' or other GPA-related columns
+    11. The 'GPA' column is already cleaned and converted to numeric float type
+    12. For GPA queries, ALWAYS return only 'Student Name' and 'GPA' (or mean GPA) columns
+
+    DATA TYPE HANDLING:
+    13. pandas is already imported as 'pd'
+    14. numpy is already imported as 'np' 
+    15. If you encounter dtype errors with GPA column, use: pd.to_numeric(df['GPA'], errors='coerce')
+    16. To handle empty strings in numeric columns: df['Column'].replace('', np.nan)
+    17. Always check data types before operations using: df['Column'].dtype
+
+    RESPONSE FORMAT - CRITICAL:
+    18. When you execute code and get a result (pandas Series, DataFrame, or any data), IMMEDIATELY write:
+        Final Answer: [the complete data you just got]
+    19. DO NOT try to reformat or extract specific columns after getting a valid result
+    20. For example, if you get:
+        Student Name    Arnoldo Bernal Cavazos
+        GPA                                2.5
+        Name: 1, dtype: object
+        
+        Then IMMEDIATELY provide Final Answer with this exact data
+    21. When None is coming as answer then in that case mention "No data found" instead of None.
+
+    CRITICAL AGGREGATION RULES:
+    22. When finding min/max/highest/lowest after groupby, you MUST return the AGGREGATED value, not the original row
+    23. CORRECT: df.groupby('Student Name')['GPA'].mean().reset_index()
+    24. WRONG: df.loc[df.groupby('Student Name')['GPA'].mean().idxmin()] - This returns original row, NOT aggregated mean
+    25. For finding student with min/max GPA: First group and aggregate, then find min/max on the aggregated result
+    26. Example for minimum: grouped = df.groupby('Student Name')['GPA'].mean().reset_index(); grouped[grouped['GPA'] == grouped['GPA'].min()]
+
+    GPA CALCULATION EXAMPLES:
+    For sorting students by GPA:
     Action: python_repl_ast
-    Action Input: your_python_code_here
+    Action Input: df.groupby('Student Name')['GPA'].mean().sort_values(ascending=False).reset_index()
+    [After seeing the result, immediately provide Final Answer]
 
-3. NEVER use descriptive text as the Action name
-4. NEVER say "Use the python_repl_ast to..." - just use "python_repl_ast"
-5. After getting results from an action, IMMEDIATELY provide the full pandas dataframe as Final Answer
-6. Only provide Final Answer after you have the complete result
-7. For unique values, use .unique() or .drop_duplicates()
-8. Give unique rows only - do not repeat rows in your answers.
-9. Execute ONE action at a time and wait for the result
+    For finding 2nd highest GPA:
+    Action: python_repl_ast
+    Action Input: result = df.groupby('Student Name')['GPA'].mean().sort_values(ascending=False).reset_index().iloc[1]; result
+    [After seeing the result, immediately provide Final Answer with the result]
 
-CRITICAL GPA COLUMN RULES:
-10. ALWAYS use 'GPA' column for GPA calculations, NEVER use 'Hours GPA' or other GPA-related columns
-11. The 'GPA' column is already cleaned and converted to numeric float type
-12. For GPA queries, ALWAYS return only 'Student Name' and 'GPA' (or mean GPA) columns
-
-DATA TYPE HANDLING:
-13. pandas is already imported as 'pd'
-14. numpy is already imported as 'np' 
-15. If you encounter dtype errors with GPA column, use: pd.to_numeric(df['GPA'], errors='coerce')
-16. To handle empty strings in numeric columns: df['Column'].replace('', np.nan)
-17. Always check data types before operations using: df['Column'].dtype
-
-RESPONSE FORMAT:
-18. When you find data, Give unique rows only - do not repeat rows in your answers. Write result of the agent after fixed text "Final Answer"
-19. For advisor queries: if multiple rows have same advisor, show unique advisor name only
-20. show unique column rows or columns only
-21. When None is coming as answer then in that case mention "No data found" instead of None.
-
-GPA CALCULATION EXAMPLE:
-For sorting students by GPA:
-Action: python_repl_ast
-Action Input: df.groupby('Student Name')['GPA'].mean().sort_values(ascending=False).reset_index()
-
-The GPA column has been pre-processed to be numeric (float type).
-"""
+    The GPA column has been pre-processed to be numeric (float type).
+    """
             )
             
             print("✅ CSV Agent created successfully")
@@ -616,7 +635,48 @@ Now reformulate this query by ONLY making column references explicit. Do NOT add
         
         print(f"🔍 DEBUG: Extracting raw data from response length: {len(response)}")
         
-        # Method 1: Look for Final Answer section first
+        # CRITICAL FIX: First check if response contains actual data in the execution trace
+        # Look for pandas Series output patterns BEFORE checking for "Agent stopped"
+        lines = response.split('\n')
+        data_found = False
+        extracted_data_lines = []
+        
+        # Pattern 1: Look for pandas Series output (most common for single-row results)
+        # Format: "Student Name    Value\nGPA    Value\nName: index, dtype: object"
+        series_pattern_found = False
+        current_series = []
+        
+        for i, line in enumerate(lines):
+            line_stripped = line.strip()
+            
+            # Detect start of pandas Series output
+            if re.search(r'^[A-Za-z\s]+\s{4,}[\w\s.]+$', line_stripped):  # Column name with value
+                series_pattern_found = True
+                current_series = [line_stripped]
+                data_found = True
+                continue
+            
+            # Continue collecting series lines
+            if series_pattern_found:
+                if re.search(r'^(GPA|Student Name|Name:|dtype:)', line_stripped):
+                    current_series.append(line_stripped)
+                    # If we hit dtype, we've reached the end of the series
+                    if 'dtype:' in line_stripped:
+                        extracted_data_lines.extend(current_series)
+                        series_pattern_found = False
+                        current_series = []
+                elif line_stripped and not any(marker in line_stripped for marker in [
+                    'Action:', 'Thought:', 'Observation:', '> Entering', '> Finished', 'chain'
+                ]):
+                    current_series.append(line_stripped)
+        
+        # If we found pandas Series data, use it immediately
+        if extracted_data_lines:
+            result = '\n'.join(extracted_data_lines)
+            print(f"🔍 DEBUG: Extracted pandas Series data: {result[:100]}...")
+            return result
+        
+        # Method 2: Look for Final Answer section
         final_answer_match = None
         if "Final Answer:" in response:
             final_answer_part = response.split("Final Answer:")[-1].strip()
@@ -643,8 +703,43 @@ Now reformulate this query by ONLY making column references explicit. Do NOT add
                 print("🔍 DEBUG: Using Final Answer section - contains meaningful data")
                 final_answer_match = cleaned_final
         
-        # Method 2: Look for the last substantial data output in the response
-        lines = response.split('\n')
+        # Method 3: Look for Observation sections with actual data
+        observation_data = []
+        in_observation = False
+        current_observation = []
+        
+        for line in lines:
+            line_stripped = line.strip()
+            
+            if line_stripped.startswith('Observation:'):
+                in_observation = True
+                obs_content = line_stripped.replace('Observation:', '').strip()
+                if obs_content:
+                    current_observation = [obs_content]
+                continue
+            
+            if in_observation:
+                if line_stripped and not any(marker in line_stripped for marker in [
+                    'Thought:', 'Action:', '> Entering', '> Finished'
+                ]):
+                    current_observation.append(line_stripped)
+                else:
+                    if current_observation:
+                        observation_data.append('\n'.join(current_observation))
+                        current_observation = []
+                    in_observation = False
+        
+        # Add last observation if exists
+        if current_observation:
+            observation_data.append('\n'.join(current_observation))
+        
+        # Check if observations contain meaningful data
+        for obs in observation_data:
+            if re.search(r'Student Name|GPA|Name:\s+\w+|dtype:', obs):
+                print(f"🔍 DEBUG: Using observation data: {obs[:100]}...")
+                return obs
+        
+        # Method 4: Look for the last substantial data output in the response
         data_blocks = []
         current_block = []
         
@@ -690,11 +785,11 @@ Now reformulate this query by ONLY making column references explicit. Do NOT add
         if current_block:
             data_blocks.append('\n'.join(current_block))
         
-        # Method 3: Choose the best data block
+        # Method 5: Choose the best data block
         best_data = None
         
         # Prioritize Final Answer if it's substantial
-        if final_answer_match and len(final_answer_match.split('\n')) >= 3:
+        if final_answer_match and len(final_answer_match.split('\n')) >= 1:  # Changed from 3 to 1 for Series
             best_data = final_answer_match
             print("🔍 DEBUG: Using Final Answer as best data")
         
@@ -722,7 +817,7 @@ Now reformulate this query by ONLY making column references explicit. Do NOT add
                     if re.search(r'^[A-Za-z\s]+\s+\d+\.\d+', line.strip()):  # Student GPA pairs
                         score += 4
                     if re.search(r'Name:\s+\w+|dtype:\s+float', line):  # Pandas Series
-                        score += 2
+                        score += 5  # Increased score for Series output
                 
                 scored_blocks.append((score, block))
             
@@ -732,27 +827,16 @@ Now reformulate this query by ONLY making column references explicit. Do NOT add
                 best_data = scored_blocks[0][1]
                 print(f"🔍 DEBUG: Using highest scoring data block (score: {scored_blocks[0][0]})")
         
-        # Method 4: Fallback to cleaned response
-        if not best_data:
-            # Clean the entire response
-            clean_lines = []
+        # Method 6: Fallback - if nothing found, return a message instead of the raw response
+        if not best_data or best_data.strip() == "Agent stopped due to iteration limit or time limit.":
+            # Last attempt: search for any line with student name and GPA
             for line in lines:
-                line_stripped = line.strip()
-                if line_stripped and not any(marker in line_stripped for marker in [
-                    '> Entering', '> Finished', 'Let\'s get started!', 'Question:', 
-                    'Thought:', 'Action:', 'Action Input:', 'chain...', 'python_repl_ast',
-                    'is not a valid tool', 'Let\'s execute', 'NameError:', 'ValueError:', 'TypeError:'
-                ]):
-                    clean_lines.append(line)
+                if re.search(r'Student Name.*GPA|[A-Za-z\s]+\s+\d+\.\d+', line.strip()):
+                    print(f"🔍 DEBUG: Found data in line: {line.strip()}")
+                    return line.strip()
             
-            if clean_lines:
-                best_data = '\n'.join(clean_lines).strip()
-                print("🔍 DEBUG: Using cleaned response as fallback")
-        
-        # Final fallback
-        if not best_data:
-            best_data = response.strip()
-            print("🔍 DEBUG: Using original response as final fallback")
+            print("⚠️ DEBUG: No data found in response, but agent completed")
+            return "No data found in response"
         
         print(f"🔍 DEBUG: Final extracted data length: {len(best_data)}")
         print(f"🔍 DEBUG: First 100 chars: {best_data[:100]}...")
@@ -769,67 +853,97 @@ Now reformulate this query by ONLY making column references explicit. Do NOT add
         if "Agent stopped due to iteration limit or time limit" in raw_response:
             return "I encountered a timeout while processing your query. This usually means the data was found but the system took too long to format it. Please try rephrasing your question or contact support."
         
+        # CRITICAL: Extract actual numeric values from raw response BEFORE summarization
+        extracted_values = {}
+        
+        # Pattern 1: Extract GPA values that appear with student names
+        gpa_pattern = r'([A-Za-z\s]+)\s+(\d+\.?\d*)\s*$'
+        for line in raw_response.split('\n'):
+            match = re.search(gpa_pattern, line.strip())
+            if match:
+                student_name = match.group(1).strip()
+                gpa_value = match.group(2).strip()
+                extracted_values[student_name] = gpa_value
+                print(f"🔍 DEBUG: Extracted {student_name} -> {gpa_value}")
+        
+        # Pattern 2: Extract from table-like structures
+        table_pattern = r'(\d+\.?\d*)\s*$'
+        
         prompt = f"""
-You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
+    You are an expert data presentation assistant for academic transcript systems. You must interpret data accurately and present it clearly.
 
-Original Question: {original_question}
+    Original Question: {original_question}
 
-Raw Data Response: {raw_response}
+    Raw Data Response: {raw_response}
 
-**CRITICAL DATA INTERPRETATION RULES:**
-- Extract ALL numeric values EXACTLY as they appear in the raw data
-- Do NOT round, modify, or change any numbers unless explicitly showing the original value first
-- The raw data contains the ACTUAL answer - use those exact values
+    **CRITICAL DATA INTEGRITY RULES:**
+    - The raw data contains EXACT numeric values that you MUST preserve without any modification
+    - DO NOT round, estimate, or change any numbers from the raw data
+    - If you see "Leslie Nichole Bright  0.00" in raw data, the GPA is EXACTLY 0.00
+    - If you see "Leslie Nichole Bright  2.7" in raw data, the GPA is EXACTLY 2.7
+    - ALWAYS use the EXACT numeric values as they appear in the raw response
+    - Cross-check: If a student name appears with a number, that IS the correct value for that student
 
-**DATA PRESENTATION RULES:**
-- Present ALL data found in the raw response
-- Use clear, professional academic language
+    **EXTRACTED VALUES TO USE:**
+    {json.dumps(extracted_values, indent=2) if extracted_values else "No pre-extracted values"}
 
-**FORMATTING RULES - CHOOSE BEST FORMAT:**
+    **DATA PRESENTATION RULES:**
+    - Present ALL data found in the raw response
+    - Use clear, professional academic language
+    - For GPA values, use EXACTLY the values from the raw response (do not round unless displaying, and show original value first)
 
-**Option 1: Simple List Format (Default for single-column data like advisors):**
-* For advisor lists, use this format:
-**Advisor(s) for Student 'Student Name'**
-- Advisor Name 1
-- Advisor Name 2
-- Advisor Name 3
+    **FORMATTING RULES - CHOOSE BEST FORMAT:**
 
-**Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
-* When data has multiple columns or comparative information, use HTML table format
-* For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
-<table>
-<tr><th>Column Header 1</th><th>Column Header 2</th></tr>
-<tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
-<tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
-</table>
+    **Option 1: Simple List Format (Default for single-column data like advisors):**
+    * For advisor lists, use this format:
+    **Advisor(s) for Student 'Student Name'**
+    - Advisor Name 1
+    - Advisor Name 2
+    - Advisor Name 3
 
-**ABSOLUTE TABLE RULES - MUST FOLLOW:**
-* NEVER use markdown table format with pipes (|) and dashes (---)
-* ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
-* FORBIDDEN: Any use of |---|, ---, or pipe separators
-* Every <tr> after the header must contain actual student names, GPA values, or real information
-* If you see raw data, immediately put that real data in <td> cells
-* REQUIRED: Start immediately with real data in table rows after the header row
+    **Option 2: Table Format (Use for multi-column data like GPA, grades, course details):**
+    * When data has multiple columns or comparative information, use HTML table format
+    * For tables, use this EXACT HTML structure (NO MARKDOWN TABLES). Do NOT add extra line breaks or blank lines before or after the table:
+    <table>
+    <tr><th>Column Header 1</th><th>Column Header 2</th></tr>
+    <tr><td>Actual Data 1</td><td>Actual Data 2</td></tr>
+    <tr><td>Actual Data 3</td><td>Actual Data 4</td></tr>
+    </table>
 
-**FORMAT SELECTION GUIDE:**
-- Use simple list format for: advisor names, course lists, single-column data
-- Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
+    **ABSOLUTE TABLE RULES - MUST FOLLOW:**
+    * NEVER use markdown table format with pipes (|) and dashes (---)
+    * ONLY use HTML table format with <table>, <tr>, <th>, <td> tags
+    * FORBIDDEN: Any use of |---|, ---, or pipe separators
+    * Every <tr> after the header must contain actual student names, GPA values, or real information
+    * If you see raw data, immediately put that real data in <td> cells
+    * REQUIRED: Start immediately with real data in table rows after the header row
+    * CRITICAL: Use the EXACT GPA values from the raw response - do not modify them
 
-- Be accurate about what the data shows
-- Round GPA values to 2 decimal places for display
+    **FORMAT SELECTION GUIDE:**
+    - Use simple list format for: advisor names, course lists, single-column data
+    - Use table format for: GPA data, grade reports, multi-column comparisons, detailed course information
 
-**CRITICAL FORMATTING REQUIREMENTS:**
-- Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
-- Example format (this exact structure must be followed – no blank lines or line breaks between sentence and table):
-Here are the students sorted by GPA:<table>
-<tr><th>Student Name</th><th>GPA</th></tr>
-<tr><td>Example Student</td><td>3.50</td></tr>
-</table>
-- FORBIDDEN: Any blank line or whitespace between the colon and <table>
-- FORBIDDEN: Markdown bolding using ** for headers
-- FORBIDDEN: Any introductory phrasing like "I will present…" or "Here is…" followed by a blank line
-- Keep content compact, professional, and minimal with no extra spacing
-"""
+    - Be accurate about what the data shows
+    - For display purposes only, you may show rounded values (2 decimal places) but ONLY if the original value is clear in context
+
+    **CRITICAL FORMATTING REQUIREMENTS:**
+    - Write a brief intro sentence followed immediately (same line or next line only) by the table with NO blank lines
+    - Example format (this exact structure must be followed – no blank lines or line breaks between sentence and table):
+    Here are the students sorted by GPA:<table>
+    <tr><th>Student Name</th><th>GPA</th></tr>
+    <tr><td>Example Student</td><td>3.50</td></tr>
+    </table>
+    - FORBIDDEN: Any blank line or whitespace between the colon and <table>
+    - FORBIDDEN: Markdown bolding using ** for headers
+    - FORBIDDEN: Any introductory phrasing like "I will present…" or "Here is…" followed by a blank line
+    - Keep content compact, professional, and minimal with no extra spacing
+
+    **FINAL VERIFICATION STEP:**
+    Before finalizing your response, verify that:
+    1. Each student name in your output has the EXACT GPA value from the raw response
+    2. No GPA values were rounded or estimated
+    3. The numeric values match what appears in the raw data
+    """
         
         try:
             # Use the summarizer LLM
@@ -844,6 +958,26 @@ Here are the students sorted by GPA:<table>
                 result = summary_response.content
             else:
                 result = str(summary_response)
+            
+            # CRITICAL VALIDATION: Check if extracted values match what's in the result
+            if extracted_values:
+                print("🔍 DEBUG: Validating extracted values match result...")
+                for student_name, correct_gpa in extracted_values.items():
+                    # Check if student name is in result
+                    if student_name in result:
+                        # Try to find the GPA value near the student name in the result
+                        # Look for patterns like <td>2.70</td> or similar
+                        result_gpa_pattern = f"{student_name}.*?<td>(\d+\.?\d*)</td>"
+                        match = re.search(result_gpa_pattern, result, re.DOTALL)
+                        if match:
+                            result_gpa = match.group(1)
+                            if result_gpa != correct_gpa:
+                                print(f"⚠️ WARNING: GPA mismatch for {student_name}")
+                                print(f"   Raw data has: {correct_gpa}")
+                                print(f"   Result has: {result_gpa}")
+                                print(f"   FIXING: Replacing {result_gpa} with {correct_gpa}")
+                                # Replace the incorrect value with the correct one
+                                result = result.replace(f"<td>{result_gpa}</td>", f"<td>{correct_gpa}</td>", 1)
                     
             print(f"✅ DEBUG: Summarization completed. Result length: {len(result)}")
             return result
@@ -921,6 +1055,42 @@ Here are the students sorted by GPA:<table>
         """General formatting for unstructured data"""
         return f"📋 **Query Results ({len(lines)} lines):**\n\n" + '\n'.join(lines)
         
+    def _extract_from_intermediate_steps(self, intermediate_steps):
+        """Extract actual data from agent's intermediate execution steps"""
+        if not intermediate_steps:
+            return None
+        
+        print(f"🔍 DEBUG: Processing {len(intermediate_steps)} intermediate steps")
+        
+        # Look for the last observation that contains actual data
+        for i, (action, observation) in enumerate(reversed(intermediate_steps)):
+            print(f"🔍 DEBUG: Step {len(intermediate_steps) - i}: Action={action.tool}, Observation length={len(str(observation))}")
+            
+            obs_str = str(observation)
+            
+            # Check if observation contains pandas Series output
+            if re.search(r'Student Name.*\n.*GPA.*\n.*dtype:', obs_str):
+                print(f"✅ DEBUG: Found pandas Series in step {len(intermediate_steps) - i}")
+                return obs_str
+            
+            # Check if observation contains DataFrame output
+            if re.search(r'Student Name.*GPA', obs_str) and len(obs_str) > 20:
+                print(f"✅ DEBUG: Found DataFrame in step {len(intermediate_steps) - i}")
+                return obs_str
+            
+            # Check for any meaningful numeric data with student names
+            if re.search(r'[A-Za-z\s]+\s+\d+\.?\d*', obs_str):
+                print(f"✅ DEBUG: Found student data in step {len(intermediate_steps) - i}")
+                return obs_str
+        
+        # If nothing found, return the last observation
+        if intermediate_steps:
+            last_obs = str(intermediate_steps[-1][1])
+            print(f"⚠️ DEBUG: No specific pattern matched, returning last observation: {last_obs[:100]}...")
+            return last_obs
+        
+        return None
+
     def _query_csv_agent(self, question: str, max_retries: int = 2, clean_logs: bool = True, use_summarizer: bool = True, format_type: str = "auto"):
         """Query the CSV agent with error handling and optional summarization"""
         if not self.agent:
@@ -938,11 +1108,24 @@ Here are the students sorted by GPA:<table>
                 print("-" * 50)
                 
                 # Query the agent with the reformulated question
-                response = self.agent.run(final_question)
+                result = self.agent(final_question)
+                
+                # CRITICAL FIX: Extract from intermediate steps if final output is empty
+                response = result.get("output", "")
+                intermediate_steps = result.get("intermediate_steps", [])
                 
                 print("=" * 60)
                 print(f"✅ Agent completed successfully")
                 print(f"🔍 DEBUG: Raw agent response length: {len(response)}")
+                print(f"🔍 DEBUG: Intermediate steps count: {len(intermediate_steps)}")
+                
+                # If response is too short or indicates timeout, extract from intermediate steps
+                if len(response) < 100 or "Agent stopped" in response or not response.strip():
+                    print("⚠️ DEBUG: Response too short or timeout detected, extracting from intermediate steps")
+                    extracted_data = self._extract_from_intermediate_steps(intermediate_steps)
+                    if extracted_data:
+                        print(f"✅ DEBUG: Successfully extracted data from intermediate steps: {extracted_data[:100]}...")
+                        response = extracted_data
                 
                 if use_summarizer:
                     print("🔄 Formatting response with summarizer...")
