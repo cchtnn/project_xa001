@@ -8,6 +8,7 @@ from conversation_graph import create_conversation_graph
 import uvicorn
 import sqlite3
 import os
+import docx_parser
 import shutil
 import auth_db
 import session_db, session_manager, student_transcript_csv_handler, query_handler, logic, config
@@ -238,6 +239,26 @@ async def upload_files(request: Request, session_id: int = Form(...), files: Lis
                 if result:
                     processed_files.append(file.filename)
                 logging.info(f"User {username} uploaded PDF file {file.filename}")
+            elif file.filename.lower().endswith('.docx'):
+                # Process DOCX file (payroll calendar extraction)
+                try:
+                    print(f"Extract payroll calendar from DOCX")
+                    df = docx_parser.extract_payroll_calendar(file_path, expected_count=27)
+                    df.columns = ['payroll_no', 'start_date', 'end_date', 'check_date']
+                    
+                    # Add optional withholdings column
+                    df['optional_withholdings_changes_by'] = df['end_date']
+                    
+                    # Save extracted data to CSV in the session folder
+                    docx_csv_output = os.path.join(csv_output_path, f"{os.path.splitext(file.filename)[0]}_payroll.csv")
+                    df.to_csv(docx_csv_output, index=False)
+                    
+                    processed_files.append(file.filename)
+                    logging.info(f"User {username} uploaded and processed DOCX file {file.filename} - extracted {len(df)} payroll records")
+                    
+                except Exception as docx_error:
+                    errors.append(f"Error processing DOCX {file.filename}: {str(docx_error)}")
+                    logging.error(f"DOCX processing error for {file.filename}: {docx_error}")
             else:
                 errors.append(f"Unsupported file type: {file.filename}")
                 
@@ -288,7 +309,6 @@ async def query(
     embedding_index = session_info['embedding_index_path']
 
     # CLASSIFICATION FIRST - Always classify the query regardless of uploaded data
-    from query_classifier import classify_user_query, QueryType
     query_type, confidence_score = classify_user_query(query)
     print(f"Query classified as: {query_type} (confidence: {confidence_score:.3f})")
 
@@ -368,6 +388,63 @@ async def query(
             has_public_csv = True
 
     print("User has public CSV:", has_public_csv)
+    
+    # NEW LOGIC: Only use public CSV if it's actually a transcript query
+    # Handle PAYROLL_CALENDAR queries
+    if query_type == QueryType.PAYROLL_CALENDAR:
+        logging.info(f"User {username} queried PAYROLL_CALENDAR: {query}")
+        
+        # Determine payroll CSV path based on private flag
+        if private:
+            payroll_csv_folder = f"data/user_uploads/{username}/session_{session_id}/csv_files"
+        else:
+            payroll_csv_folder = f"data/public_uploads/session_{session_id}/csv_files"
+        
+        print(f"Looking for payroll CSV in: {payroll_csv_folder}")
+        
+        # Look for payroll CSV (contains "payroll" in filename)
+        payroll_csv_path = None
+        if os.path.exists(payroll_csv_folder):
+            csv_files = [f for f in os.listdir(payroll_csv_folder) if f.lower().endswith('.csv') and 'payroll' in f.lower()]
+            print(f"Found CSV files with 'payroll': {csv_files}")
+            if csv_files:
+                payroll_csv_path = os.path.join(payroll_csv_folder, csv_files[-1])
+                print(f"Using payroll CSV: {payroll_csv_path}")
+        else:
+            print(f"Payroll CSV folder does not exist: {payroll_csv_folder}")
+        
+        if payroll_csv_path and os.path.exists(payroll_csv_path):
+            # Import and use PayrollCSVAgent
+            from docx_parser import PayrollCSVAgent
+            
+            try:
+                payroll_agent = PayrollCSVAgent(csv_path=payroll_csv_path)
+                if payroll_agent.initialize():
+                    answer = payroll_agent.query(query)
+                else:
+                    answer = "Failed to initialize payroll calendar system. Please try again."
+            except Exception as e:
+                logging.error(f"Error processing payroll query: {e}")
+                answer = "Error processing payroll query. Please ensure you have uploaded the payroll calendar document."
+        else:
+            answer = "No payroll calendar data found. Please upload a payroll calendar document (.docx) first."
+        
+        # Save to history
+        history_before = session_db.get_session_message_count(session_id)
+        session_db.add_single_qa_to_history(session_id, query, answer)
+
+        if history_before == 0:
+            session_name = generate_session_name(query)
+            session_db.rename_session(session_id, session_name)
+            logging.info(f"Updated session {session_id} name to: {session_name}")
+
+        return {
+            "answer": answer,
+            "session_id": session_id,
+            "query_type": query_type,
+            "confidence_score": confidence_score,
+            "session_name_updated": history_before == 0
+        }
     
     # NEW LOGIC: Only use public CSV if it's actually a transcript query
     if query_type == QueryType.STUDENT_TRANSCRIPT and has_public_csv and not private:

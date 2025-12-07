@@ -33,3 +33,6 @@ filetype
 clamd
 langgraph>=0.0.40
 pymupdf
+python-docx
+docx2python
+rank-bm25

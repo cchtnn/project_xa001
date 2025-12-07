@@ -16,6 +16,7 @@ class QueryClassifier:
         self.similarity_threshold = similarity_threshold
         self.model = None
         self.transcript_embeddings = None
+        self.payroll_embeddings = None
         self._initialize_model()
     
     def _initialize_model(self):
@@ -23,10 +24,39 @@ class QueryClassifier:
         try:
             self.model = SentenceTransformer('all-MiniLM-L6-v2')
             self._precompute_transcript_embeddings()
+            self._precompute_payroll_embeddings()
         except Exception as e:
             print(f"❌ Error initializing query classifier: {e}")
             self.model = None
     
+    def _precompute_payroll_embeddings(self):
+        """Precompute embeddings for payroll calendar example queries"""
+        payroll_examples = [
+            "Tell me the check date where optional withholdings changes is 2/27/2026?",
+            "When is the check date for payroll period between 01/03/2026 to 01/16/2026?",
+            "What is the payroll period where check date is 2/6/2026?",
+            "What is the check date for payroll period?",
+            "When will I get paid?",
+            "Show me the payroll calendar",
+            "What are the pay dates?",
+            "When is the next pay period?",
+            "What is the pay period start date?",
+            "What is the pay period end date?",
+            "When can I change my withholdings?",
+            "What is the deadline for withholding changes?",
+            "Tell me the payroll schedule",
+            "What is payroll number 5?",
+            "Show me check dates",
+            "When does pay period start?",
+            "When does pay period end?",
+            "What is the optional withholdings deadline?"
+        ]
+        
+        if self.model:
+            self.payroll_embeddings = self.model.encode(
+                payroll_examples, 
+                convert_to_tensor=True
+            )
     def _precompute_transcript_embeddings(self):
         """Precompute embeddings for transcript example queries"""
         transcript_examples = [
@@ -69,17 +99,17 @@ class QueryClassifier:
     
     def classify_query(self, user_query):
         """
-        Classify user query as either STUDENT_TRANSCRIPT or POLICY
+        Classify user query as STUDENT_TRANSCRIPT, PAYROLL_CALENDAR, or POLICY
         
         Args:
             user_query (str): The user's question
             
         Returns:
             tuple: (query_type, confidence_score)
-                query_type: 'STUDENT_TRANSCRIPT' or 'POLICY'
+                query_type: 'STUDENT_TRANSCRIPT', 'PAYROLL_CALENDAR', or 'POLICY'
                 confidence_score: float between 0 and 1
         """
-        if not self.model or self.transcript_embeddings is None:
+        if not self.model or self.transcript_embeddings is None or self.payroll_embeddings is None:
             # Fallback to POLICY type if model is not available
             print("⚠️ Query classifier not available, defaulting to POLICY type")
             return 'POLICY', 0.0
@@ -88,23 +118,36 @@ class QueryClassifier:
             # Embed the user question
             user_embedding = self.model.encode(user_query, convert_to_tensor=True)
             
-            # Compute cosine similarities with transcript references
-            cos_scores = util.cos_sim(user_embedding, self.transcript_embeddings)
+            # Compute cosine similarities with all reference types
+            transcript_scores = util.cos_sim(user_embedding, self.transcript_embeddings)
+            payroll_scores = util.cos_sim(user_embedding, self.payroll_embeddings)
             
-            # Get the highest similarity score
-            max_score = cos_scores.max().item()
+            # Get the highest similarity score for each type
+            max_transcript_score = transcript_scores.max().item()
+            max_payroll_score = payroll_scores.max().item()
             
-            # Classify based on threshold
+            # Classify based on highest score above threshold
+            scores = {
+                'STUDENT_TRANSCRIPT': max_transcript_score,
+                'PAYROLL_CALENDAR': max_payroll_score
+            }
+            
+            # Find the type with highest score
+            max_type = max(scores, key=scores.get)
+            max_score = scores[max_type]
+            
+            # If highest score is below threshold, classify as POLICY
             if max_score >= self.similarity_threshold:
-                query_type = 'STUDENT_TRANSCRIPT'
+                query_type = max_type
             else:
                 query_type = 'POLICY'
-                # query_type = 'STUDENT_TRANSCRIPT'
+                max_score = 0.0  # No strong match found
             
             print(f"🔍 Query Classification:")
             print(f"   Query: {user_query}")
             print(f"   Type: {query_type}")
             print(f"   Confidence: {max_score:.3f}")
+            print(f"   Scores - Transcript: {max_transcript_score:.3f}, Payroll: {max_payroll_score:.3f}")
             print(f"   Threshold: {self.similarity_threshold}")
             
             return query_type, max_score
@@ -149,3 +192,4 @@ def classify_user_query(user_query, threshold=0.6):
 class QueryType:
     STUDENT_TRANSCRIPT = 'STUDENT_TRANSCRIPT'
     POLICY = 'POLICY'
+    PAYROLL_CALENDAR = 'PAYROLL_CALENDAR'
