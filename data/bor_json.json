@@ -1,0 +1,295 @@
+{
+  "document_metadata": {
+    "title": "Board of Regents Meeting Planner 2025-2026",
+    "approval_date": "2025-10-01",
+    "resolution_number": "DC-OCT-2769-25",
+    "academic_year": "2025-2026",
+    "document_purpose": "Operational planning and reporting schedule for Board of Regents"
+  },
+  "bor_meetings": {
+    "schedule_pattern": {
+      "frequency": "Bi-Monthly",
+      "day_of_week": "Friday",
+      "week_of_month": "2nd Friday",
+      "months": ["November", "January", "March", "May", "July", "September"]
+    },
+    "specific_meetings": [
+      {
+        "month": "November",
+        "year": 2025,
+        "meeting_date": "2025-11-14",
+        "meeting_date_formatted": "Nov 14, 2025",
+        "report_due_date": "2025-11-12",
+        "report_due_date_formatted": "Nov 12, 2025",
+        "days_before_meeting": 2
+      },
+      {
+        "month": "January",
+        "year": 2026,
+        "meeting_date": "2026-01-09",
+        "meeting_date_formatted": "Jan 09, 2026",
+        "report_due_date": "2026-01-07",
+        "report_due_date_formatted": "Jan 07, 2026",
+        "days_before_meeting": 2
+      },
+      {
+        "month": "March",
+        "year": 2026,
+        "meeting_date": "2026-03-13",
+        "meeting_date_formatted": "Mar 13, 2026",
+        "report_due_date": "2026-03-11",
+        "report_due_date_formatted": "Mar 11, 2026",
+        "days_before_meeting": 2
+      },
+      {
+        "month": "May",
+        "year": 2026,
+        "meeting_date": "2026-05-08",
+        "meeting_date_formatted": "May 08, 2026",
+        "report_due_date": "2026-05-06",
+        "report_due_date_formatted": "May 06, 2026",
+        "days_before_meeting": 2
+      },
+      {
+        "month": "July",
+        "year": 2026,
+        "meeting_date": "2026-07-10",
+        "meeting_date_formatted": "Jul 10, 2026",
+        "report_due_date": "2026-07-08",
+        "report_due_date_formatted": "Jul 08, 2026",
+        "days_before_meeting": 2
+      },
+      {
+        "month": "September",
+        "year": 2026,
+        "meeting_date": "2026-09-11",
+        "meeting_date_formatted": "Sep 11, 2026",
+        "report_due_date": "2026-09-09",
+        "report_due_date_formatted": "Sep 09, 2026",
+        "days_before_meeting": 2
+      }
+    ]
+  },
+  "committee_meetings": {
+    "schedule_pattern": {
+      "frequency": "Bi-Monthly",
+      "day_of_week": "Friday",
+      "week_of_month": "2nd Friday",
+      "months": ["October", "December", "February", "April", "June", "August"],
+      "note": "Alternating months from Regular BOR meetings"
+    },
+    "committees": [
+      {
+        "committee_name": "Finance/Audit/Investment Committee",
+        "time": "09:00",
+        "time_formatted": "9:00 a.m.",
+        "specific_dates": [
+          { "date": "2025-10-10", "formatted": "Oct 10, 2025" },
+          { "date": "2025-12-12", "formatted": "Dec 12, 2025" },
+          { "date": "2026-02-13", "formatted": "Feb 13, 2026" },
+          { "date": "2026-04-10", "formatted": "Apr 10, 2026" },
+          { "date": "2026-06-12", "formatted": "Jun 12, 2026" },
+          { "date": "2026-08-14", "formatted": "Aug 14, 2026" }
+        ]
+      },
+      {
+        "committee_name": "Governance Committee",
+        "time": "11:30",
+        "time_formatted": "11:30 a.m.",
+        "specific_dates": [
+          { "date": "2025-10-10", "formatted": "Oct 10, 2025" },
+          { "date": "2025-12-12", "formatted": "Dec 12, 2025" },
+          { "date": "2026-02-13", "formatted": "Feb 13, 2026" },
+          { "date": "2026-04-10", "formatted": "Apr 10, 2026" },
+          { "date": "2026-06-12", "formatted": "Jun 12, 2026" },
+          { "date": "2026-08-14", "formatted": "Aug 14, 2026" }
+        ]
+      },
+      {
+        "committee_name": "Academic & Student Success Committee",
+        "time": "14:00",
+        "time_formatted": "2:00 p.m.",
+        "specific_dates": [
+          { "date": "2025-10-10", "formatted": "Oct 10, 2025" },
+          { "date": "2025-12-12", "formatted": "Dec 12, 2025" },
+          { "date": "2026-02-13", "formatted": "Feb 13, 2026" },
+          { "date": "2026-04-10", "formatted": "Apr 10, 2026" },
+          { "date": "2026-06-12", "formatted": "Jun 12, 2026" },
+          { "date": "2026-08-14", "formatted": "Aug 14, 2026" }
+        ]
+      }
+    ]
+  },
+  "reporting_requirements": {
+    "bi_monthly_written_reports": {
+      "reporting_months": [
+        "November",
+        "January",
+        "March",
+        "May",
+        "July",
+        "September"
+      ],
+      "submission_deadline": "Wednesday prior to BOR meeting",
+      "required_components": [
+        {
+          "component": "Dashboard of Key Metrics",
+          "description": "Key performance metrics dashboard"
+        },
+        {
+          "component": "Strategic Goals Report",
+          "description": "Report of goals relating to strategic goals"
+        },
+        {
+          "component": "Department Goals Report",
+          "description": "Report of goals relating to department goals"
+        },
+        {
+          "component": "Other Activities",
+          "description": "Summary of other activities"
+        }
+      ],
+      "due_dates": [
+        {
+          "meeting_date": "2025-11-14",
+          "due_date": "2025-11-12",
+          "due_date_formatted": "Nov 12, 2025"
+        },
+        {
+          "meeting_date": "2026-01-09",
+          "due_date": "2026-01-07",
+          "due_date_formatted": "Jan 07, 2026"
+        },
+        {
+          "meeting_date": "2026-03-13",
+          "due_date": "2026-03-11",
+          "due_date_formatted": "Mar 11, 2026"
+        },
+        {
+          "meeting_date": "2026-05-08",
+          "due_date": "2026-05-06",
+          "due_date_formatted": "May 06, 2026"
+        },
+        {
+          "meeting_date": "2026-07-10",
+          "due_date": "2026-07-08",
+          "due_date_formatted": "Jul 08, 2026"
+        },
+        {
+          "meeting_date": "2026-09-11",
+          "due_date": "2026-09-09",
+          "due_date_formatted": "Sep 09, 2026"
+        }
+      ]
+    },
+    "association_reporting": {
+      "entities": ["Faculty Association", "Staff Association"],
+      "format": {
+        "format_1": "Written Report",
+        "format_2": "Oral Presentation",
+        "requirement": "Both formats are mandatory"
+      },
+      "reporting_schedule": [
+        "November",
+        "January",
+        "March",
+        "May",
+        "July",
+        "September"
+      ],
+      "submission_deadline": "Wednesday prior to BOR meeting"
+    }
+  },
+  "key_events": {
+    "confirmed_events": [
+      {
+        "event_name": "AIHEC Fall 2025",
+        "start_date": "2025-10-06",
+        "end_date": "2025-10-07",
+        "status": "Confirmed"
+      },
+      {
+        "event_name": "ACCT Leadership Congress",
+        "start_date": "2025-10-22",
+        "end_date": "2025-10-25",
+        "status": "Confirmed"
+      },
+      {
+        "event_name": "DC Winter Graduation",
+        "date": "2025-12-12",
+        "status": "Confirmed"
+      },
+      {
+        "event_name": "ACCT GLI",
+        "start_date": "2026-03-18",
+        "end_date": "2026-03-20",
+        "status": "Confirmed"
+      },
+      {
+        "event_name": "DC Spring Graduation",
+        "date": "2026-05-08",
+        "status": "Confirmed"
+      }
+    ],
+    "pending_events": [
+      {
+        "event_name": "ACCT NLS '26",
+        "start_date": "2026-02-01",
+        "end_date": null,
+        "status": "End Date TBA"
+      },
+      {
+        "event_name": "AIHEC Spring Board Meeting 2026",
+        "start_date": null,
+        "end_date": null,
+        "status": "Dates TBA"
+      },
+      {
+        "event_name": "AIHEC Student Conference 2026",
+        "start_date": null,
+        "end_date": null,
+        "status": "Dates TBA"
+      },
+      {
+        "event_name": "AIHEC Summer 2026",
+        "start_date": null,
+        "end_date": null,
+        "status": "Dates TBA"
+      }
+    ]
+  },
+  "faq": [
+    {
+      "question": "When are the Board meetings scheduled?",
+      "answer": "Board meetings are held bi-monthly on the 2nd Friday of the month in November, January, March, May, July, and September. The specific dates for 2025-2026 are: Nov 14, 2025; Jan 09, 2026; Mar 13, 2026; May 08, 2026; Jul 10, 2026; Sep 11, 2026."
+    },
+    {
+      "question": "When are BOR reports due?",
+      "answer": "Reports are due the Wednesday prior to each BOR meeting: Nov 12, 2025; Jan 07, 2026; Mar 11, 2026; May 06, 2026; Jul 08, 2026; Sep 09, 2026."
+    },
+    {
+      "question": "What must be included in BOR reports?",
+      "answer": "Each bi-monthly report must include: (1) Dashboard of key metrics, (2) Report of goals relating to strategic goals, (3) Report of goals relating to department goals, (4) Summary of other activities."
+    },
+    {
+      "question": "When do the committee meetings occur?",
+      "answer": "Standing committees meet bi-monthly on the 2nd Friday of alternating months (October, December, February, April, June, August). Finance/Audit/Investment at 9:00 a.m., Governance at 11:30 a.m., and Academic & Student Success at 2:00 p.m."
+    },
+    {
+      "question": "What time is the Finance/Audit/Investment Committee meeting?",
+      "answer": "The Finance/Audit/Investment Committee meets at 9:00 a.m. on the 2nd Friday of alternating months (October, December, February, April, June, August)."
+    },
+    {
+      "question": "What format must Faculty and Staff Associations use for reporting?",
+      "answer": "Both Faculty and Staff Associations must provide written reports AND oral presentations bi-monthly during the November, January, March, May, July, and September BOR meetings."
+    },
+    {
+      "question": "When is the ACCT NLS '26 event scheduled?",
+      "answer": "ACCT NLS '26 starts on February 1, 2026. The end date has not been announced (TBA)."
+    },
+    {
+      "question": "What are the confirmed graduation dates?",
+      "answer": "Winter Graduation is scheduled for December 12, 2025. Spring Graduation is scheduled for May 8, 2026."
+    }
+  ]
+}
