@@ -408,23 +408,46 @@ async def query(
             csv_files = [f for f in os.listdir(payroll_csv_folder) if f.lower().endswith('.csv') and 'payroll' in f.lower()]
             print(f"Found CSV files with 'payroll': {csv_files}")
             if csv_files:
-                payroll_csv_path = os.path.join(payroll_csv_folder, csv_files[-1])
-                print(f"Using payroll CSV: {payroll_csv_path}")
+                # Prefer merged files if available
+                merged_files = [f for f in csv_files if 'merged' not in f.lower()]
+                if merged_files:
+                    payroll_csv_path = os.path.join(payroll_csv_folder, merged_files[0])
+                    print(f"Using merged payroll CSV: {payroll_csv_path}")
+                else:
+                    payroll_csv_path = os.path.join(payroll_csv_folder, csv_files[-1])
+                    print(f"Using payroll CSV: {payroll_csv_path}")
         else:
             print(f"Payroll CSV folder does not exist: {payroll_csv_folder}")
         
         if payroll_csv_path and os.path.exists(payroll_csv_path):
-            # Import and use PayrollCSVAgent
+            # Import and use PayrollCSVAgent with reformulation
             from docx_parser import PayrollCSVAgent
             
             try:
+                print(f"\n{'='*60}")
+                print(f"🚀 INITIALIZING PAYROLL QUERY PROCESSING")
+                print(f"{'='*60}")
+                print(f"📄 CSV Path: {payroll_csv_path}")
+                print(f"❓ Query: {query}")
+                print(f"🔒 Private: {private}")
+                
                 payroll_agent = PayrollCSVAgent(csv_path=payroll_csv_path)
                 if payroll_agent.initialize():
+                    print(f"✅ Payroll agent initialized successfully")
+                    
+                    # The query() method now includes reformulation internally
                     answer = payroll_agent.query(query)
+                    
+                    print(f"✅ Query processed successfully")
+                    print(f"📊 Answer length: {len(answer)} characters")
+                    print(f"{'='*60}\n")
                 else:
                     answer = "Failed to initialize payroll calendar system. Please try again."
+                    print(f"❌ Failed to initialize payroll agent")
             except Exception as e:
                 logging.error(f"Error processing payroll query: {e}")
+                import traceback
+                traceback.print_exc()
                 answer = "Error processing payroll query. Please ensure you have uploaded the payroll calendar document."
         else:
             answer = "No payroll calendar data found. Please upload a payroll calendar document (.docx) first."

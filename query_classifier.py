@@ -49,7 +49,11 @@ class QueryClassifier:
             "Show me check dates",
             "When does pay period start?",
             "When does pay period end?",
-            "What is the optional withholdings deadline?"
+            "What is the optional withholdings deadline?",
+            "How many payroll periods do we have in 2026?",
+            "How many payroll periods in current year?",
+            "Count the payroll periods",
+            "Total number of pay periods this year"
         ]
         
         if self.model:

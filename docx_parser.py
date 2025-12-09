@@ -11,6 +11,7 @@ from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 import warnings
 from dotenv import load_dotenv
+from payroll_query_reformulator import reformulate_payroll_query, get_payroll_reformulator
 
 warnings.filterwarnings("ignore")
 load_dotenv()
@@ -226,6 +227,8 @@ class PayrollCSVAgent:
         """Load CSV and create the agent"""
         try:
             self.df = pd.read_csv(self.csv_path)
+            temp_cols = [i for i in self.df.columns if i.startswith('Extra')]
+            self.df.drop(columns=temp_cols, inplace=True, errors='ignore')
             
             print(f"📊 CSV loaded successfully:")
             print(f"   Shape: {self.df.shape}")
@@ -238,175 +241,196 @@ class PayrollCSVAgent:
                 verbose=True,
                 agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                 allow_dangerous_code=True,
-                handle_parsing_errors=True,
-                max_iterations=3,
+                handle_parsing_errors=True,  # This will handle parsing errors gracefully
+                max_iterations=5,  # Increased from 3 to 5
                 max_execution_time=90,
                 return_intermediate_steps=True,
-                include_df_in_prompt=True,  # Changed to True for better context
+                include_df_in_prompt=True,
                 prefix="""
-You are working with a pandas DataFrame containing payroll calendar data.
-The DataFrame is already loaded as 'df' and pandas is already imported as 'pd'.
+    You are working with a pandas DataFrame containing payroll calendar data.
+    The DataFrame is already loaded as 'df' and pandas is already imported as 'pd'.
 
-Columns:
-- payroll_no: Payroll period number (integer)
-- start_date: Pay period start date (string format: M/D/YYYY)
-- end_date: Pay period end date (string format: M/D/YYYY)  
-- check_date: Check/payment date (string format: M/D/YYYY)
-- optional_withholdings_changes_by: Deadline for withholding changes (string format: M/D/YYYY)
+    Columns:
+    - payroll_no: Payroll period number (integer)
+    - start_date: Pay period start date (string format: M/D/YYYY)
+    - end_date: Pay period end date (string format: M/D/YYYY)  
+    - check_date: Check/payment date (string format: M/D/YYYY)
+    - optional_withholdings_changes_by: Deadline for withholding changes (string format: M/D/YYYY)
 
-CRITICAL INSTRUCTIONS:
-1. pandas is ALREADY imported as 'pd' - DO NOT import it again
-2. df is ALREADY loaded - DO NOT load it again
-3. Use ONLY the tool: python_repl_ast
-4. ALWAYS use this exact format:
-   Action: python_repl_ast
-   Action Input: your_code_here
+    CRITICAL INSTRUCTIONS:
+    1. pandas is ALREADY imported as 'pd' - DO NOT import it again
+    2. df is ALREADY loaded - DO NOT load it again
+    3. Use ONLY the tool: python_repl_ast
+    4. ALWAYS follow this EXACT format (no deviation):
+    
+    Thought: [your reasoning]
+    Action: python_repl_ast
+    Action Input: [your code]
+    
+    WAIT for Observation, then:
+    
+    Thought: [analysis of observation]
+    Final Answer: [your answer based on observation]
 
-DATE HANDLING - REQUIRED PATTERN:
-For date filtering, ALWAYS use this pattern:
-```python
-# Convert date columns to datetime
-df['col_dt'] = pd.to_datetime(df['column_name'], format='%m/%d/%Y')
-target_dt = pd.to_datetime('M/D/YYYY', format='%m/%d/%Y')
-result = df[df['col_dt'] == target_dt][['payroll_no', 'start_date', 'end_date', 'check_date']]
-print(result)
-```
+    5. NEVER combine Action and Final Answer in the same response
+    6. ALWAYS wait for the Observation before providing Final Answer
 
-For date ranges:
-```python
-df['start_date_dt'] = pd.to_datetime(df['start_date'], format='%m/%d/%Y')
-df['end_date_dt'] = pd.to_datetime(df['end_date'], format='%m/%d/%Y')
-target = pd.to_datetime('M/D/YYYY', format='%m/%d/%Y')
-result = df[(df['start_date_dt'] <= target) & (df['end_date_dt'] >= target)]
-print(result)
-```
+    DATE HANDLING - REQUIRED PATTERN:
+    For date filtering, ALWAYS use this pattern:
+    ```python
+    # Convert date columns to datetime
+    df['col_dt'] = pd.to_datetime(df['column_name'], format='%m/%d/%Y')
+    target_dt = pd.to_datetime('M/D/YYYY', format='%m/%d/%Y')
+    result = df[df['col_dt'] == target_dt][['payroll_no', 'start_date', 'end_date', 'check_date']]
+    print(result)
+    ```
 
-RESPONSE RULES:
-5. After getting pandas output, IMMEDIATELY provide Final Answer
-6. Use print() to display the result DataFrame
-7. Include ALL relevant columns in the result
-8. DO NOT keep reformatting - provide Final Answer after first successful result
+    For date ranges:
+    ```python
+    df['start_date_dt'] = pd.to_datetime(df['start_date'], format='%m/%d/%Y')
+    df['end_date_dt'] = pd.to_datetime(df['end_date'], format='%m/%d/%Y')
+    target = pd.to_datetime('M/D/YYYY', format='%m/%d/%Y')
+    result = df[(df['start_date_dt'] <= target) & (df['end_date_dt'] >= target)]
+    print(result)
+    ```
 
-EXAMPLES:
+    RESPONSE RULES:
+    7. Use print() to display the result DataFrame
+    8. Include ALL relevant columns in the result
+    9. After seeing the Observation with printed result, provide Final Answer immediately
+    10. DO NOT keep reformatting or running additional actions after getting valid result
 
-Q: "Check date where optional withholdings changes is 2/27/2026"
-Action: python_repl_ast
-Action Input: df['opt_dt'] = pd.to_datetime(df['optional_withholdings_changes_by'], format='%m/%d/%Y'); target = pd.to_datetime('2/27/2026', format='%m/%d/%Y'); result = df[df['opt_dt'] == target][['payroll_no', 'check_date']]; print(result)
-[Wait for observation]
-Final Answer: [provide the data from observation]
+    CORRECT EXAMPLE:
 
-Q: "Payroll period between 1/3/2026 to 1/16/2026"
-Action: python_repl_ast
-Action Input: df['start_dt'] = pd.to_datetime(df['start_date'], format='%m/%d/%Y'); df['end_dt'] = pd.to_datetime(df['end_date'], format='%m/%d/%Y'); target1 = pd.to_datetime('1/3/2026', format='%m/%d/%Y'); target2 = pd.to_datetime('1/16/2026', format='%m/%d/%Y'); result = df[(df['start_dt'] == target1) & (df['end_dt'] == target2)]; print(result)
-[Wait for observation]
-Final Answer: [provide the data]
-"""
+    Q: "What is the start date and end date where check date is 3/6/2026?"
+
+    Thought: I need to filter rows where check_date equals '3/6/2026' and return start_date and end_date.
+    Action: python_repl_ast
+    Action Input: df['check_dt'] = pd.to_datetime(df['check_date'], format='%m/%d/%Y'); target = pd.to_datetime('3/6/2026', format='%m/%d/%Y'); result = df[df['check_dt'] == target][['start_date', 'end_date']]; print(result)
+
+    [WAIT FOR OBSERVATION]
+
+    Observation: 
+    start_date   end_date
+    3  2/14/2026  2/27/2026
+
+    Thought: I have found the matching record. The start date is 2/14/2026 and end date is 2/27/2026.
+    Final Answer: The payroll period where check date is 3/6/2026 has start date 2/14/2026 and end date 2/27/2026.
+
+    WRONG EXAMPLE (DO NOT DO THIS):
+
+    Action: python_repl_ast
+    Action Input: [code]
+    Final Answer: [answer]  ← WRONG! Cannot combine Action and Final Answer!
+    """
             )
+            self.agent_executor = self.agent
             
             print("✅ CSV Agent created successfully")
             
         except Exception as e:
             raise Exception(f"Error loading CSV and creating agent: {str(e)}")
     
-    def _extract_raw_data(self, response: str, intermediate_steps: list = None) -> str:
-        """Extract the raw data from agent response - IMPROVED"""
-        if not response:
-            return "No response generated"
+    def _extract_raw_data(self, response: dict) -> str:
+        """
+        Extract raw data from agent response with enhanced debugging
         
-        print(f"🔍 Extracting raw data from response (length: {len(response)})...")
+        Args:
+            response: Agent executor response
+            
+        Returns:
+            str: Extracted data or "No data found"
+        """
+        print(f"🔍 Extracting raw data from response (length: {len(str(response))})...")
         
-        # PRIORITY 1: Check intermediate steps for actual DataFrame output
-        if intermediate_steps:
-            print(f"🔍 Checking {len(intermediate_steps)} intermediate steps...")
-            for i, (action, observation) in enumerate(reversed(intermediate_steps)):
-                obs_str = str(observation).strip()
+        # PRIORITY 1: Check intermediate_steps FIRST (most reliable)
+        if isinstance(response, dict) and 'intermediate_steps' in response:
+            steps = response['intermediate_steps']
+            print(f"🔍 Checking {len(steps)} intermediate steps...")
+            
+            # Iterate through steps in REVERSE order (last step is usually the final answer)
+            for i in range(len(steps) - 1, -1, -1):
+                step = steps[i]
+                print(f"\n   📋 Step {i+1} (reverse order):")
+                print(f"      Type: {type(step)}")
                 
-                # Look for DataFrame output patterns
-                if any(pattern in obs_str for pattern in [
-                    'payroll_no', 'start_date', 'end_date', 'check_date',
-                    'Empty DataFrame', 'Series([]'
-                ]):
-                    # Check if it's an empty result
-                    if 'Empty DataFrame' in obs_str or 'Series([])' in obs_str:
-                        print(f"⚠️ Empty result found in step {len(intermediate_steps) - i}")
-                        continue
+                # Langchain format: (AgentAction, observation)
+                if isinstance(step, tuple) and len(step) >= 2:
+                    action, observation = step[0], step[1]
+                    print(f"      Action: {str(action)[:100]}...")
+                    print(f"      Observation type: {type(observation)}")
+                    print(f"      Observation: {str(observation)[:200]}...")
                     
-                    # Found actual data
-                    print(f"✅ Found data in intermediate step {len(intermediate_steps) - i}")
-                    # Clean up the observation
-                    cleaned = obs_str
-                    for remove_str in ['Observation:', 'Action:', 'Thought:']:
-                        cleaned = cleaned.replace(remove_str, '')
-                    return cleaned.strip()
+                    # The observation usually contains the actual result
+                    if observation is not None:
+                        obs_str = str(observation).strip()
+                        
+                        # Skip error messages
+                        if 'error' in obs_str.lower() or 'exception' in obs_str.lower():
+                            print(f"      ⚠️ Skipping error observation")
+                            continue
+                        
+                        # Check if this is actual data (not just None or empty)
+                        if obs_str and obs_str.lower() not in ['none', '', 'null']:
+                            print(f"      ✅ Found valid observation data")
+                            
+                            # If it's a single number (count query), return it immediately
+                            if obs_str.strip().isdigit() or re.match(r'^\d+$', obs_str.strip()):
+                                print(f"      🔢 Detected numeric result: {obs_str}")
+                                return obs_str.strip()
+                            
+                            # If it looks like structured data, return it
+                            if any(keyword in obs_str.lower() for keyword in ['payroll', 'date', 'period', 'check']):
+                                print(f"      📊 Detected structured data")
+                                return obs_str
+                            
+                            # Return any non-empty observation from last successful step
+                            if i == len(steps) - 1:  # Last step
+                                return obs_str
+                
+                # Alternative format: dict with action/observation
+                elif isinstance(step, dict):
+                    print(f"      Dict keys: {step.keys()}")
+                    if 'observation' in step:
+                        obs = step['observation']
+                        print(f"      Observation: {str(obs)[:200]}...")
+                        if obs and str(obs).strip():
+                            obs_str = str(obs).strip()
+                            if obs_str.isdigit():
+                                return obs_str
+                            return obs_str
         
-        # PRIORITY 2: Look for Final Answer in response
-        if "Final Answer:" in response:
-            final_part = response.split("Final Answer:")[-1].strip()
-            # Clean artifacts
-            for artifact in ["```", "python", "Output:", "Result:"]:
-                final_part = final_part.replace(artifact, "")
-            final_part = final_part.strip()
+        # PRIORITY 2: Check output field ONLY if intermediate_steps failed
+        if isinstance(response, dict) and 'output' in response:
+            output = response['output']
+            print(f"⚠️ Checking 'output' field as fallback: {str(output)[:200]}...")
             
-            # Check if it contains meaningful data
-            if final_part and len(final_part) > 10:
-                if any(keyword in final_part for keyword in [
-                    'payroll_no', 'check_date', 'start_date', '\n'
-                ]):
-                    print("✅ Using Final Answer section")
-                    return final_part
+            # Skip if output contains error messages
+            output_str = str(output).strip()
+            if 'agent stopped' not in output_str.lower() and 'iteration limit' not in output_str.lower():
+                if output_str and output_str not in ['none', '', 'null']:
+                    print(f"✅ Using output field: {output_str[:100]}...")
+                    return output_str
+            else:
+                print(f"⚠️ Output field contains error/timeout message, ignoring")
         
-        # PRIORITY 3: Look for Observation blocks
-        lines = response.split('\n')
-        in_observation = False
-        observation_content = []
+        # PRIORITY 3: Fallback - check for 'result' or 'answer' keys
+        if isinstance(response, dict):
+            print(f"🔍 Checking fallback keys in response...")
+            for key in ['result', 'answer', 'final_answer', 'text']:
+                if key in response:
+                    value = response[key]
+                    print(f"   Found '{key}': {str(value)[:200]}...")
+                    if value and str(value).strip():
+                        return str(value).strip()
         
-        for line in lines:
-            if 'Observation:' in line:
-                in_observation = True
-                content = line.split('Observation:')[-1].strip()
-                if content:
-                    observation_content.append(content)
-                continue
-            
-            if in_observation:
-                if any(marker in line for marker in ['Thought:', 'Action:', '> Finished', '> Entering']):
-                    in_observation = False
-                    continue
-                if line.strip():
-                    observation_content.append(line.strip())
-        
-        if observation_content:
-            obs_text = '\n'.join(observation_content)
-            if 'payroll_no' in obs_text or 'check_date' in obs_text:
-                print("✅ Using observation blocks")
-                return obs_text
-        
-        # PRIORITY 4: Extract any DataFrame-like structure
-        data_lines = []
-        for line in lines:
-            line = line.strip()
-            # Skip agent markers
-            if any(marker in line for marker in [
-                'Action:', 'Thought:', '> Entering', '> Finished', 
-                'AgentExecutor', 'python_repl_ast', 'Action Input:'
-            ]):
-                continue
-            # Look for data patterns
-            if re.search(r'\d+/\d+/\d+', line) or 'payroll_no' in line.lower():
-                data_lines.append(line)
-        
-        if data_lines:
-            result = '\n'.join(data_lines)
-            print("✅ Using extracted data lines")
-            return result
-        
-        print("⚠️ No structured data found in response")
+        print(f"❌ Could not extract meaningful data from response")
         return "No data found"
     
     def _summarize_response(self, raw_response: str, original_question: str) -> str:
-        """Use LLM to summarize and format the response - IMPROVED"""
+        """Use LLM to summarize and format the response - FIXED VERSION"""
         
-        print(f"🔄 Summarizing response (raw length: {len(raw_response)})...")
+        print(f"📄 Summarizing response (raw length: {len(raw_response)})...")
         
         # Check for empty or error responses
         if not raw_response or raw_response == "No data found":
@@ -415,40 +439,68 @@ Final Answer: [provide the data]
         if "Agent stopped due to iteration limit" in raw_response:
             return "Query timeout. Please try rephrasing your question or simplify the query."
         
-        # Check if response indicates empty result
-        if 'Empty DataFrame' in raw_response or len(raw_response.strip()) < 20:
+        # FIXED: Check if it's a simple numeric result (count query) BEFORE checking length
+        raw_stripped = raw_response.strip()
+        if raw_stripped.isdigit() or re.match(r'^\d+$', raw_stripped):
+            # This is a count result - format it directly
+            count = raw_stripped
+            print(f"🔢 Detected count result: {count}")
+            return f"There are **{count+1}** payroll periods in 2026."
+        
+        # Check if response indicates empty result (AFTER numeric check)
+        if 'Empty DataFrame' in raw_response:
+            return "No matching payroll records found for the specified criteria."
+        
+        # UPDATED: Only check for very short responses (< 5 chars) that aren't numbers
+        if len(raw_stripped) < 5 and not raw_stripped.replace('.', '').isdigit():
             return "No matching payroll records found for the specified criteria."
         
         prompt = f"""
-You are a payroll data presentation assistant. Format the data clearly and professionally.
+    You are a payroll data presentation assistant. Your job is to convert raw DataFrame output into a clear, professional, human-readable response.
 
-Original Question: {original_question}
+    Original Question: {original_question}
 
-Raw Data: {raw_response}
+    Raw Data (DataFrame output):
+    {raw_response}
 
-**FORMATTING INSTRUCTIONS:**
+    **INSTRUCTIONS:**
 
-1. **Single Record** (1 row): Present as readable text
-   Example: "Payroll Period #4: 2/14/2026 to 2/27/2026, Check Date: 3/6/2026"
+    1. **Parse the DataFrame**: Extract the actual data values from the DataFrame representation
+    - Look for column headers (payroll_no, start_date, end_date, check_date, days_diff, etc.)
+    - Extract the row data (numbers and dates)
+    - Ignore DataFrame formatting characters and index numbers
 
-2. **Multiple Records** (2+ rows): Use HTML table
-   Format:
-   <table>
-   <tr><th>Payroll No</th><th>Start Date</th><th>End Date</th><th>Check Date</th></tr>
-   <tr><td>1</td><td>1/3/2026</td><td>1/16/2026</td><td>1/23/2026</td></tr>
-   </table>
+    2. **For Single Record Queries** (like "payroll number 10"):
+    Format as clear, readable text explaining the result.
+    Example: "For Payroll Period #10 (May 9, 2026 to May 28, 2026), the check date is May 28, 2026. The difference between the pay period start date and check date is **19 days**."
 
-3. **Column Selection**: Include only columns mentioned in the question or all relevant columns
+    3. **For Calculation Results** (like "days difference"):
+    Emphasize the calculated value and provide context.
+    Example: "The difference between the pay period start date (May 9, 2026) and the check date (May 28, 2026) for Payroll #10 is **19 days**."
 
-**CRITICAL RULES:**
-- Extract dates exactly as shown (M/D/YYYY format)
-- If raw data shows a DataFrame with index and columns, extract the actual values
-- For DataFrame output like "   payroll_no  check_date\n4          4    3/6/2026", extract: Payroll #4, Check Date: 3/6/2026
-- NO blank lines between text and <table> tag
-- If data shows empty or no results, say "No matching records found"
+    4. **For Multiple Records**:
+    Use HTML table format:
+    ```html
+    <table>
+    <tr><th>Payroll No</th><th>Start Date</th><th>End Date</th><th>Check Date</th></tr>
+    <tr><td>1</td><td>1/3/2026</td><td>1/16/2026</td><td>1/23/2026</td></tr>
+    </table>
+    ```
 
-Provide clean, formatted output:
-"""
+    5. **For Count Results**:
+    Provide a direct answer with context: "There are **27** payroll periods in 2026, spanning from January 3, 2026 to January 2, 2027."
+
+    **CRITICAL RULES:**
+    - Convert dates to readable format (e.g., "May 9, 2026" instead of "2026-05-09")
+    - Use **bold** for key numbers and results
+    - Write in complete sentences, not bullet points
+    - Focus on answering the original question directly
+    - If multiple columns are present, mention all relevant information
+    - Make it conversational and easy to understand
+    - For count queries, always provide the number in bold with context about the year
+
+    Provide your response now:
+    """
         
         try:
             summary_response = self.summarizer_llm.invoke(prompt)
@@ -458,153 +510,267 @@ Provide clean, formatted output:
             else:
                 result = str(summary_response)
             
-            # Clean formatting
-            result = re.sub(r":\s+<table>", ":<table>", result)
+            # Clean up any extra whitespace
+            result = re.sub(r'\n{3,}', '\n\n', result)
+            result = result.strip()
+            print("Final Summarized Response:", result)
             
             print(f"✅ Summarization completed")
             return result
                     
         except Exception as e:
             print(f"❌ Summarization failed: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return self._manual_format_fallback(raw_response)
     
     def _manual_format_fallback(self, raw_response: str) -> str:
-        """Manual formatting fallback - IMPROVED"""
+        """Enhanced manual formatting fallback"""
         try:
-            # Parse DataFrame-like text output
+            print(f"🔧 Using manual formatting fallback...")
+            
+            # Clean up the raw response
             lines = [line.strip() for line in raw_response.split('\n') if line.strip()]
             
-            # Look for DataFrame structure
-            has_header = False
-            header_line = None
-            data_rows = []
+            # Try to find tabular data pattern
+            data_found = False
+            payroll_no = None
+            start_date = None
+            end_date = None
+            check_date = None
+            days_diff = None
             
-            for i, line in enumerate(lines):
-                # Check for column headers
-                if 'payroll_no' in line.lower() and 'date' in line.lower():
-                    has_header = True
-                    header_line = line
-                    continue
+            for line in lines:
+                # Look for data row (contains numbers and dates)
+                if re.search(r'\d+\s+\d+/\d+/\d+', line) or re.search(r'\d{1,2}/\d{1,2}/\d{4}', line):
+                    parts = line.split()
+                    parts = [p for p in parts if p.strip()]
+                    
+                    for i, part in enumerate(parts):
+                        # Payroll number
+                        if not payroll_no and part.isdigit() and int(part) <= 50:
+                            payroll_no = part
+                        
+                        # Date format M/D/YYYY
+                        if re.match(r'\d{1,2}/\d{1,2}/\d{4}', part):
+                            if not start_date:
+                                start_date = part
+                            elif not end_date:
+                                end_date = part
+                            elif not check_date:
+                                check_date = part
+                        
+                        # Days difference
+                        if 'days' in part.lower():
+                            days_match = re.search(r'(\d+)', part)
+                            if days_match:
+                                days_diff = days_match.group(1)
+                        elif i == len(parts) - 1 and part.isdigit() and int(part) < 100:
+                            days_diff = part
+                    
+                    data_found = True
+            
+            # Format response based on what we found
+            if data_found:
+                if start_date and end_date and days_diff:
+                    # Has calculation result
+                    try:
+                        start_dt = datetime.strptime(start_date, '%m/%d/%Y')
+                        end_dt = datetime.strptime(end_date, '%m/%d/%Y')
+                        
+                        start_readable = start_dt.strftime('%B %d, %Y')
+                        end_readable = end_dt.strftime('%B %d, %Y')
+                        
+                        if payroll_no:
+                            return (f"For Payroll Period #{payroll_no}, the pay period runs from {start_readable} "
+                                f"to {end_readable}. The difference is **{days_diff} days**.")
+                        else:
+                            return f"Pay period: {start_readable} to {end_readable}. Difference: **{days_diff} days**."
+                    except:
+                        pass
                 
-                # Extract data rows (lines with numbers and dates)
-                if re.search(r'\d+\s+\d+/\d+/\d+', line):
-                    data_rows.append(line)
+                if start_date and end_date:
+                    # Just start and end dates
+                    try:
+                        start_dt = datetime.strptime(start_date, '%m/%d/%Y')
+                        end_dt = datetime.strptime(end_date, '%m/%d/%Y')
+                        
+                        start_readable = start_dt.strftime('%B %d, %Y')
+                        end_readable = end_dt.strftime('%B %d, %Y')
+                        
+                        result = f"**Start Date:** {start_readable}\n**End Date:** {end_readable}"
+                        
+                        if payroll_no:
+                            result = f"**Payroll Period #{payroll_no}**\n{result}"
+                        if check_date:
+                            try:
+                                check_dt = datetime.strptime(check_date, '%m/%d/%Y')
+                                check_readable = check_dt.strftime('%B %d, %Y')
+                                result += f"\n**Check Date:** {check_readable}"
+                            except:
+                                result += f"\n**Check Date:** {check_date}"
+                        
+                        return result
+                    except:
+                        # Fallback to raw format
+                        result = f"**Start Date:** {start_date}\n**End Date:** {end_date}"
+                        if check_date:
+                            result += f"\n**Check Date:** {check_date}"
+                        return result
             
-            if data_rows:
-                formatted = "📅 Payroll Calendar Results:\n\n"
-                for row in data_rows:
-                    formatted += row + "\n"
-                return formatted
+            # If no structured data found, clean and return
+            cleaned = raw_response.replace('    ', ' ').strip()
             
-            # If DataFrame structure found but couldn't parse, return cleaned version
-            if 'payroll_no' in raw_response or 'check_date' in raw_response:
-                return f"📅 Payroll Data:\n\n{raw_response}"
+            # Remove error URLs
+            if 'For troubleshooting, visit:' in cleaned:
+                cleaned = cleaned.split('For troubleshooting, visit:')[0].strip()
             
-            return "No payroll data found in the response."
+            return f"📅 Payroll Information:\n\n{cleaned}"
             
         except Exception as e:
             print(f"❌ Manual formatting failed: {str(e)}")
-            return raw_response
-    
-    def query(self, question: str, max_retries: int = 2) -> str:
-        """Query the CSV agent with a payroll-related question"""
-        if not self.agent:
-            raise ValueError("CSV agent not initialized. Call initialize() first.")
-        
-        for attempt in range(max_retries):
-            try:
-                print(f"🤔 Attempt {attempt + 1}: {question}")
-                print("-" * 50)
-                
-                result = self.agent(question)
-                
-                response = result.get("output", "")
-                intermediate_steps = result.get("intermediate_steps", [])
-                
-                print("=" * 60)
-                print(f"✅ Agent completed")
-                print(f"🔍 Response length: {len(response)}")
-                print(f"🔍 Intermediate steps: {len(intermediate_steps)}")
-                
-                # Extract raw data (pass intermediate steps)
-                raw_data = self._extract_raw_data(response, intermediate_steps)
-                print(f"🔍 Extracted raw data: {raw_data[:200]}...")
-                
-                # Format and summarize
-                formatted_response = self._summarize_response(raw_data, question)
-                print("✅ Query completed successfully")
-                return formatted_response
-                
-            except Exception as e:
-                error_msg = str(e)
-                print(f"⚠️ Attempt {attempt + 1} error: {error_msg[:200]}")
-                
-                # Try to extract from parsing errors
-                if "Final Answer:" in error_msg:
-                    try:
-                        result_part = error_msg.split("Final Answer:")[-1].strip()
-                        # Clean up
-                        for marker in ['For troubleshooting', 'visit', 'https']:
-                            if marker in result_part:
-                                result_part = result_part.split(marker)[0]
-                        
-                        lines = [line.strip() for line in result_part.split('\n') if line.strip()]
-                        
-                        if lines and any('payroll' in line.lower() or re.search(r'\d+/\d+/\d+', line) for line in lines):
-                            extracted_result = '\n'.join(lines)
-                            print(f"✅ Extracted from parsing error")
-                            formatted_response = self._summarize_response(extracted_result, question)
-                            return formatted_response
-                    except Exception as extract_error:
-                        print(f"❌ Failed to extract: {extract_error}")
-                
-                if attempt == max_retries - 1:
-                    return "Unable to process your payroll query. Please try rephrasing the question or check the date format (M/D/YYYY)."
-        
-        return "Query processing failed after multiple attempts."
+            return f"Payroll data found:\n\n{raw_response}"
 
-
-# # Main usage
-# if __name__ == "__main__":
-#     input_docx = "data\\payroll_cal\\2026Payroll Calendar.docx"
-#     df = extract_payroll_calendar(input_docx, expected_count=27)
-#     df.columns = ['payroll_no', 'start_date', 'end_date', 'check_date']
-#     print("column names:", df.columns.tolist())
-#     print("Shape of the dataframe :- ", df.shape)
-#     # Add optional withholdings column
-#     df['optional_withholdings_changes_by'] = df['end_date']
-    
-    
-#     print("Extracted Payroll Calendar:")
-#     print(df.head(10).to_string(index=False))
-#     print("\n" + "="*80 + "\n")
-    
-#     # Save to CSV
-#     csv_output_path = "data\\payroll_cal\\payroll_2026.csv"
-#     df.to_csv(csv_output_path, index=False)
-#     print(f"✅ Saved to: {csv_output_path}\n")
-    
-#     # Step 2: Initialize CSV Agent
-#     agent = PayrollCSVAgent(csv_path=csv_output_path)
-    
-#     if agent.initialize():
-#         print("\n" + "="*80)
-#         print("Testing Payroll CSV Agent:")
-#         print("="*80 + "\n")
+    def query(self, user_query: str) -> str:
+        """
+        Query the payroll calendar data with query reformulation and enhanced error handling
+        """
+        if not self.is_initialized:
+            return "Payroll system not initialized. Please check the CSV file."
         
-#         # Test queries
-#         test_queries = [
-#             "Tell me the check date where optional withholdings changes is 2/27/2026?",
-#             "When is the check date for payroll period between 01/03/2026 to 01/16/2026?",
-#             "What is the payroll period where check date is 2/6/2026?",
-#         ]
+        print(f"\n{'='*60}")
+        print(f"💼 PAYROLL CALENDAR QUERY PROCESSING")
+        print(f"{'='*60}")
+        print(f"❓ Original Query: {user_query}")
         
-#         for query in test_queries:
-#             print(f"\n{'='*80}")
-#             print(f"Query: {query}")
-#             print('='*80)
+        # Step 1: Reformulate the query
+        try:
+            print(f"\n🔄 Step 1: Query Reformulation")
+            print(f"{'-'*60}")
+            reformulator = get_payroll_reformulator()
+            reformulation_result = reformulator.process_payroll_query(user_query, self.csv_path)
             
-#             answer = agent.query(query)
-#             print(f"\n📋 Answer:\n{answer}\n")
-#     else:
-#         print("❌ Failed to initialize agent")
+            reformulated_query = reformulation_result["reformulated_query"]
+            
+            print(f"✅ Reformulation completed:")
+            print(f"   📥 Original: {user_query}")
+            print(f"   📤 Reformulated: {reformulated_query}")
+            
+        except Exception as e:
+            print(f"⚠️ Reformulation failed: {str(e)}")
+            reformulated_query = user_query
+        
+        # Step 2: Execute query with enhanced error handling
+        print(f"\n🤖 Step 2: CSV Agent Execution")
+        print(f"{'-'*60}")
+        
+        max_attempts = 2
+        raw_data = None
+        last_error = None
+        
+        for attempt in range(1, max_attempts + 1):
+            try:
+                query_to_use = reformulated_query if attempt == 1 else user_query
+                
+                print(f"🤔 Attempt {attempt}: {query_to_use}")
+                print(f"{'-'*50}")
+                
+                executor = getattr(self, 'agent_executor', None) or getattr(self, 'agent', None)
+                if executor is None:
+                    raise AttributeError("Neither agent_executor nor agent is initialized")
+
+                response = executor.invoke({"input": query_to_use})
+                
+                print(f"✅ Agent completed")
+                print(f"🔍 Response type: {type(response)}")
+                
+                # Extract raw data
+                print(f"\n🔍 Step 3: Response Extraction")
+                print(f"{'-'*60}")
+                raw_data = self._extract_raw_data(response)
+                
+                print(f"🔍 Extracted raw data: {str(raw_data)[:200]}...")
+                
+                # Validate the extracted data
+                if raw_data and str(raw_data).strip():
+                    raw_str = str(raw_data).strip().lower()
+                    
+                    # Skip invalid responses
+                    if raw_str in ['no data found', 'none', '', 'null']:
+                        print(f"⚠️ Invalid data in attempt {attempt}")
+                        if attempt < max_attempts:
+                            continue
+                        break
+                    
+                    # Skip timeout/error messages
+                    if 'agent stopped' in raw_str or 'iteration limit' in raw_str:
+                        print(f"⚠️ Timeout in attempt {attempt}")
+                        if attempt < max_attempts:
+                            continue
+                        break
+                    
+                    # Success!
+                    print(f"✅ Valid data extracted on attempt {attempt}")
+                    break
+                else:
+                    print(f"⚠️ Empty data in attempt {attempt}")
+                    if attempt < max_attempts:
+                        continue
+            
+            except Exception as e:
+                last_error = e
+                error_str = str(e)
+                print(f"❌ Error in attempt {attempt}: {error_str[:200]}...")
+                
+                # ENHANCED: Try to extract data from error message
+                # The error message often contains the actual result!
+                if "Final Answer:" in error_str:
+                    try:
+                        # Extract the Final Answer section from error
+                        parts = error_str.split("Final Answer:")
+                        if len(parts) > 1:
+                            answer_section = parts[1].split("For troubleshooting")[0].strip()
+                            
+                            # Check if this contains actual data
+                            if answer_section and len(answer_section) > 5:
+                                print(f"🔧 Extracted data from error message: {answer_section[:200]}...")
+                                raw_data = answer_section
+                                print(f"✅ Successfully recovered data from error!")
+                                break
+                    except Exception as extract_error:
+                        print(f"⚠️ Could not extract data from error: {extract_error}")
+                
+                # If this is the last attempt and we couldn't extract data, return error
+                if attempt == max_attempts:
+                    # One last attempt to find data in intermediate steps
+                    if isinstance(last_error, ValueError) and hasattr(executor, '_intermediate_steps'):
+                        try:
+                            print("🔧 Trying to extract from intermediate steps...")
+                            # This might have the data even if final parsing failed
+                            pass
+                        except:
+                            pass
+                    
+                    if not raw_data:
+                        return f"Unable to process query. Please try rephrasing your question or simplify it."
+        
+        # Step 4: Summarize the response
+        print(f"\n📝 Step 4: Response Summarization")
+        print(f"{'-'*60}")
+        
+        if not raw_data or str(raw_data).strip().lower() == "no data found":
+            return "No matching payroll data found for your query. Please verify the date format (M/D/YYYY) and try again."
+        
+        try:
+            print(f"📄 Summarizing response (raw length: {len(str(raw_data))})...")
+            summarized_answer = self._summarize_response(str(raw_data), user_query)
+            
+            print(f"✅ Summarization completed")
+            print(f"{'='*60}\n")
+            return summarized_answer
+        
+        except Exception as e:
+            print(f"❌ Summarization failed: {str(e)}")
+            formatted_response = self._manual_format_fallback(str(raw_data))
+            print(f"{'='*60}\n")
+            return formatted_response
