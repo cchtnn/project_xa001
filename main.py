@@ -415,7 +415,6 @@ async def query(
 
     print("User has public CSV:", has_public_csv)
     
-    # NEW LOGIC: Only use public CSV if it's actually a transcript query
     # Handle PAYROLL_CALENDAR queries
     if query_type == QueryType.PAYROLL_CALENDAR:
         logging.info(f"User {username} queried PAYROLL_CALENDAR: {query}")

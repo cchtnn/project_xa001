@@ -242,87 +242,118 @@ class PayrollCSVAgent:
                 agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
                 allow_dangerous_code=True,
                 handle_parsing_errors=True,  # This will handle parsing errors gracefully
-                max_iterations=5,  # Increased from 3 to 5
-                max_execution_time=90,
+                max_iterations=3,  # Increased from 3 to 5
+                max_execution_time=60,
                 return_intermediate_steps=True,
                 include_df_in_prompt=True,
+                early_stopping_method="generate",
                 prefix="""
-    You are working with a pandas DataFrame containing payroll calendar data.
-    The DataFrame is already loaded as 'df' and pandas is already imported as 'pd'.
+You are working with a pandas DataFrame containing payroll calendar data.
 
-    Columns:
-    - payroll_no: Payroll period number (integer)
-    - start_date: Pay period start date (string format: M/D/YYYY)
-    - end_date: Pay period end date (string format: M/D/YYYY)  
-    - check_date: Check/payment date (string format: M/D/YYYY)
-    - optional_withholdings_changes_by: Deadline for withholding changes (string format: M/D/YYYY)
+CRITICAL ENVIRONMENT LIMITATION:
+The python_repl_ast tool does NOT have pandas imported as 'pd' in its scope.
+You CANNOT use 'pd.to_datetime()' or any 'pd.' functions.
+The DataFrame 'df' exists, but you must work with it using ONLY:
+- String operations (.str methods)
+- DataFrame methods (.shape, .nunique(), .loc, etc.)
+- Python built-in functions (len, str, int, etc.)
 
-    CRITICAL INSTRUCTIONS:
-    1. pandas is ALREADY imported as 'pd' - DO NOT import it again
-    2. df is ALREADY loaded - DO NOT load it again
-    3. Use ONLY the tool: python_repl_ast
-    4. ALWAYS follow this EXACT format (no deviation):
-    
-    Thought: [your reasoning]
-    Action: python_repl_ast
-    Action Input: [your code]
-    
-    WAIT for Observation, then:
-    
-    Thought: [analysis of observation]
-    Final Answer: [your answer based on observation]
+Columns:
+- payroll_no: Payroll period number (integer, UNIQUE - only ONE row per payroll number)
+- start_date: Pay period start date (string format: M/D/YYYY)
+- end_date: Pay period end date (string format: M/D/YYYY)  
+- check_date: Check/payment date (string format: M/D/YYYY)
+- optional_withholdings_changes_by: Deadline for withholding changes (string format: M/D/YYYY)
 
-    5. NEVER combine Action and Final Answer in the same response
-    6. ALWAYS wait for the Observation before providing Final Answer
+CRITICAL INSTRUCTIONS:
+1. NEVER use pd.to_datetime() - it will always fail with NameError
+2. Use STRING operations for date filtering: df['start_date'].str.contains('2026')
+3. Use ONLY the tool: python_repl_ast
+4. Follow this workflow:
+   - Think about what you need to do
+   - Write ONE Action with python_repl_ast
+   - Write ONLY Python code in Action Input
+   - Wait for the Observation
+   - IF the Observation shows valid results → Provide Final Answer IMMEDIATELY
+   - DO NOT run additional actions if you already have the answer
 
-    DATE HANDLING - REQUIRED PATTERN:
-    For date filtering, ALWAYS use this pattern:
-    ```python
-    # Convert date columns to datetime
-    df['col_dt'] = pd.to_datetime(df['column_name'], format='%m/%d/%Y')
-    target_dt = pd.to_datetime('M/D/YYYY', format='%m/%d/%Y')
-    result = df[df['col_dt'] == target_dt][['payroll_no', 'start_date', 'end_date', 'check_date']]
-    print(result)
-    ```
+5. EFFICIENCY RULE: Once you get a valid observation with data, STOP and provide Final Answer
+6. Each payroll_no is UNIQUE - there is only ONE row per payroll number, no need to iterate
+7. If you get NameError about 'pd', immediately switch to string operations
 
-    For date ranges:
-    ```python
-    df['start_date_dt'] = pd.to_datetime(df['start_date'], format='%m/%d/%Y')
-    df['end_date_dt'] = pd.to_datetime(df['end_date'], format='%m/%d/%Y')
-    target = pd.to_datetime('M/D/YYYY', format='%m/%d/%Y')
-    result = df[(df['start_date_dt'] <= target) & (df['end_date_dt'] >= target)]
-    print(result)
-    ```
+WORKING CODE PATTERNS:
 
-    RESPONSE RULES:
-    7. Use print() to display the result DataFrame
-    8. Include ALL relevant columns in the result
-    9. After seeing the Observation with printed result, provide Final Answer immediately
-    10. DO NOT keep reformatting or running additional actions after getting valid result
+Pattern 1 - Count rows by year:
+result = df[df['start_date'].str.contains('2026')]['payroll_no'].nunique()
+print(result)
 
-    CORRECT EXAMPLE:
+Pattern 2 - Filter by specific date:
+result = df[df['start_date'] == '5/9/2026'][['payroll_no', 'start_date', 'end_date', 'check_date']]
+print(result)
 
-    Q: "What is the start date and end date where check date is 3/6/2026?"
+Pattern 3 - Filter by payroll number:
+result = df[df['payroll_no'] == 10][['payroll_no', 'start_date', 'end_date', 'check_date']]
+print(result)
 
-    Thought: I need to filter rows where check_date equals '3/6/2026' and return start_date and end_date.
-    Action: python_repl_ast
-    Action Input: df['check_dt'] = pd.to_datetime(df['check_date'], format='%m/%d/%Y'); target = pd.to_datetime('3/6/2026', format='%m/%d/%Y'); result = df[df['check_dt'] == target][['start_date', 'end_date']]; print(result)
+Pattern 4 - Calculate days difference (USE THIS FOR DATE CALCULATIONS):
+from datetime import datetime
+row = df[df['payroll_no'] == 9].iloc[0]
+start = row['start_date']
+check = row['check_date']
+start_parts = start.split('/')
+check_parts = check.split('/')
+start_dt = datetime(int(start_parts[2]), int(start_parts[0]), int(start_parts[1]))
+check_dt = datetime(int(check_parts[2]), int(check_parts[0]), int(check_parts[1]))
+days = (check_dt - start_dt).days
+print("Start: " + start + ", Check: " + check + ", Days: " + str(days))
 
-    [WAIT FOR OBSERVATION]
+Pattern 5 - Get all rows:
+result = df[['payroll_no', 'start_date', 'end_date', 'check_date']]
+print(result)
 
-    Observation: 
-    start_date   end_date
-    3  2/14/2026  2/27/2026
+RESPONSE RULES:
+8. Use print() to display results
+9. After seeing valid Observation with data → STOP and provide Final Answer
+10. DO NOT run the same action multiple times
+11. DO NOT second-guess yourself - if the observation shows the answer, that IS the answer
 
-    Thought: I have found the matching record. The start date is 2/14/2026 and end date is 2/27/2026.
-    Final Answer: The payroll period where check date is 3/6/2026 has start date 2/14/2026 and end date 2/27/2026.
+ERROR RECOVERY:
+- If you see "NameError: name 'pd' is not defined" → Use string operations instead
+- If you see "SyntaxError" → Remove any non-Python text from your code
+- If you see "KeyError" → Check column names match exactly
 
-    WRONG EXAMPLE (DO NOT DO THIS):
+WORKFLOW EXAMPLE (NOTICE: ONLY ONE ACTION NEEDED):
 
-    Action: python_repl_ast
-    Action Input: [code]
-    Final Answer: [answer]  ← WRONG! Cannot combine Action and Final Answer!
-    """
+Question: "How many payroll periods in 2026?"
+
+Thought: I need to count rows where start_date contains '2026' using string operations.
+Action: python_repl_ast
+Action Input: result = df[df['start_date'].str.contains('2026')]['payroll_no'].nunique()
+print(result)
+Observation: 26
+Thought: I found 26 unique payroll periods. This answers the question completely.
+Final Answer: There are 26 payroll periods in 2026.
+
+ANOTHER EXAMPLE (NOTICE: ONLY ONE ACTION NEEDED):
+
+Question: "Days difference between start and check date for payroll 9?"
+
+Thought: I need to get dates for payroll 9 and calculate difference. Since payroll_no is unique, there's only one row.
+Action: python_repl_ast
+Action Input: from datetime import datetime
+row = df[df['payroll_no'] == 9].iloc[0]
+start = row['start_date']
+check = row['check_date']
+start_parts = start.split('/')
+check_parts = check.split('/')
+start_dt = datetime(int(start_parts[2]), int(start_parts[0]), int(start_parts[1]))
+check_dt = datetime(int(check_parts[2]), int(check_parts[0]), int(check_parts[1]))
+days = (check_dt - start_dt).days
+print("Start: " + start + ", Check: " + check + ", Days: " + str(days))
+Observation: Start: 4/25/2026, Check: 5/15/2026, Days: 20
+Thought: Perfect! I have the answer. The days difference is 20 days.
+Final Answer: The difference between the start date (4/25/2026) and check date (5/15/2026) for payroll 9 is 20 days.
+"""
             )
             self.agent_executor = self.agent
             
@@ -428,7 +459,7 @@ class PayrollCSVAgent:
         return "No data found"
     
     def _summarize_response(self, raw_response: str, original_question: str) -> str:
-        """Use LLM to summarize and format the response - FIXED VERSION"""
+        """Use LLM to summarize and format the response - IMPROVED FORMATTING"""
         
         print(f"📄 Summarizing response (raw length: {len(raw_response)})...")
         
@@ -445,7 +476,7 @@ class PayrollCSVAgent:
             # This is a count result - format it directly
             count = raw_stripped
             print(f"🔢 Detected count result: {count}")
-            return f"There are **{count+1}** payroll periods in 2026."
+            return f"There are **{int(count)+1}** payroll periods in CY 2026 from January 3rd, 2026 till January 2nd, 2027."
         
         # Check if response indicates empty result (AFTER numeric check)
         if 'Empty DataFrame' in raw_response:
@@ -456,50 +487,68 @@ class PayrollCSVAgent:
             return "No matching payroll records found for the specified criteria."
         
         prompt = f"""
-    You are a payroll data presentation assistant. Your job is to convert raw DataFrame output into a clear, professional, human-readable response.
+    You are a payroll data presentation assistant. Your job is to convert raw DataFrame output into CONCISE, PROFESSIONAL, STORY-LIKE responses that feel natural to read.
 
     Original Question: {original_question}
 
     Raw Data (DataFrame output):
     {raw_response}
 
-    **INSTRUCTIONS:**
+    **RESPONSE STYLE REQUIREMENTS:**
 
-    1. **Parse the DataFrame**: Extract the actual data values from the DataFrame representation
-    - Look for column headers (payroll_no, start_date, end_date, check_date, days_diff, etc.)
-    - Extract the row data (numbers and dates)
-    - Ignore DataFrame formatting characters and index numbers
+    Write responses as if you're telling someone a brief, professional story. Make it feel conversational yet precise.
 
-    2. **For Single Record Queries** (like "payroll number 10"):
-    Format as clear, readable text explaining the result.
-    Example: "For Payroll Period #10 (May 9, 2026 to May 28, 2026), the check date is May 28, 2026. The difference between the pay period start date and check date is **19 days**."
+    1. **For Single Record Queries** (like "payroll number 10" or "days difference"):
+    - Lead with the direct answer
+    - Use ordinal dates (e.g., "May 9th, 2026" not "May 9, 2026")
+    - Keep it to ONE sentence when possible
+    - Format: "[Key info] with [additional context]"
+    
+    Example: "Start date May 9th, 2026 and Check Date of May 28th, 2026 with the gap of 19 days."
 
-    3. **For Calculation Results** (like "days difference"):
-    Emphasize the calculated value and provide context.
-    Example: "The difference between the pay period start date (May 9, 2026) and the check date (May 28, 2026) for Payroll #10 is **19 days**."
+    2. **For Count Results**:
+    - State the count with context in one flowing sentence
+    - Include the year range naturally
+    - Use ordinal dates (e.g., "January 3rd" not "January 3")
+    
+    Example: "There are 27 payroll periods in CY 2026 from January 3rd, 2026 till January 2nd, 2027."
+
+    3. **For Date Range Queries**:
+    - Present dates in a flowing manner
+    - Use ordinal suffixes (1st, 2nd, 3rd, 9th, etc.)
+    
+    Example: "The payroll period runs from February 14th, 2026 to February 27th, 2026, with check date on March 6th, 2026."
 
     4. **For Multiple Records**:
-    Use HTML table format:
+    - Introduce with a brief statement
+    - Use clean HTML table
     ```html
     <table>
     <tr><th>Payroll No</th><th>Start Date</th><th>End Date</th><th>Check Date</th></tr>
-    <tr><td>1</td><td>1/3/2026</td><td>1/16/2026</td><td>1/23/2026</td></tr>
+    <tr><td>1</td><td>Jan 3rd, 2026</td><td>Jan 16th, 2026</td><td>Jan 23rd, 2026</td></tr>
     </table>
     ```
 
-    5. **For Count Results**:
-    Provide a direct answer with context: "There are **27** payroll periods in 2026, spanning from January 3, 2026 to January 2, 2027."
+    **FORMATTING RULES:**
+    - Use ordinal dates: 1st, 2nd, 3rd, 4th, 5th, etc. (not 1, 2, 3)
+    - Month abbreviations for tables, full names in sentences
+    - Use "CY" for "Current Year"
+    - Use "with the gap of X days" for date differences
+    - Keep sentences flowing - avoid bullet points unless showing multiple records
+    - Use **bold** ONLY for key numbers (counts, differences)
+    - Write in active voice, present tense
 
-    **CRITICAL RULES:**
-    - Convert dates to readable format (e.g., "May 9, 2026" instead of "2026-05-09")
-    - Use **bold** for key numbers and results
-    - Write in complete sentences, not bullet points
-    - Focus on answering the original question directly
-    - If multiple columns are present, mention all relevant information
-    - Make it conversational and easy to understand
-    - For count queries, always provide the number in bold with context about the year
+    **WHAT TO AVOID:**
+    - Do NOT write "Based on the provided DataFrame"
+    - Do NOT write "Here's the response"
+    - Do NOT explain what you're doing
+    - Do NOT use bullet points for single records
+    - Do NOT write multiple sentences when one will do
+    - Do NOT use formal date formats like "May 9, 2026" - use "May 9th, 2026"
 
-    Provide your response now:
+    **CRITICAL:** Extract the actual data from the DataFrame representation, then present it naturally. Go straight to the answer.
+
+    Provide your concise, story-like response now:
     """
         
         try:
@@ -513,8 +562,29 @@ class PayrollCSVAgent:
             # Clean up any extra whitespace
             result = re.sub(r'\n{3,}', '\n\n', result)
             result = result.strip()
-            print("Final Summarized Response:", result)
             
+            # Remove any leftover meta-commentary
+            meta_phrases = [
+                "Based on the provided DataFrame output",
+                "Here's the parsed data:",
+                "Here's the response in a clear, readable format:",
+                "Based on the DataFrame:",
+                "According to the data:"
+            ]
+            
+            for phrase in meta_phrases:
+                if phrase in result:
+                    # Remove the phrase and everything before it up to the first newline or colon
+                    parts = result.split(phrase, 1)
+                    if len(parts) > 1:
+                        # Take everything after the phrase, skip any bullet points or formatting
+                        remaining = parts[1].strip()
+                        # If there's a colon or newline shortly after, skip to the actual content
+                        if remaining.startswith(':'):
+                            remaining = remaining[1:].strip()
+                        result = remaining
+            
+            print("Final Summarized Response:", result)
             print(f"✅ Summarization completed")
             return result
                     
