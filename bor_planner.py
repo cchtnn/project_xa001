@@ -60,20 +60,6 @@ def get_bor_meeting_by_month_year(month_name: str, year: int) -> Optional[Dict[s
     return None
 
 
-def get_report_due_for_meeting(meeting_date_iso: str) -> Optional[Dict[str, Any]]:
-    """Return reporting due-date record for a given ISO meeting date."""
-    data = _load_bor_data()
-    due_list = (
-        data.get("reporting_requirements", {})
-        .get("bi_monthly_written_reports", {})
-        .get("due_dates", [])
-    )
-    for item in due_list:
-        if item.get("meeting_date") == meeting_date_iso:
-            return item
-    return None
-
-
 def get_committee_schedule(committee_name: str) -> Optional[Dict[str, Any]]:
     """Return committee record (name, time, specific dates)."""
     data = _load_bor_data()
@@ -116,6 +102,15 @@ def get_association_reporting() -> Dict[str, Any]:
     return (
         data.get("reporting_requirements", {})
         .get("association_reporting", {})
+    )
+
+
+def get_bi_monthly_written_reports() -> Dict[str, Any]:
+    """Return bi-monthly written report requirements."""
+    data = _load_bor_data()
+    return (
+        data.get("reporting_requirements", {})
+        .get("bi_monthly_written_reports", {})
     )
 
 
@@ -165,16 +160,28 @@ def answer_bor_query(user_query: str, today: Optional[date] = None) -> str:
     """
     High-level BOR query handler.
 
-    It stays deterministic and only uses the BOR JSON, so it is safe for
-    production without affecting other domains.
+    Returns short explanatory text and HTML tables for date-heavy answers.
     """
     if today is None:
         today = date.today()
 
     q_lower = user_query.lower().strip()
 
+    # 0. Document metadata / resolution / approval
+    if "resolution" in q_lower or "approved" in q_lower or "planner" in q_lower:
+        data = _load_bor_data()
+        meta = data.get("document_metadata", {})
+        title = meta.get("title", "Board of Regents Meeting Planner")
+        approval = meta.get("approval_date", "")
+        res_no = meta.get("resolution_number", "")
+        year = meta.get("academic_year", "")
+        return (
+            f"{title} covers the {year} academic year, was approved on {approval}, "
+            f"under resolution {res_no}."
+        )
+
     # 1. "Next BOR meeting" style
-    if "next" in q_lower and ("bor" in q_lower or "board of regents" in q_lower):
+    if "next" in q_lower and ("bor" in q_lower or "board of regents" in q_lower or "board meeting" in q_lower):
         m = get_next_bor_meeting(today)
         if not m:
             return "There are no upcoming Board of Regents meetings in the current planner."
@@ -184,7 +191,7 @@ def answer_bor_query(user_query: str, today: Optional[date] = None) -> str:
         )
 
     # 2. Direct "BOR meeting in <month> <year>" style
-    if ("bor" in q_lower or "board of regents" in q_lower) and "meeting" in q_lower:
+    if ("bor" in q_lower or "board of regents" in q_lower or "board meeting" in q_lower) and "meeting" in q_lower:
         month, year = _extract_month_and_year_from_query(user_query)
         if month and year:
             m = get_bor_meeting_by_month_year(month, year)
@@ -194,36 +201,152 @@ def answer_bor_query(user_query: str, today: Optional[date] = None) -> str:
                     f"{m.get('meeting_date_formatted')}."
                 )
 
-    # 3. Reporting due dates
-    if "report" in q_lower and ("due" in q_lower or "deadline" in q_lower):
+    # Ask flags
+    asks_meeting = (
+        "meeting" in q_lower
+        or "board meeting" in q_lower
+        or "bor meeting" in q_lower
+    )
+    asks_report = "report" in q_lower or "reports" in q_lower
+
+    # 3. BOTH meeting and report in the question → combined schedule + due table
+    if asks_meeting and asks_report:
         data = _load_bor_data()
-        bi = (
-            data.get("reporting_requirements", {})
-            .get("bi_monthly_written_reports", {})
+        meetings = data.get("bor_meetings", {}).get("specific_meetings", [])
+        if not meetings:
+            return "Board of Regents meeting and report dates are not defined in the current planner."
+
+        rows_html = []
+        for m in meetings:
+            month = m.get("month")
+            year = m.get("year")
+            meeting_fmt = m.get("meeting_date_formatted")
+            report_fmt = m.get("report_due_date_formatted")
+            rows_html.append(
+                f"<tr><td>{month} {year}</td><td>{meeting_fmt}</td><td>{report_fmt}</td></tr>"
+            )
+
+        pattern = data.get("bor_meetings", {}).get("schedule_pattern", {})
+        freq = pattern.get("frequency", "Bi-Monthly")
+        dow = pattern.get("day_of_week", "Friday")
+        wom = pattern.get("week_of_month", "2nd Friday")
+
+        table_html = (
+            f"<p>Regular Board of Regents meetings are generally held {freq} on the {wom} "
+            f"({dow}), and written reports are due on the Wednesday prior to each meeting.</p>"
+            "<table border='1' cellspacing='0' cellpadding='4'>"
+            "<thead><tr><th>Month / Year</th><th>BOR meeting date</th><th>Report due date</th></tr></thead>"
+            "<tbody>"
+            + "".join(rows_html) +
+            "</tbody></table>"
         )
+        return table_html
+
+    # 4. Reporting due dates ONLY – table
+    if asks_report and "due" in q_lower:
+        data = _load_bor_data()
+        bi = get_bi_monthly_written_reports()
         due_dates = bi.get("due_dates", [])
         if not due_dates:
             return "Reporting due dates are not available in the current BOR planner."
 
-        month, year = _extract_month_and_year_from_query(user_query)
-        if month:
-            for item in due_dates:
-                mdate = _parse_iso_date(item.get("meeting_date"))
-                if not mdate:
-                    continue
-                if mdate.strftime("%B").lower() == month.lower():
-                    return (
-                        f"The report due date before the {month} Board of Regents meeting "
-                        f"is {item.get('due_date_formatted')}."
-                    )
+        meetings = data.get("bor_meetings", {}).get("specific_meetings", [])
+        meeting_by_date = {m["meeting_date"]: m for m in meetings if "meeting_date" in m}
 
-        # Fallback generic description
+        rows_html = []
+        for item in due_dates:
+            meeting_date_iso = item.get("meeting_date")
+            due_fmt = item.get("due_date_formatted")
+            meeting = meeting_by_date.get(meeting_date_iso)
+            meeting_fmt = meeting.get("meeting_date_formatted") if meeting else meeting_date_iso
+            rows_html.append(
+                f"<tr><td>{due_fmt}</td><td>for BOR on {meeting_fmt}</td></tr>"
+            )
+
+        table_html = (
+            "<p>Reports are due on the Wednesday prior to each Board of Regents meeting.</p>"
+            "<table border='1' cellspacing='0' cellpadding='4'>"
+            "<thead><tr><th>Report due</th><th>Context</th></tr></thead>"
+            "<tbody>"
+            + "".join(rows_html) +
+            "</tbody></table>"
+        )
+        return table_html
+
+    # 5. Generic BOR meeting schedule ONLY – table
+    if asks_meeting and ("when" in q_lower or "schedule" in q_lower or "date" in q_lower or "due" in q_lower):
+        data = _load_bor_data()
+        meetings = data.get("bor_meetings", {}).get("specific_meetings", [])
+        if not meetings:
+            return "Board of Regents meeting dates are not defined in the current planner."
+
+        pattern = data.get("bor_meetings", {}).get("schedule_pattern", {})
+        freq = pattern.get("frequency", "Bi-Monthly")
+        dow = pattern.get("day_of_week", "Friday")
+        wom = pattern.get("week_of_month", "2nd Friday")
+
+        rows_html = []
+        for m in meetings:
+            month = m.get("month")
+            year = m.get("year")
+            meeting_fmt = m.get("meeting_date_formatted")
+            rows_html.append(
+                f"<tr><td>{month} {year}</td><td>{meeting_fmt}</td></tr>"
+            )
+
+        table_html = (
+            f"<p>Regular Board of Regents meetings are generally held {freq} on the {wom} "
+            f"({dow}).</p>"
+            "<table border='1' cellspacing='0' cellpadding='4'>"
+            "<thead><tr><th>Month / Year</th><th>BOR meeting date</th></tr></thead>"
+            "<tbody>"
+            + "".join(rows_html) +
+            "</tbody></table>"
+        )
+        return table_html
+
+    # 6. Bi-monthly written reports content / components
+    if "bi-monthly" in q_lower or ("written reports" in q_lower) or ("bor reports" in q_lower and "include" in q_lower):
+        bi = get_bi_monthly_written_reports()
+        months = bi.get("reporting_months", [])
+        components = bi.get("required_components", [])
+        submission = bi.get("submission_deadline", "")
+
+        comp_items = ", ".join(c.get("component") for c in components) if components else ""
         return (
-            "Reports are due on the Wednesday prior to each Board of Regents meeting, "
-            "with specific due dates defined in the planner for each meeting."
+            f"Bi-monthly written reports are submitted in {', '.join(months)}. "
+            f"Reports are due {submission}. Each report must include: {comp_items}."
         )
 
-    # 4. Committee meetings by committee name
+    # 7. Association reporting schedule (Faculty & Staff)
+    if "association" in q_lower or "faculty association" in q_lower or "staff association" in q_lower:
+        assoc = get_association_reporting()
+        entities = assoc.get("entities", [])
+        fmt = assoc.get("format", {})
+        schedule = assoc.get("reporting_schedule", [])
+        deadline = assoc.get("submission_deadline", "")
+        entities_str = ", ".join(entities) if entities else "the associations"
+        requirement = fmt.get("requirement") or ""
+        return (
+            f"{entities_str} provide both written and oral reports bi-monthly in "
+            f"{', '.join(schedule)}. {requirement} Reports are due {deadline}."
+        )
+
+    # 8. Committee meeting patterns (generic question)
+    if "committee" in q_lower and ("when" in q_lower or "schedule" in q_lower or "pattern" in q_lower):
+        data = _load_bor_data()
+        pat = data.get("committee_meetings", {}).get("schedule_pattern", {})
+        freq = pat.get("frequency", "Bi-Monthly")
+        dow = pat.get("day_of_week", "Friday")
+        wom = pat.get("week_of_month", "2nd Friday")
+        note = pat.get("note", "Alternating months from regular BOR meetings")
+        return (
+            f"Standing committees meet {freq} on the {wom} ({dow}) in alternating months "
+            f"from regular BOR meetings ({note}). Finance/Audit/Investment meets at 9:00 a.m., "
+            f"Governance at 11:30 a.m., and Academic & Student Success at 2:00 p.m."
+        )
+
+    # 9. Committee meetings by committee name – table
     if "committee" in q_lower:
         if "finance" in q_lower:
             cname = "Finance/Audit/Investment Committee"
@@ -243,50 +366,124 @@ def answer_bor_query(user_query: str, today: Optional[date] = None) -> str:
             formatted_dates = [d.get("formatted") for d in dates if d.get("formatted")]
             if not formatted_dates:
                 return f"{cname} meets as scheduled, but specific dates are not listed."
-            return (
-                f"{cname} meets at {time}, with the following scheduled dates: "
-                + "; ".join(formatted_dates)
-                + "."
-            )
 
-    # 5. Committee meetings filtered by month
-    if "committee" in q_lower and any(m in q_lower for m in ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]):
+            rows_html = [
+                f"<tr><td>{d}</td><td>{time}</td></tr>"
+                for d in formatted_dates
+            ]
+            table_html = (
+                f"<p>{cname} meets at {time} on the scheduled dates below.</p>"
+                "<table border='1' cellspacing='0' cellpadding='4'>"
+                "<thead><tr><th>Date</th><th>Time</th></tr></thead>"
+                "<tbody>"
+                + "".join(rows_html) +
+                "</tbody></table>"
+            )
+            return table_html
+
+    # 10. Committee meetings filtered by month – table
+    if "committee" in q_lower and any(
+        m in q_lower
+        for m in [
+            "january",
+            "february",
+            "march",
+            "april",
+            "may",
+            "june",
+            "july",
+            "august",
+            "september",
+            "october",
+            "november",
+            "december",
+        ]
+    ):
         month, _ = _extract_month_and_year_from_query(user_query)
         if month:
             rows = list_committee_meetings_for_month(month)
             if not rows:
                 return f"No committee meetings are scheduled in {month} in the BOR planner."
-            parts = []
+            rows_html = []
             for cname, d in rows:
-                parts.append(f"{cname} on {d.get('formatted')}")
-            return (
-                f"In {month}, the following committee meetings are scheduled: "
-                + "; ".join(parts)
-                + "."
+                rows_html.append(
+                    f"<tr><td>{cname}</td><td>{d.get('formatted')}</td></tr>"
+                )
+            table_html = (
+                f"<p>Committee meetings scheduled in {month} are listed below.</p>"
+                "<table border='1' cellspacing='0' cellpadding='4'>"
+                "<thead><tr><th>Committee</th><th>Date</th></tr></thead>"
+                "<tbody>"
+                + "".join(rows_html) +
+                "</tbody></table>"
             )
+            return table_html
 
-    # 6. Association reporting rules
-    if "faculty association" in q_lower or "staff association" in q_lower or "association reporting" in q_lower:
-        assoc = get_association_reporting()
-        entities = assoc.get("entities", [])
-        fmt = assoc.get("format", {})
-        schedule = assoc.get("reporting_schedule", [])
-        deadline = assoc.get("submission_deadline", "")
-        entities_str = ", ".join(entities) if entities else "the associations"
-        requirement = fmt.get("requirement") or ""
-        return (
-            f"{entities_str} report during the Board of Regents meetings in "
-            f"{', '.join(schedule)}. {requirement} Reports are due "
-            f"{deadline}."
-        )
-
-    # 7. Key events
-    if "key events" in q_lower or "graduation" in q_lower or "acct" in q_lower or "aihec" in q_lower:
+    # 11. Key events (confirmed + pending, includes ACCT NLS '26) – specific or table
+    if (
+        "key events" in q_lower
+        or "graduation" in q_lower
+        or "acct" in q_lower
+        or "aihec" in q_lower
+        or "nls" in q_lower
+        or "event" in q_lower
+    ):
         events = list_key_events()
         confirmed = events.get("confirmed_events", [])
-        if not confirmed:
-            return "No confirmed key events are listed in the BOR planner."
-        pieces = []
+        pending = events.get("pending_events", [])
+
+        # Specific ACCT NLS '26 handling
+        if "acct nls" in q_lower:
+            for e in pending:
+                if "acct nls" in e.get("event_name", "").lower():
+                    start = e.get("start_date")
+                    status = e.get("status", "")
+                    if start and "tba" in status.lower():
+                        return (
+                            f"{e.get('event_name')} starts on {start}. "
+                            "The end date has not been announced."
+                        )
+                    elif start:
+                        return (
+                            f"{e.get('event_name')} starts on {start}. "
+                            f"Status: {status}."
+                        )
+            for e in confirmed:
+                if "acct nls" in e.get("event_name", "").lower():
+                    start = e.get("start_date")
+                    end = e.get("end_date")
+                    if start and end:
+                        return f"{e.get('event_name')} runs from {start} to {end}."
+                    elif start:
+                        return f"{e.get('event_name')} starts on {start}."
+            return "ACCT NLS '26 is mentioned in the planner, but detailed dates are not fully defined."
+
+        # Generic lookup by event name fragment (AIHEC FALL’25, ACCT GLI, graduations, etc.)
+        for e in confirmed + pending:
+            name = e.get("event_name", "")
+            if not name:
+                continue
+            name_lower = name.lower()
+            # Match on first word or major token
+            if any(tok in q_lower for tok in name_lower.replace("’", "'").split()):
+                start = e.get("start_date")
+                end = e.get("end_date")
+                dt = e.get("date")
+                status = e.get("status", "")
+                if dt:
+                    return f"{name} is scheduled on {dt} ({status})."
+                if start and end:
+                    return f"{name} runs from {start} to {end} ({status})."
+                if start and "tba" in status.lower():
+                    return f"{name} starts on {start}. The end date has not been announced."
+                if start:
+                    return f"{name} starts on {start} ({status})."
+                if "tba" in status.lower():
+                    return f"{name} has dates to be announced ({status})."
+                return f"{name} is listed in the planner with status: {status}."
+
+        # Generic listing as table
+        rows_html = []
         for e in confirmed:
             name = e.get("event_name")
             start = e.get("start_date")
@@ -294,24 +491,50 @@ def answer_bor_query(user_query: str, today: Optional[date] = None) -> str:
             dt = e.get("date")
             status = e.get("status")
             if dt:
-                pieces.append(f"{name} on {dt} ({status})")
+                date_text = dt
             elif start and end:
-                pieces.append(f"{name} from {start} to {end} ({status})")
+                date_text = f"{start} to {end}"
             elif start:
-                pieces.append(f"{name} starting {start} ({status})")
-        if not pieces:
-            return "Key events are defined in the BOR planner but dates are incomplete."
-        return "Key events in the Board of Regents planner include: " + "; ".join(pieces) + "."
+                date_text = f"Starting {start}"
+            else:
+                date_text = ""
+            rows_html.append(
+                f"<tr><td>{name}</td><td>{date_text}</td><td>{status}</td></tr>"
+            )
 
-    # 8. Fallback BOR answer: generic FAQ-style summary
+        for e in pending:
+            name = e.get("event_name")
+            start = e.get("start_date")
+            status = e.get("status")
+            if start:
+                date_text = f"Starting {start}"
+            else:
+                date_text = ""
+            rows_html.append(
+                f"<tr><td>{name}</td><td>{date_text}</td><td>{status}</td></tr>"
+            )
+
+        if not rows_html:
+            return "Key events are defined in the BOR planner but dates are incomplete."
+
+        table_html = (
+            "<p>Key events in the Board of Regents planner are listed below.</p>"
+            "<table border='1' cellspacing='0' cellpadding='4'>"
+            "<thead><tr><th>Event</th><th>Date(s)</th><th>Status</th></tr></thead>"
+            "<tbody>"
+            + "".join(rows_html) +
+            "</tbody></table>"
+        )
+        return table_html
+
+    # 12. Fallback BOR answer: generic FAQ-style summary
     data = _load_bor_data()
     faq_list = data.get("faq", [])
     if faq_list:
-        # Very lightweight: return a brief generic description instead of copying FAQ text
         return (
-            "The Board of Regents planner defines bi-monthly BOR meetings, "
-            "alternating committee meetings, reporting requirements, and key events "
-            "for the 2025-2026 academic year."
+            "The Board of Regents planner defines regular BOR meetings, "
+            "alternating committee meetings, bi-monthly written reports, "
+            "association reporting, and key events for the 2025-2026 academic year."
         )
 
     return (

@@ -126,7 +126,88 @@ class QueryClassifier:
             "When is DC Spring Graduation as per the Board of Regents schedule?",
             "Show me all BOR-related events in 2026",
             "What is the Board of Regents meeting planner?",
-        ]
+            "when is ACCT NLS ‘26 event scheduled",
+            "AIHEC SPRING BOARD",
+            # BOR meeting timing
+            "When is the next BOR meeting?",
+            "When is the next Board of Regents meeting?",
+            "What are the Board of Regents meeting dates for 2025-2026?",
+            "When is the BOR meeting in November 2025?",
+            "When is the BOR meeting in January 2026?",
+            "When is the BOR meeting in March 2026?",
+            "When is the BOR meeting in May 2026?",
+            "When is the BOR meeting in July 2026?",
+            "When is the BOR meeting in September 2026?",
+            "What is the regular BOR meeting schedule?",
+            "On which day of the week are BOR meetings held?",
+            "Are BOR meetings bi-monthly?",
+            "Are BOR meetings generally on the 2nd Friday?",
+
+            # BOR report due dates
+            "When is the BOR report due?",
+            "When are BOR reports due?",
+            "What are the report due dates before each BOR meeting?",
+            "When is the report due for the November 2025 BOR meeting?",
+            "When is the report due for the January 2026 BOR meeting?",
+            "When is the report due for the March 2026 BOR meeting?",
+            "When is the report due for the May 2026 BOR meeting?",
+            "When is the report due for the July 2026 BOR meeting?",
+            "When is the report due for the September 2026 BOR meeting?",
+            "Are BOR reports due on Wednesday prior to the meeting?",
+
+            # Bi-monthly written reports content
+            "What must be included in BOR reports?",
+            "What are the components of the bi-monthly written reports?",
+            "What is required in the BOR bi-monthly written report?",
+            "What should the BOR dashboard of key metrics include?",
+            "What are the strategic goals report requirements for BOR?",
+            "What are the department goals reporting requirements for BOR?",
+            "What are other activities in the BOR written report?",
+
+            # Association reporting (Faculty & Staff)
+            "What is the association reporting schedule for faculty and staff?",
+            "When do the Faculty and Staff Associations report to the Board of Regents?",
+            "Do Faculty and Staff Associations provide written and oral reports?",
+            "In which months do faculty and staff give BOR reports?",
+            "What report format must Faculty and Staff Associations use for BOR?",
+
+            # Committee schedules and times
+            "When do the committee meetings occur?",
+            "What is the standing committee meeting schedule?",
+            "When does the Finance/Audit/Investment Committee meet?",
+            "What time is the Finance/Audit/Investment Committee meeting?",
+            "When does the Governance Committee meet?",
+            "What time is the Governance Committee meeting?",
+            "When does the Academic & Student Success Committee meet?",
+            "What time is the Academic & Student Success Committee meeting?",
+            "Are committee meetings on the 2nd Friday of alternating months?",
+            "In which months do committees meet (October, December, February, April, June, August)?",
+
+            # Key events and graduations
+            "When is AIHEC Fall 2025 event scheduled?",
+            "When is ACCT Leadership Congress scheduled?",
+            "When is ACCT GLI scheduled?",
+            "When is the DC Winter Graduation?",
+            "When is the DC Spring Graduation?",
+            "What are the confirmed BOR-related key events?",
+            "What AIHEC events are planned for 2025-2026?",
+            "What ACCT events are listed in the BOR planner?",
+
+            # ACCT NLS and TBA events
+            "When is ACCT NLS 26 event scheduled?",
+            "When does ACCT NLS 2026 start and end?",
+            "What is the schedule for AIHEC Spring Board Meeting 2026?",
+            "What is the schedule for AIHEC Student Conference 2026?",
+            "What is the schedule for AIHEC Summer 2026?",
+            "Which BOR-related events have dates TBA?",
+
+            # High-level planner questions
+            "What is the Board of Regents meeting planner?",
+            "What does the BOR planner cover for 2025-2026?",
+            "What is the resolution number and approval date for the BOR planner?",
+            "What is the academic year for the current BOR planner?",
+            "Give me the full BOR meeting and reporting schedule for 2025-2026.",
+            ]
 
         if self.model:
             self.bor_embeddings = self.model.encode(
