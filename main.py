@@ -20,6 +20,7 @@ from dotenv import load_dotenv
 import secrets
 import logging
 from typing import List
+from bor_planner import answer_bor_query
 
 # Load environment variables
 load_dotenv()
@@ -315,6 +316,31 @@ async def query_endpoint(
     # CLASSIFICATION FIRST - Always classify the query regardless of uploaded data
     query_type, confidence_score = classify_user_query(user_query)
     print(f"Query classified as: {query_type} (confidence: {confidence_score:.3f})")
+
+    # --- BOR_MEETING queries (Board of Regents) ---
+    if query_type == QueryType.BOR_MEETING:
+        # Use current UTC date; adjust if you want local time
+        today = datetime.utcnow().date()
+        answer = answer_bor_query(query, today=today)
+
+        # Save to history
+        history_before = session_db.get_session_message_count(session_id)
+        session_db.add_single_qa_to_history(session_id, query, answer)
+
+        # If this was the first question, update the session name
+        if history_before == 0:
+            session_name = generate_session_name(query)
+            session_db.rename_session(session_id, session_name)
+            logging.info(f"Updated session {session_id} name to: {session_name}")
+
+        return {
+            "answer": answer,
+            "session_id": session_id,
+            "query_type": query_type,
+            "confidence_score": confidence_score,
+            "session_name_updated": history_before == 0,
+        }
+
 
     # Scenario a: Private checked - use ONLY user's private data (no fallback to common pool)
     print("Private flag is", private)
