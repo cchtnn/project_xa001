@@ -29,6 +29,10 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
 REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7))
 STRONG_PASSWORD = os.getenv("STRONG_PASSWORD", "true").lower() == "true"
 
+# Default payroll calendar path
+DEFAULT_PAYROLL_CALENDAR_PATH = 'data//payroll_cal//2026Payroll Calendar.docx'
+DEFAULT_PAYROLL_CSV_FOLDER = 'data//payroll_cal//csv_files'
+
 app = FastAPI()
 
 # Mount static files
@@ -294,9 +298,9 @@ async def upload_files(request: Request, session_id: int = Form(...), files: Lis
 
 # --- Query Endpoint (FIXED) ---
 @app.post("/query")
-async def query(
+async def query_endpoint(
     request: Request,
-    query: str = Form(...),
+    user_query: str = Form(..., alias="query"),  # Renamed to avoid conflict
     session_id: int = Form(...),
     private: bool = Form(False)
 ):
@@ -309,7 +313,7 @@ async def query(
     embedding_index = session_info['embedding_index_path']
 
     # CLASSIFICATION FIRST - Always classify the query regardless of uploaded data
-    query_type, confidence_score = classify_user_query(query)
+    query_type, confidence_score = classify_user_query(user_query)
     print(f"Query classified as: {query_type} (confidence: {confidence_score:.3f})")
 
     # Scenario a: Private checked - use ONLY user's private data (no fallback to common pool)
@@ -331,16 +335,16 @@ async def query(
             csv_path = os.path.join(user_csv_folder, csv_files[-1])
             print("Using private CSV for transcript query:", csv_path)
             answer = student_transcript_csv_handler.process_transcript_query(
-                query, csv_path=csv_path
+                user_query, csv_path=csv_path
             )
             
             # Check if this is the first question in the session BEFORE adding to history
             history_before = session_db.get_session_message_count(session_id)
-            session_db.add_single_qa_to_history(session_id, query, answer)
+            session_db.add_single_qa_to_history(session_id, user_query, answer)
 
             # If this was the first question, update the session name
             if history_before == 0:
-                session_name = generate_session_name(query)
+                session_name = generate_session_name(user_query)
                 session_db.rename_session(session_id, session_name)
                 logging.info(f"Updated session {session_id} name to: {session_name}")
 
@@ -362,10 +366,10 @@ async def query(
             answer = "I can only provide answers based on your private uploaded documents when private mode is enabled. Please upload relevant documents or uncheck the private option."
         
         history_before = session_db.get_session_message_count(session_id)
-        session_db.add_single_qa_to_history(session_id, query, answer)
+        session_db.add_single_qa_to_history(session_id, user_query, answer)
 
         if history_before == 0:
-            session_name = generate_session_name(query)
+            session_name = generate_session_name(user_query)
             session_db.rename_session(session_id, session_name)
             logging.info(f"Updated session {session_id} name to: {session_name}")
 
@@ -391,7 +395,7 @@ async def query(
     
     # Handle PAYROLL_CALENDAR queries
     if query_type == QueryType.PAYROLL_CALENDAR:
-        logging.info(f"User {username} queried PAYROLL_CALENDAR: {query}")
+        logging.info(f"User {username} queried PAYROLL_CALENDAR: {user_query}")
         
         # Determine payroll CSV path based on private flag
         if private:
@@ -403,6 +407,8 @@ async def query(
         
         # Look for payroll CSV (contains "payroll" in filename)
         payroll_csv_path = None
+        user_uploaded_file = False
+        
         if os.path.exists(payroll_csv_folder):
             csv_files = [f for f in os.listdir(payroll_csv_folder) if f.lower().endswith('.csv') and 'payroll' in f.lower()]
             print(f"Found CSV files with 'payroll': {csv_files}")
@@ -411,12 +417,52 @@ async def query(
                 merged_files = [f for f in csv_files if 'merged' not in f.lower()]
                 if merged_files:
                     payroll_csv_path = os.path.join(payroll_csv_folder, merged_files[0])
-                    print(f"Using merged payroll CSV: {payroll_csv_path}")
+                    print(f"Using user-uploaded payroll CSV: {payroll_csv_path}")
+                    user_uploaded_file = True
                 else:
                     payroll_csv_path = os.path.join(payroll_csv_folder, csv_files[-1])
-                    print(f"Using payroll CSV: {payroll_csv_path}")
+                    print(f"Using user-uploaded payroll CSV: {payroll_csv_path}")
+                    user_uploaded_file = True
         else:
             print(f"Payroll CSV folder does not exist: {payroll_csv_folder}")
+        
+        # Fallback to default payroll calendar if user hasn't uploaded
+        if not payroll_csv_path:
+            print(f"No user-uploaded payroll data found. Checking default payroll calendar...")
+            
+            # Ensure default CSV folder exists
+            os.makedirs(DEFAULT_PAYROLL_CSV_FOLDER, exist_ok=True)
+            
+            # Check if default CSV already exists
+            default_csv_files = [f for f in os.listdir(DEFAULT_PAYROLL_CSV_FOLDER) if f.lower().endswith('.csv') and 'payroll' in f.lower()]
+            
+            if default_csv_files:
+                # Use existing default CSV
+                payroll_csv_path = os.path.join(DEFAULT_PAYROLL_CSV_FOLDER, default_csv_files[-1])
+                print(f"Using existing default payroll CSV: {payroll_csv_path}")
+            elif os.path.exists(DEFAULT_PAYROLL_CALENDAR_PATH):
+                # Parse default DOCX and create CSV
+                print(f"Parsing default payroll calendar from: {DEFAULT_PAYROLL_CALENDAR_PATH}")
+                try:
+                    df = docx_parser.extract_payroll_calendar(DEFAULT_PAYROLL_CALENDAR_PATH, expected_count=27)
+                    df.columns = ['payroll_no', 'start_date', 'end_date', 'check_date']
+                    df['optional_withholdings_changes_by'] = df['end_date']
+                    
+                    # Save to default CSV folder
+                    default_csv_path = os.path.join(DEFAULT_PAYROLL_CSV_FOLDER, "2026Payroll_Calendar_payroll.csv")
+                    df.to_csv(default_csv_path, index=False)
+                    payroll_csv_path = default_csv_path
+                    
+                    print(f"Default payroll CSV created: {payroll_csv_path}")
+                    logging.info(f"Created default payroll CSV from {DEFAULT_PAYROLL_CALENDAR_PATH} with {len(df)} records")
+                except Exception as e:
+                    logging.error(f"Error processing default payroll calendar: {e}")
+                    print(f"Error processing default payroll calendar: {e}")
+            else:
+                print(f"Default payroll calendar not found at: {DEFAULT_PAYROLL_CALENDAR_PATH}")
+        
+        # Process the query with PayrollCSVAgent
+        answer = None  # Initialize answer variable
         
         if payroll_csv_path and os.path.exists(payroll_csv_path):
             # Import and use PayrollCSVAgent with reformulation
@@ -427,7 +473,7 @@ async def query(
                 print(f"🚀 INITIALIZING PAYROLL QUERY PROCESSING")
                 print(f"{'='*60}")
                 print(f"📄 CSV Path: {payroll_csv_path}")
-                print(f"❓ Query: {query}")
+                print(f"❓ Query: {user_query}")
                 print(f"🔒 Private: {private}")
                 
                 payroll_agent = PayrollCSVAgent(csv_path=payroll_csv_path)
@@ -435,7 +481,7 @@ async def query(
                     print(f"✅ Payroll agent initialized successfully")
                     
                     # The query() method now includes reformulation internally
-                    answer = payroll_agent.query(query)
+                    answer = payroll_agent.query(user_query)
                     
                     print(f"✅ Query processed successfully")
                     print(f"📊 Answer length: {len(answer)} characters")
@@ -447,16 +493,16 @@ async def query(
                 logging.error(f"Error processing payroll query: {e}")
                 import traceback
                 traceback.print_exc()
-                answer = "Error processing payroll query. Please ensure you have uploaded the payroll calendar document."
+                answer = "Error processing payroll query. Please ensure you have uploaded the payroll calendar document or try again later."
         else:
-            answer = "No payroll calendar data found. Please upload a payroll calendar document (.docx) first."
+            answer = "No payroll calendar data found. Please upload a payroll calendar document (.docx) or contact support if the default calendar should be available."
         
         # Save to history
         history_before = session_db.get_session_message_count(session_id)
-        session_db.add_single_qa_to_history(session_id, query, answer)
+        session_db.add_single_qa_to_history(session_id, user_query, answer)
 
         if history_before == 0:
-            session_name = generate_session_name(query)
+            session_name = generate_session_name(user_query)
             session_db.rename_session(session_id, session_name)
             logging.info(f"Updated session {session_id} name to: {session_name}")
 
@@ -473,16 +519,16 @@ async def query(
         csv_files = sorted([f for f in os.listdir(public_csv_folder) if f.lower().endswith('.csv')])
         csv_path = os.path.join(public_csv_folder, csv_files[-1])
         answer = student_transcript_csv_handler.process_transcript_query(
-            query, csv_path=csv_path
+            user_query, csv_path=csv_path
         )
         
         # Check if this is the first question in the session BEFORE adding to history
         history_before = session_db.get_session_message_count(session_id)
-        session_db.add_single_qa_to_history(session_id, query, answer)
+        session_db.add_single_qa_to_history(session_id, user_query, answer)
 
         # If this was the first question, update the session name
         if history_before == 0:
-            session_name = generate_session_name(query)
+            session_name = generate_session_name(user_query)
             session_db.rename_session(session_id, session_name)
             logging.info(f"Updated session {session_id} name to: {session_name}")
 
@@ -495,7 +541,7 @@ async def query(
         }
 
     # Scenario c: Either no uploads found OR it's a POLICY query - use common data (existing vectorstore logic)
-    logging.info(f"User {username} queried: {query} (session_id: {session_id}) - Using vectorstore for {query_type} query")
+    logging.info(f"User {username} queried: {user_query} (session_id: {session_id}) - Using vectorstore for {query_type} query")
     try:
         index, metadata, tab_data = initialize_vectorstore()
         collection = get_collection()
@@ -512,16 +558,16 @@ async def query(
         "active_transcript_csv_path": None
     }
     conv_graph = create_conversation_graph(collection, tab_data)
-    result = conv_graph.process_conversation(query, chat_history, user_context)
+    result = conv_graph.process_conversation(user_query, chat_history, user_context)
     response_content = result["response"]
 
     # Check if this is the first question in the session BEFORE adding to history
     history_before = session_db.get_session_message_count(session_id)
-    session_db.add_single_qa_to_history(session_id, query, response_content)
+    session_db.add_single_qa_to_history(session_id, user_query, response_content)
 
     # If this was the first question, update the session name
     if history_before == 0:
-        session_name = generate_session_name(query)
+        session_name = generate_session_name(user_query)
         session_db.rename_session(session_id, session_name)
         logging.info(f"Updated session {session_id} name to: {session_name}")
 
