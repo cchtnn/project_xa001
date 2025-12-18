@@ -42,6 +42,7 @@ class QueryClassifier:
             "give me details about ENV 105 Climate Change for Tribal Peoples",
             "i want name of all the course code that are coming under ENVIRONMENTAL SCIENCE AND TECHNOLOGY.",
             "tell me about College Board of Regents from Academic Catalog.",
+            "list all the courses under 'GEOLOGY (GLG)' in catalog document."
             
             # Department/category listing queries
             "I want name of all the course code that are coming under AGRICULTURE (AGR)",

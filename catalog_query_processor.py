@@ -172,18 +172,29 @@ class HybridSearchSystem:
                 print(f"   Detected section pattern: '{pattern}' -> '{section_id}'")
                 break
         
-        # Pattern 2: Extract department/prefix
+        # Pattern 2: Extract department/prefix from query
         dept_patterns = [
-            r'\b([A-Z]{2,4})\b',
-            r'under\s+([A-Z][a-z]+)',
-            r'in\s+([A-Z][a-z]+)',
-            r'from\s+([A-Z][a-z]+)',
+            # Match department names in parentheses: "ENVIRONMENTAL SCIENCE (ENV)"
+            (r'\(([A-Z]{2,4})\)', 'prefix_in_parens'),
+            # Match standalone course prefix at start: "ENV courses"
+            (r'^([A-Z]{2,4})\s+(?:course|class)', 'prefix_standalone'),
+            # Match "in [DEPT NAME]" or "under [DEPT NAME]"
+            (r'(?:in|under)\s+([A-Z][A-Z\s&]+?)(?:\s+category|\s+department|\s*$)', 'full_dept_name'),
         ]
-        
-        for pattern in dept_patterns:
-            matches = re.findall(pattern, query)
+
+        for pattern, pattern_type in dept_patterns:
+            matches = re.findall(pattern, query, re.IGNORECASE)
             if matches:
-                intent['entities']['department'] = matches[0]
+                extracted = matches[0].strip()
+                
+                if pattern_type == 'full_dept_name':
+                    # Store the full department name for matching
+                    intent['entities']['department_name'] = extracted.upper()
+                    print(f"   Extracted department name: '{extracted}'")
+                else:
+                    # Store the course prefix (2-4 letter code)
+                    intent['entities']['department'] = extracted.upper()
+                    print(f"   Extracted course prefix: '{extracted}'")
                 break
         
         # Pattern 3: Specific course code
@@ -268,15 +279,36 @@ class HybridSearchSystem:
             return matching_chunks
         
         # Handle department-based course queries
-        if 'department' in intent['entities']:
-            dept = intent['entities']['department'].upper()
+        if 'department_name' in intent['entities']:
+            # User specified full department name like "ENVIRONMENTAL SCIENCE AND TECHNOLOGY"
+            dept_name = intent['entities']['department_name']
+            print(f"🔍 Searching by department name: '{dept_name}'")
+            
+            matching_chunks = []
+            for chunk in self.chunks:
+                chunk_dept = chunk.get('metadata', {}).get('department', '').upper()
+                chunk_type = chunk.get('metadata', {}).get('chunk_type', '')
+                
+                # Match if department name is contained in chunk's department field
+                if chunk_type == 'course_description' and dept_name in chunk_dept:
+                    matching_chunks.append(chunk)
+                    course_code = chunk.get('metadata', {}).get('course_code', 'N/A')
+                    print(f"  ✓ Matched: {course_code} (dept: {chunk_dept})")
+            
+        elif 'department' in intent['entities']:
+            # User specified course prefix like "ENV"
+            dept_prefix = intent['entities']['department']
+            print(f"🔍 Searching by course prefix: '{dept_prefix}'")
+            
             matching_chunks = [
                 chunk for chunk in self.chunks
                 if chunk.get('metadata', {}).get('chunk_type') == 'course_description' and
-                chunk.get('metadata', {}).get('course_prefix', '') == dept
+                chunk.get('metadata', {}).get('course_prefix', '') == dept_prefix
             ]
+            
         else:
             # Default: all course descriptions
+            print(f"🔍 Listing all courses (no filter)")
             matching_chunks = [
                 chunk for chunk in self.chunks
                 if chunk.get('metadata', {}).get('chunk_type') == 'course_description'
@@ -512,8 +544,8 @@ class CatalogAnswerGenerator:
             
             return "\n".join(context_parts)
         
-        # For list_all queries with many results, provide structured data
-        if query_type == 'list_all' and len(results) > 10:
+        # For list_all queries, provide structured data (threshold lowered to 5)
+        if query_type == 'list_all' and len(results) >= 5:
             context_parts.append(f"Total courses found: {len(results)}\n")
             context_parts.append("Course Listing:\n")
             
@@ -522,8 +554,11 @@ class CatalogAnswerGenerator:
                 code = metadata.get('course_code', 'N/A')
                 title = metadata.get('course_title', 'N/A')
                 credits = metadata.get('credits', 'N/A')
+                dept = metadata.get('department', 'N/A')
                 
-                context_parts.append(f"{i}. {code} - {title} ({credits} credits)")
+                context_parts.append(f"{i}. {code} - {title}")
+                context_parts.append(f"   Credits: {credits}")
+                context_parts.append(f"   Department: {dept}")
         
         # For detailed queries, provide full course information
         else:
