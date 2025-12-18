@@ -2,3 +2,4 @@
 __pycache__
 .env
 .bin/data/session_state.db
+.bin/catalouge_imgs/

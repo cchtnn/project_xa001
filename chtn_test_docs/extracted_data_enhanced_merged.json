@@ -1,0 +1,1902 @@
+{
+  "metadata": {
+    "total_pages": 10,
+    "merge_notes": "Course descriptions have been merged across page boundaries"
+  },
+  "pages": [
+    {
+      "page_number": 1,
+      "layout_type": "single_column",
+      "reading_order": "top_to_bottom",
+      "sections": [
+        {
+          "level": 1,
+          "header": "Diné College Academic Catalog 2024-2025",
+          "header_type": "main_header",
+          "continues_from_previous": false,
+          "continues_on_next": false,
+          "content": {
+            "type": "image",
+            "description": "Cover page of Diné College Academic Catalog 2024-2025 featuring a colorful illustration of a plant with various cultural elements and the college's logo."
+          }
+        },
+        {
+          "level": 2,
+          "header": "The Original Tribally-Controlled College • Established In 1968",
+          "header_type": "sub_header",
+          "content": {
+            "type": "text",
+            "text": "www.dinecollege.edu"
+          }
+        }
+      ],
+      "extraction_metadata": {
+        "page_number": 1,
+        "validation_status": "validated",
+        "total_sections": 2,
+        "layout_detected": "single_column"
+      }
+    },
+    {
+      "page_number": 2,
+      "layout_type": "single_column",
+      "reading_order": "top_to_bottom",
+      "sections": [
+        {
+          "level": 1,
+          "header": "2024-2025 CATALOG",
+          "header_type": "main_header",
+          "continues_from_previous": true,
+          "continues_on_next": false,
+          "content": {
+            "type": "paragraph",
+            "text": "Copyright ©2024 by Diné College. Diné College reserves the right to make changes at any time to any provision of this Catalog. Students will be notified of changes to this published catalog by updated 2024-2025 Catalog Addendums.",
+            "formatting": []
+          },
+          "subsections": [
+            {
+              "level": 2,
+              "header": "",
+              "header_type": "",
+              "content": {
+                "type": "paragraph",
+                "text": "This Catalog sets forth the official policies, rules, and regulations which apply to every student attending the College.",
+                "formatting": []
+              }
+            },
+            {
+              "level": 2,
+              "header": "Catalog Editing and Entries",
+              "header_type": "sub_header",
+              "content": {
+                "type": "paragraph",
+                "text": "2024-2025 Catalog Committee",
+                "formatting": []
+              }
+            },
+            {
+              "level": 2,
+              "header": "Graphic Designer",
+              "header_type": "sub_header",
+              "content": {
+                "type": "paragraph",
+                "text": "Patrick G. Begay; Marketing and Communications Department",
+                "formatting": []
+              }
+            },
+            {
+              "level": 2,
+              "header": "Catalog Publish Date",
+              "header_type": "sub_header",
+              "content": {
+                "type": "paragraph",
+                "text": "May 3rd, 2024",
+                "formatting": []
+              }
+            },
+            {
+              "level": 2,
+              "header": "Address",
+              "header_type": "sub_header",
+              "content": {
+                "type": "paragraph",
+                "text": "Tsaile, Arizona 86556",
+                "formatting": []
+              }
+            },
+            {
+              "level": 2,
+              "header": "Phone Number",
+              "header_type": "sub_header",
+              "content": {
+                "type": "paragraph",
+                "text": "1-877-988-DINE",
+                "formatting": []
+              }
+            },
+            {
+              "level": 2,
+              "header": "Website",
+              "header_type": "sub_header",
+              "content": {
+                "type": "paragraph",
+                "text": "www.dinecollege.edu",
+                "formatting": []
+              }
+            },
+            {
+              "level": 2,
+              "header": "Call to Action",
+              "header_type": "sub_header",
+              "content": {
+                "type": "paragraph",
+                "text": "APPLY ONLINE",
+                "formatting": []
+              }
+            }
+          ],
+          "continuation_info": {
+            "from_page": 1,
+            "from_section": "The Original Tribally-Controlled College • Established In 1968",
+            "from_level": 2
+          }
+        }
+      ],
+      "extraction_metadata": {
+        "page_number": 2,
+        "validation_status": "validated",
+        "total_sections": 1,
+        "layout_detected": "single_column"
+      }
+    },
+    {
+      "page_number": 3,
+      "layout_type": "single_column",
+      "reading_order": "top_to_bottom",
+      "sections": [
+        {
+          "level": 1,
+          "header": "2024-2025 ACADEMIC CALENDAR",
+          "header_type": "main_header",
+          "continues_from_previous": true,
+          "continues_on_next": false,
+          "subsections": [
+            {
+              "level": 2,
+              "header": "2024 Fall Semester",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  {
+                    "item": "Fall '24 Early Registration Begins",
+                    "date": "Monday, April 8, 2024"
+                  },
+                  {
+                    "item": "Sih Hasin Day",
+                    "date": "Friday, August 2, 2024"
+                  },
+                  {
+                    "item": "Convocation",
+                    "date": "Monday, August 5, 2024"
+                  },
+                  {
+                    "item": "Faculty Assessment and School Meetings",
+                    "date": "Tuesday–Friday, August 6-9, 2024"
+                  },
+                  {
+                    "item": "Last day to Withdraw/100% refund with documented attempt",
+                    "date": "Sunday, August 11, 2024"
+                  },
+                  {
+                    "item": "Residence Hall Opens",
+                    "date": "Sunday, August 11, 2024"
+                  },
+                  {
+                    "item": "Instruction Begins/Late Registration",
+                    "date": "Monday, August 12, 2024"
+                  },
+                  {
+                    "item": "Last day to ADD classes",
+                    "date": "Friday, August 16, 2024"
+                  },
+                  {
+                    "item": "Last day to withdraw/80% refund with documented attempt (1-14 calendar days)",
+                    "date": "Sunday, August 25, 2024"
+                  },
+                  {
+                    "item": "Last day to DROP, without 'W'",
+                    "date": "Friday, August 30, 2024"
+                  },
+                  {
+                    "item": "Faculty Association/Department Meetings",
+                    "date": "Friday, September 6, 13, 20, 27, 2024"
+                  },
+                  {
+                    "item": "Last Day to register for 2nd 8wk courses",
+                    "date": "Monday, October 21, 2024"
+                  },
+                  {
+                    "item": "Last day to withdraw/60% refund with documented attempt (15-21 calendar days)",
+                    "date": "Sunday, September 1, 2024"
+                  },
+                  {
+                    "item": "21 Day Count",
+                    "date": "Monday, September 02, 2024"
+                  },
+                  {
+                    "item": "Labor Day",
+                    "date": "Monday, September 02, 2024"
+                  },
+                  {
+                    "item": "Last day to withdrawal/40% refund with documented attempt (22-28 calendar days)",
+                    "date": "Sunday September 08, 2024"
+                  },
+                  {
+                    "item": "Last day to withdraw/20% refund with documented attempt (29-35 calendar days)",
+                    "date": "Sunday, September 15, 2024"
+                  },
+                  {
+                    "item": "No refund with Withdrawal",
+                    "date": "Monday, September 16, 2024"
+                  },
+                  {
+                    "item": "Fall 2024 Graduation Petition Deadline",
+                    "date": "Friday, September 20, 2024"
+                  },
+                  {
+                    "item": "45 Day Count",
+                    "date": "Sunday, September 29, 2024"
+                  },
+                  {
+                    "item": "Mid-term Exam week",
+                    "date": "September 30-October 4, 2024"
+                  },
+                  {
+                    "item": "Faculty Association/Department Meetings",
+                    "date": "Friday, October 4, 11, 18, 25, 2024"
+                  },
+                  {
+                    "item": "Mid-term grades due",
+                    "date": "Monday, October 7, 2024"
+                  },
+                  {
+                    "item": "Late Graduation Petition with Late Fee",
+                    "date": "Monday, October 14, 2024"
+                  },
+                  {
+                    "item": "Indigenous People's Day",
+                    "date": "Monday, October 14, 2024"
+                  },
+                  {
+                    "item": "Last Day to register for 2nd-8 week courses",
+                    "date": "Friday, October 18, 2024"
+                  },
+                  {
+                    "item": "Last Day to Drop with 'W'",
+                    "date": "Friday, October 18, 2024"
+                  },
+                  {
+                    "item": "2nd 8-week courses begin",
+                    "date": "Monday, October 21, 2024"
+                  },
+                  {
+                    "item": "Early Spring '25 Registration begins",
+                    "date": "Monday, October 28, 2024"
+                  },
+                  {
+                    "item": "Faculty Association/Department Meetings",
+                    "date": "Friday, November 1, 8, 15, 29, 2024"
+                  },
+                  {
+                    "item": "Veteran's Day",
+                    "date": "Monday, November 11, 2024"
+                  },
+                  {
+                    "item": "Last Day for Instructor Drops",
+                    "date": "Friday, November 15, 2024"
+                  },
+                  {
+                    "item": "Thanksgiving",
+                    "date": "Thursday, November 28, 2024"
+                  },
+                  {
+                    "item": "Diné Family Day",
+                    "date": "Friday, November 29, 2024"
+                  },
+                  {
+                    "item": "Last day of instruction",
+                    "date": "Friday, December 6, 2024"
+                  },
+                  {
+                    "item": "Final Exam Week",
+                    "date": "December 9-12, 2024"
+                  },
+                  {
+                    "item": "Graduation Fall Commencement",
+                    "date": "Friday, December 13, 2024"
+                  },
+                  {
+                    "item": "Faculty Assessment Days",
+                    "date": "Friday, December 17-18, 2024"
+                  }
+                ]
+              }
+            },
+            {
+              "level": 2,
+              "header": "2025 Spring Semester",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  {
+                    "item": "Spring '25 Registration Begins",
+                    "date": "Monday, October 28, 2024"
+                  },
+                  {
+                    "item": "Institutional Updates",
+                    "date": "Monday, January 13, 2025"
+                  },
+                  {
+                    "item": "Faculty Assessment and School Meetings",
+                    "date": "Tuesday–Friday, January 14-17, 2025"
+                  },
+                  {
+                    "item": "Last day to Withdraw/100% refund with documented attempt",
+                    "date": "Sunday, January 19, 2025"
+                  },
+                  {
+                    "item": "Residence Hall Opens",
+                    "date": "Sunday, January 19, 2025"
+                  },
+                  {
+                    "item": "Martin Luther King Jr. Day",
+                    "date": "Monday, January 20, 2025"
+                  },
+                  {
+                    "item": "Instruction Begins/Late Registration",
+                    "date": "Tuesday, January 21, 2025"
+                  },
+                  {
+                    "item": "Last day to ADD classes",
+                    "date": "Friday, January 24, 2025"
+                  },
+                  {
+                    "item": "Last day to withdraw/80% refund with documented attempt (1-14 calendar days)",
+                    "date": "Sunday, January 26, 2025"
+                  },
+                  {
+                    "item": "Last day to withdraw/60% refund with documented attempt (15-21 calendar days)",
+                    "date": "Sunday, February 2, 2025"
+                  },
+                  {
+                    "item": "Faculty Association/Department Meetings",
+                    "date": "Friday, February 7, 14, 21, 28, 2025"
+                  },
+                  {
+                    "item": "Last day to DROP, without 'W'",
+                    "date": "Friday, February 7, 2025"
+                  },
+                  {
+                    "item": "Last day to withdraw/40% refund with documented attempt (22-28 calendar days)",
+                    "date": "Sunday, February 9, 2025"
+                  },
+                  {
+                    "item": "21 Day CountLast day to withdraw/40% refund with documented attempt (22-28 calendar days)",
+                    "date": "Monday, February 10, 2025"
+                  }
+                ]
+              }
+            },
+            {
+              "level": 3,
+              "header": "",
+              "header_type": "paragraph",
+              "content": {
+                "type": "paragraph",
+                "text": "Students must be fully admitted into Diné College prior to course registration.",
+                "formatting": []
+              }
+            }
+          ],
+          "continuation_info": {
+            "from_page": 2,
+            "from_section": "2024-2025 CATALOG",
+            "from_level": 1
+          }
+        }
+      ],
+      "extraction_metadata": {
+        "page_number": 3,
+        "validation_status": "validated",
+        "total_sections": 1,
+        "layout_detected": "single_column"
+      }
+    },
+    {
+      "page_number": 4,
+      "layout_type": "single_column",
+      "reading_order": "top_to_bottom",
+      "continues_from_previous": true,
+      "sections": [
+        {
+          "level": 1,
+          "header": "2024-2025 ACADEMIC CALENDAR",
+          "header_type": "main_header",
+          "subsections": [
+            {
+              "level": 2,
+              "header": "2025 Spring Semester",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  {
+                    "item": "Last day to withdraw/20% refund with documented attempt (29-35 calendar days)",
+                    "date": "Sunday, February 16, 2025"
+                  },
+                  {
+                    "item": "No refund with Withdrawal",
+                    "date": "Monday, February 17, 2025"
+                  },
+                  {
+                    "item": "Spring 2025 Graduation Petition Deadline",
+                    "date": "Friday, February 21, 2025"
+                  },
+                  {
+                    "item": "45 day count",
+                    "date": "Thursday, March 6, 2025"
+                  },
+                  {
+                    "item": "Mid-term Exam week",
+                    "date": "March 3-7, 2025"
+                  },
+                  {
+                    "item": "Late Graduation Petition with Late Fee",
+                    "date": "Friday, March 7, 2025"
+                  },
+                  {
+                    "item": "Spring Break",
+                    "date": "March 10-March 14, 2025"
+                  },
+                  {
+                    "item": "2nd 8-week courses begin",
+                    "date": "Monday, March 17, 2025"
+                  },
+                  {
+                    "item": "Last Day to Drop with 'W'",
+                    "date": "Friday, March 21, 2025"
+                  },
+                  {
+                    "item": "Fall & Summer '25 Registration begins",
+                    "date": "Monday, April 7, 2025"
+                  },
+                  {
+                    "item": "Faculty Association/Department Meetings",
+                    "date": "Friday, April 4, 11, 18, 25, 2025"
+                  },
+                  {
+                    "item": "Last Day for Instructor Drops",
+                    "date": "Friday, April 18, 2025"
+                  },
+                  {
+                    "item": "Academic Achievement Awards",
+                    "date": "Thursday, April 24, 2025"
+                  },
+                  {
+                    "item": "Diné College Holiday",
+                    "date": "Monday, April 28, 2025"
+                  },
+                  {
+                    "item": "Faculty Association/Department Meetings",
+                    "date": "Friday, May 2, 2025"
+                  },
+                  {
+                    "item": "Last day of instruction",
+                    "date": "Friday, May 2, 2025"
+                  },
+                  {
+                    "item": "Final Exam Week",
+                    "date": "May 05-May 08, 2025"
+                  },
+                  {
+                    "item": "Graduation Spring Commencement",
+                    "date": "Friday, May 9, 2025"
+                  },
+                  {
+                    "item": "Faculty Assessment Days",
+                    "date": "Tuesday-Wednesday, May 13-14, 2025"
+                  }
+                ]
+              }
+            },
+            {
+              "level": 2,
+              "header": "2025 Summer Sessions",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  {
+                    "item": "Summer '25 Registration Begins",
+                    "date": "Monday, April 7, 2025"
+                  },
+                  {
+                    "item": "Diné College Memorial Day",
+                    "date": "Friday, May 23, 2025"
+                  },
+                  {
+                    "item": "Last day to Withdraw/100% refund with documented attempt Session I & 10 week",
+                    "date": "Sunday, May 25, 2025"
+                  },
+                  {
+                    "item": "Memorial Day",
+                    "date": "Monday, May 26, 2025"
+                  },
+                  {
+                    "item": "Final Registration Session I & 10 weeks",
+                    "date": "Tuesday, May 27, 2025"
+                  },
+                  {
+                    "item": "(1st) 5-week Session Instruction begins",
+                    "date": "Tuesday, May 27-June 27, 2025"
+                  },
+                  {
+                    "item": "10 week Session Instruction Begins",
+                    "date": "May 27-August 1, 2025"
+                  },
+                  {
+                    "item": "Last day of Instruction Session I",
+                    "date": "Friday, June 27, 2025"
+                  },
+                  {
+                    "item": "Final Registration Session II",
+                    "date": "Friday, June 27, 2025"
+                  },
+                  {
+                    "item": "Last day to Withdraw/100% refund with documented attempt Session II",
+                    "date": "Sunday, June 29, 2025"
+                  },
+                  {
+                    "item": "(2nd) 5-week Session Instruction begins",
+                    "date": "Monday, June 30, 2025"
+                  },
+                  {
+                    "item": "Independence Day",
+                    "date": "Friday, July 4, 2025"
+                  }
+                ]
+              }
+            },
+            {
+              "level": 2,
+              "header": "Summer Session Refund Schedule",
+              "header_type": "sub_header",
+              "content": {
+                "type": "paragraph",
+                "text": "Tuition, fees & books will not be refunded after seven (7) days of classes. The following schedule will be applied to summer session.",
+                "subsections": [
+                  {
+                    "level": 3,
+                    "header": "Five (5) Week session",
+                    "header_type": "sub_sub_header",
+                    "content": {
+                      "type": "list",
+                      "items": [
+                        {
+                          "item": "Before instruction begins",
+                          "refund": "100%"
+                        },
+                        {
+                          "item": "1 - 3 days of classes",
+                          "refund": "75%"
+                        },
+                        {
+                          "item": "4 - 5 days of classes",
+                          "refund": "50%"
+                        },
+                        {
+                          "item": "6 - 7 days of classes",
+                          "refund": "25%"
+                        },
+                        {
+                          "item": "After 7 days of classes",
+                          "refund": "No Refund"
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "level": 3,
+                    "header": "Ten (10) Week session",
+                    "header_type": "sub_sub_header",
+                    "content": {
+                      "type": "list",
+                      "items": [
+                        {
+                          "item": "Before instruction begins",
+                          "refund": "100%"
+                        },
+                        {
+                          "item": "1 - 6 days of classes",
+                          "refund": "75%"
+                        },
+                        {
+                          "item": "7 - 10 days of classes",
+                          "refund": "50%"
+                        },
+                        {
+                          "item": "11 - 14 days of classes",
+                          "refund": "25%"
+                        },
+                        {
+                          "item": "After 14 days of classes",
+                          "refund": "No Refund"
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ],
+      "extraction_metadata": {
+        "page_number": 4,
+        "validation_status": "validated",
+        "total_sections": 1,
+        "layout_detected": "single_column"
+      }
+    },
+    {
+      "page_number": 5,
+      "layout_type": "two_column",
+      "reading_order": "left_to_right",
+      "sections": [
+        {
+          "level": 1,
+          "header": "College Administration",
+          "header_type": "main_header",
+          "column": "left",
+          "subsections": [
+            {
+              "level": 2,
+              "header": "Dr. Charles Monty Roessel, College President",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  "Ed. D., Arizona State University, Educational Administration and Supervision",
+                  "M.A., Prescott College Journalism",
+                  "B.S., University of Northern Colorado, Photo-Communication/Industrial Arts"
+                ]
+              }
+            },
+            {
+              "level": 2,
+              "header": "Dr. Alysa Landry, Interim Provost",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  "Ph.D., Gratz College, Holocaust and Genocide",
+                  "M.F.A., Chatham University, Creative Writing",
+                  "M.A., Emerson College, Journalism",
+                  "B.A., Brigham Young University, Journalism"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "College Administration",
+          "header_type": "main_header",
+          "column": "right",
+          "subsections": [
+            {
+              "level": 2,
+              "header": "Glennita Haskey, Vice President of Student Affairs",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  "M.S., University of New Mexico, Occupational Therapy",
+                  "B.S., University of New Mexico, Multicultural Education",
+                  "A.S., Navajo Community College, Social Behavioral Science"
+                ]
+              }
+            },
+            {
+              "level": 2,
+              "header": "Bo Lewis, Vice President of Finance & Administration",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  "M.B.A., University of Phoenix, E-Business",
+                  "B.S., University of Colorado, Business Administration",
+                  "A.S., ITT Institute of Technology, Infor. Tech – Computer Network Systems",
+                  "A.A., Lamson Business College, Accounting"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "School Deans",
+          "header_type": "main_header",
+          "column": "left",
+          "subsections": [
+            {
+              "level": 2,
+              "header": "Dr. Karla Britton, Dean of Arts & Humanities, Professor",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  "Ph.D., Harvard, History of Architecture",
+                  "M.A., Columbia University, Composition. Literature",
+                  "B.A., University of Colorado, History"
+                ]
+              }
+            },
+            {
+              "level": 2,
+              "header": "Rex Lee Jim, Dean of Diné Studies & Education",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  "M.A., English Middlebury College",
+                  "M.Litt., English, Middlebury College",
+                  "B.A., English, Princeton University",
+                  "Ordained Blessing Way Singer"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "School Deans",
+          "header_type": "main_header",
+          "column": "right",
+          "subsections": [
+            {
+              "level": 2,
+              "header": "Patrick Blackwater, Dean of Business & Social Science, Assistant Professor",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  "M.G.M., Arizona State University, Global Management",
+                  "M.S., Grand Canyon University, Leadership",
+                  "B.A., Grand Canyon University, Business Management"
+                ]
+              }
+            },
+            {
+              "level": 2,
+              "header": "James Tutt, Dean of Science, Technology, Engineering & Mathematics",
+              "header_type": "sub_header",
+              "content": {
+                "type": "list",
+                "items": [
+                  "M.Ed., Western New Mexico University, Education",
+                  "B.S., Fort Lewis College"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "College Board of Regents",
+          "header_type": "main_header",
+          "column": "left",
+          "subsections": [
+            {
+              "level": 2,
+              "header": "Theresa Hatathlie, Chairperson",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Appointed Member, Business"
+              }
+            },
+            {
+              "level": 2,
+              "header": "Greg Bigman, Vice-Chairperson",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Appointed Member, Finance, Accounting, and Investment Business"
+              }
+            },
+            {
+              "level": 2,
+              "header": "Jalen S. Smallcanyon, Secretary/Treasurer",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Ex-Officio Member, ASDC Student Representative"
+              }
+            },
+            {
+              "level": 2,
+              "header": "Anderson Hoskie",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Appointed Member, Diné Spiritual Ceremonial Knowledge"
+              }
+            },
+            {
+              "level": 2,
+              "header": "Sharon Toadecheenie",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Appointed Member, Higher Education/Education"
+              }
+            },
+            {
+              "level": 2,
+              "header": "Amberia S. Tolino",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Designated Member, Staff Association President"
+              }
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "College Board of Regents",
+          "header_type": "main_header",
+          "column": "right",
+          "subsections": [
+            {
+              "level": 2,
+              "header": "Position Vacant",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Designated Member, Faculty Association President"
+              }
+            },
+            {
+              "level": 2,
+              "header": "Position Vacant",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Ex-Officio Member, Superintendent of Diné Schools"
+              }
+            },
+            {
+              "level": 2,
+              "header": "Position Vacant",
+              "header_type": "sub_header",
+              "content": {
+                "type": "text",
+                "text": "Ex-Officio Member, Navajo Nation Council Representative"
+              }
+            }
+          ]
+        }
+      ],
+      "extraction_metadata": {
+        "page_number": 5,
+        "validation_status": "validated",
+        "total_sections": 6,
+        "layout_detected": "two_column"
+      }
+    },
+    {
+      "page_number": 6,
+      "layout_type": "table_of_contents",
+      "sections": [
+        {
+          "level": 1,
+          "header": "About Diné College",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "College Mission",
+              "page": "10"
+            },
+            {
+              "text": "College Vision",
+              "page": "10"
+            },
+            {
+              "text": "College Principles",
+              "page": "10"
+            },
+            {
+              "text": "Diné College History",
+              "page": "10"
+            },
+            {
+              "text": "Membership",
+              "page": "10"
+            },
+            {
+              "text": "One College, Multiple Sites",
+              "page": "10"
+            },
+            {
+              "text": "Diné College Campuses/Centers",
+              "page": "11"
+            },
+            {
+              "text": "Non-Discrimination and Harassment Policy",
+              "page": "11"
+            },
+            {
+              "text": "Sexual Misconduct/ Title IX",
+              "page": "11"
+            },
+            {
+              "text": "Notification of Rights under FERPA",
+              "page": "11"
+            },
+            {
+              "text": "Alcohol and Drug-Free Workplace",
+              "page": "11"
+            },
+            {
+              "text": "Jeanne Clery Act",
+              "page": "11"
+            },
+            {
+              "text": "Campus Crime Information",
+              "page": "11"
+            },
+            {
+              "text": "Student Complaints and Recommendations",
+              "page": "12"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "Admission Policies and Procedures",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Enrollment",
+              "page": "12"
+            },
+            {
+              "text": "NEW Students",
+              "page": "12"
+            },
+            {
+              "text": "Letter of Admission",
+              "page": "12"
+            },
+            {
+              "text": "Denial or Cancellation of Admission",
+              "page": "12"
+            },
+            {
+              "text": "Transfer Students",
+              "page": "12"
+            },
+            {
+              "text": "Academic Credit for Military Service",
+              "page": "13"
+            },
+            {
+              "text": "Returning Students/Stopped Out Students",
+              "page": "13"
+            },
+            {
+              "text": "Non-Degree Seeking Students",
+              "page": "13"
+            },
+            {
+              "text": "Writing and Math Placement Assessment Overview",
+              "page": "13"
+            },
+            {
+              "text": "Writing Placement",
+              "page": "13"
+            },
+            {
+              "text": "Mathematics Placement",
+              "page": "13"
+            },
+            {
+              "text": "Navajo Language Placement",
+              "page": "13"
+            },
+            {
+              "text": "Enrollment Status",
+              "page": "13"
+            },
+            {
+              "text": "Change of Major",
+              "page": "13"
+            },
+            {
+              "text": "Non-Degree Seeking to Degree Seeking",
+              "page": "14"
+            },
+            {
+              "text": "Changing Degree Type",
+              "page": "14"
+            },
+            {
+              "text": "Adding a Major/ Minor (Dual major)",
+              "page": "14"
+            },
+            {
+              "text": "High School Concurrent Enrollment (Non-Degree)",
+              "page": "14"
+            },
+            {
+              "text": "Dual Credit and H.S. Concurrent Enrollment Process",
+              "page": "14"
+            },
+            {
+              "text": "Dual Credit Program",
+              "page": "14"
+            },
+            {
+              "text": "Student Eligibility",
+              "page": "14"
+            },
+            {
+              "text": "Eligible Classes",
+              "page": "14"
+            },
+            {
+              "text": "Dual Credit Placement Tests",
+              "page": "14"
+            },
+            {
+              "text": "Enrolling in Dual Credit Courses",
+              "page": "14"
+            },
+            {
+              "text": "Tuition and Fees for Dual Credit",
+              "page": "14"
+            },
+            {
+              "text": "Textbooks for Dual Credit",
+              "page": "14"
+            },
+            {
+              "text": "International Students",
+              "page": "15"
+            },
+            {
+              "text": "Co-Enrollment (College) Student",
+              "page": "15"
+            },
+            {
+              "text": "Bachelor Program Admission Process",
+              "page": "15"
+            },
+            {
+              "text": "School of STEM",
+              "page": "15"
+            },
+            {
+              "text": "School of Arts & Humanities",
+              "page": "15"
+            },
+            {
+              "text": "School of Business and Social Science",
+              "page": "15"
+            },
+            {
+              "text": "School of Diné Studies and Education",
+              "page": "15"
+            },
+            {
+              "text": "Admission to Biology Graduate Programs",
+              "page": "15"
+            },
+            {
+              "text": "Registration",
+              "page": "16"
+            },
+            {
+              "text": "Academic Advising",
+              "page": "16"
+            },
+            {
+              "text": "Student Orientation",
+              "page": "16"
+            },
+            {
+              "text": "Textbooks",
+              "page": "16"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "Tuition and Fees",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Tuition",
+              "page": "16"
+            },
+            {
+              "text": "Technology Fee",
+              "page": "16"
+            },
+            {
+              "text": "Activity Fee",
+              "page": "16"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "Cancelled Course Policy",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Payment Options",
+              "page": "17"
+            },
+            {
+              "text": "Payment Plans",
+              "page": "17"
+            },
+            {
+              "text": "Charges/Payments",
+              "page": "17"
+            },
+            {
+              "text": "Refund Policy",
+              "page": "17"
+            },
+            {
+              "text": "Fall or Spring Semester Tuition Refund",
+              "page": "17"
+            },
+            {
+              "text": "Summer Sessions Tuition Refund (5-10 weeks)",
+              "page": "17"
+            },
+            {
+              "text": "Diné College Bookstore",
+              "page": "17"
+            },
+            {
+              "text": "Merchandise Refund/Return Policy",
+              "page": "17"
+            },
+            {
+              "text": "Department Purchased Gifts",
+              "page": "17"
+            },
+            {
+              "text": "Residence Hall",
+              "page": "17"
+            },
+            {
+              "text": "Housing Costs by Semester",
+              "page": "17"
+            },
+            {
+              "text": "Student Family Housing",
+              "page": "17"
+            },
+            {
+              "text": "Student Meal Plans",
+              "page": "18"
+            },
+            {
+              "text": "Residence Halls Room and Meal Plan Refund",
+              "page": "18"
+            },
+            {
+              "text": "Student Family Housing Refund Policy",
+              "page": "18"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "Financial Aid",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Office of Financial Aid & Scholarships",
+              "page": "18"
+            },
+            {
+              "text": "FERPA",
+              "page": "18"
+            },
+            {
+              "text": "Cost of Attendance (COA)",
+              "page": "18"
+            },
+            {
+              "text": "Satisfactory Academic Progress (SAP) Policy",
+              "page": "18"
+            },
+            {
+              "text": "Qualitative Standard:",
+              "page": "19"
+            },
+            {
+              "text": "Quantitative Standards (Pace):",
+              "page": "19"
+            },
+            {
+              "text": "Course Repetition",
+              "page": "19"
+            },
+            {
+              "text": "Official Withdrawal",
+              "page": "19"
+            },
+            {
+              "text": "Unofficial Withdrawal",
+              "page": "19"
+            },
+            {
+              "text": "Incompletes",
+              "page": "19"
+            },
+            {
+              "text": "Transfer Credits",
+              "page": "19"
+            },
+            {
+              "text": "Change in Major",
+              "page": "19"
+            },
+            {
+              "text": "Additional Degree(s)",
+              "page": "19"
+            },
+            {
+              "text": "Repeat",
+              "page": "19"
+            },
+            {
+              "text": "Retake",
+              "page": "19"
+            },
+            {
+              "text": "Financial Aid Warning",
+              "page": "19"
+            },
+            {
+              "text": "Financial Aid Suspension",
+              "page": "19"
+            },
+            {
+              "text": "Financial Aid Appeal Process",
+              "page": "20"
+            },
+            {
+              "text": "Reinstatement of Financial Aid Eligibility",
+              "page": "20"
+            },
+            {
+              "text": "Financial Aid Probation",
+              "page": "20"
+            },
+            {
+              "text": "Return to Title IV (Refund & Repayment Policy) - R2T4",
+              "page": "20"
+            },
+            {
+              "text": "Federal Pell Grant: Duration of Eligibility",
+              "page": "20"
+            },
+            {
+              "text": "Pell Grant Lifetime Limit",
+              "page": "20"
+            },
+            {
+              "text": "Maximum Timeframe/Pace",
+              "page": "20"
+            },
+            {
+              "text": "Continued Funding Agreement",
+              "page": "20"
+            },
+            {
+              "text": "Consortium Agreement",
+              "page": "20"
+            },
+            {
+              "text": "Paying Prior-Year Charges",
+              "page": "20"
+            },
+            {
+              "text": "Federal/New Mexico State Work Study Program (FWS)",
+              "page": "21"
+            },
+            {
+              "text": "Student Consumer Information",
+              "page": "21"
+            },
+            {
+              "text": "Payment Plan",
+              "page": "21"
+            },
+            {
+              "text": "Certificate Program Title IV Eligibility",
+              "page": "21"
+            },
+            {
+              "text": "Office of Financial Aid & Scholarships Location/Contact",
+              "page": "21"
+            },
+            {
+              "text": "Grants and Scholarships",
+              "page": "21"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "Student Services and College Resources",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Student Services at Diné College",
+              "page": "21"
+            },
+            {
+              "text": "Career Services",
+              "page": "21"
+            },
+            {
+              "text": "Adult Education Program",
+              "page": "22"
+            },
+            {
+              "text": "Associated Students of Diné College (ASDC)",
+              "page": "22"
+            },
+            {
+              "text": "Athletics",
+              "page": "22"
+            },
+            {
+              "text": "Financial Support for Student Athletes",
+              "page": "22"
+            },
+            {
+              "text": "Intercollegiate Athletics for Men and Women",
+              "page": "22"
+            }
+          ]
+        }
+      ],
+      "extraction_metadata": {
+        "page_number": 6,
+        "validation_status": "validated",
+        "total_sections": 6,
+        "layout_detected": "table_of_contents"
+      }
+    },
+    {
+      "page_number": 7,
+      "layout_type": "table_of_contents",
+      "sections": [
+        {
+          "level": 1,
+          "header": "Student Services and College Resources",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Eligibility for Intercollegiate Sports",
+              "page": "22"
+            },
+            {
+              "text": "Student Athletes Class Attendance",
+              "page": "22"
+            },
+            {
+              "text": "Student Athletes on Satisfactory Academic Progress",
+              "page": "22"
+            },
+            {
+              "text": "Satisfactory Completion",
+              "page": "22"
+            },
+            {
+              "text": "Falsification of Records",
+              "page": "22"
+            },
+            {
+              "text": "Intermural Sports for Men and Women",
+              "page": "23"
+            },
+            {
+              "text": "Cafeteria",
+              "page": "23"
+            },
+            {
+              "text": "Campus Security",
+              "page": "23"
+            },
+            {
+              "text": "Parking Permits",
+              "page": "23"
+            },
+            {
+              "text": "Computer Services",
+              "page": "23"
+            },
+            {
+              "text": "MyDineCollege Portal",
+              "page": "23"
+            },
+            {
+              "text": "Disability Support Services (DSS)",
+              "page": "23"
+            },
+            {
+              "text": "Diné Environmental Institute (DEI)",
+              "page": "23"
+            },
+            {
+              "text": "Diné Policy Institute (DPI) - Sihasin Baa Nahat'á",
+              "page": "24"
+            },
+            {
+              "text": "School of Transformation",
+              "page": "24"
+            },
+            {
+              "text": "High School Equivalency (HSE) Tests and Credentials",
+              "page": "24"
+            },
+            {
+              "text": "Land Grant Office (LGO)",
+              "page": "24"
+            },
+            {
+              "text": "Land Grant Office Internship",
+              "page": "24"
+            },
+            {
+              "text": "Learning Centers",
+              "page": "24"
+            },
+            {
+              "text": "Request for Tutoring Services",
+              "page": "24"
+            },
+            {
+              "text": "Library Services",
+              "page": "25"
+            },
+            {
+              "text": "Library Card",
+              "page": "25"
+            },
+            {
+              "text": "Ned Hatathli Musuem",
+              "page": "25"
+            },
+            {
+              "text": "Navajo Language Proficiency Test",
+              "page": "25"
+            },
+            {
+              "text": "Residence Life Program",
+              "page": "25"
+            },
+            {
+              "text": "Residence Halls",
+              "page": "25"
+            },
+            {
+              "text": "Student Family Housing",
+              "page": "25"
+            },
+            {
+              "text": "Application Procedures and Eligibility Requirements",
+              "page": "25"
+            },
+            {
+              "text": "Deposit",
+              "page": "25"
+            },
+            {
+              "text": "Deposit Refund",
+              "page": "26"
+            },
+            {
+              "text": "Guest Housing",
+              "page": "26"
+            },
+            {
+              "text": "Summer Conference Housing",
+              "page": "26"
+            },
+            {
+              "text": "Student Clubs and Organizations",
+              "page": "26"
+            },
+            {
+              "text": "Transfer & Career Services",
+              "page": "26"
+            },
+            {
+              "text": "Veteran Services",
+              "page": "26"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "Academic Policies",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Academic Appeals",
+              "page": "26"
+            },
+            {
+              "text": "Academic Integrity",
+              "page": "27"
+            },
+            {
+              "text": "Academic Probation",
+              "page": "27"
+            },
+            {
+              "text": "Academic Recognition",
+              "page": "27"
+            },
+            {
+              "text": "Academic Standing",
+              "page": "27"
+            },
+            {
+              "text": "Academic Status Change",
+              "page": "27"
+            },
+            {
+              "text": "Academic Suspension",
+              "page": "27"
+            },
+            {
+              "text": "Access to and Confidentiality of Records",
+              "page": "27"
+            },
+            {
+              "text": "Administrative Withdrawal",
+              "page": "27"
+            },
+            {
+              "text": "Auditing Courses",
+              "page": "27"
+            },
+            {
+              "text": "Change of Grade",
+              "page": "27"
+            },
+            {
+              "text": "Class Attendance and Punctuality",
+              "page": "28"
+            },
+            {
+              "text": "Course Change or Cancellation",
+              "page": "28"
+            },
+            {
+              "text": "Course Census",
+              "page": "28"
+            },
+            {
+              "text": "Course Overload",
+              "page": "28"
+            },
+            {
+              "text": "Course Substitution",
+              "page": "28"
+            },
+            {
+              "text": "Credit-by-Examination",
+              "page": "28"
+            },
+            {
+              "text": "Internships",
+              "page": "28"
+            },
+            {
+              "text": "Practicum",
+              "page": "28"
+            },
+            {
+              "text": "Field Experience",
+              "page": "28"
+            },
+            {
+              "text": "Definition of a Semester Hour",
+              "page": "28"
+            },
+            {
+              "text": "Dropping and Adding Course(s)",
+              "page": "28"
+            },
+            {
+              "text": "Enrollment Status",
+              "page": "29"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "Faculty/Biological Child Instructional Policy",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Faculty/Biological Child Instructional Policy",
+              "page": "29"
+            },
+            {
+              "text": "General Grade Appeal",
+              "page": "29"
+            },
+            {
+              "text": "Grade Point Average (GPA) System",
+              "page": "29"
+            },
+            {
+              "text": "Graduation Requirements",
+              "page": "29"
+            },
+            {
+              "text": "Graduation Degree Checklist",
+              "page": "30"
+            },
+            {
+              "text": "Graduation Regalia",
+              "page": "30"
+            },
+            {
+              "text": "Graduation Exercise",
+              "page": "30"
+            },
+            {
+              "text": "Graduating Catalog Year",
+              "page": "30"
+            },
+            {
+              "text": "Graduation Petition",
+              "page": "30"
+            },
+            {
+              "text": "Graduation with Honors",
+              "page": "30"
+            },
+            {
+              "text": "Hold on Student Records",
+              "page": "31"
+            },
+            {
+              "text": "Instructor Drop",
+              "page": "31"
+            },
+            {
+              "text": "Midterm and Final Grade Report",
+              "page": "31"
+            },
+            {
+              "text": "Military Duty Activation: Reservists, Emergency Personnel and/or Emergency Procedures",
+              "page": "31"
+            },
+            {
+              "text": "Student Action",
+              "page": "31"
+            },
+            {
+              "text": "Administrative Withdrawal",
+              "page": "31"
+            },
+            {
+              "text": "Administrative Incomplete",
+              "page": "31"
+            },
+            {
+              "text": "Reinstatement",
+              "page": "31"
+            },
+            {
+              "text": "Completing Course Requirements",
+              "page": "31"
+            },
+            {
+              "text": "Military Credit",
+              "page": "31"
+            },
+            {
+              "text": "Participation in College-Sponsored Events",
+              "page": "31"
+            },
+            {
+              "text": "Plagiarism Policy",
+              "page": "31"
+            },
+            {
+              "text": "Repeating Courses",
+              "page": "31"
+            },
+            {
+              "text": "Satisfactory Academic Progress (SAP) Policy",
+              "page": "32"
+            },
+            {
+              "text": "Student Rights and Responsibilities",
+              "page": "32"
+            },
+            {
+              "text": "Transcripts",
+              "page": "32"
+            },
+            {
+              "text": "Transfer Credits",
+              "page": "32"
+            },
+            {
+              "text": "Withdrawal from College",
+              "page": "32"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "General Education",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "General Education Curriculum",
+              "page": "32"
+            },
+            {
+              "text": "General Education Mission Statement",
+              "page": "32"
+            },
+            {
+              "text": "Course Information",
+              "page": "32"
+            },
+            {
+              "text": "General Education Program Requirements",
+              "page": "33"
+            },
+            {
+              "text": "Communications Requirements",
+              "page": "33"
+            },
+            {
+              "text": "Humanities and Fine Arts Requirements",
+              "page": "33"
+            },
+            {
+              "text": "Mathematics Requirements",
+              "page": "34"
+            },
+            {
+              "text": "Navajo and Indian Studies Requirements",
+              "page": "34"
+            },
+            {
+              "text": "Science Requirements",
+              "page": "34"
+            },
+            {
+              "text": "Social and Behavioral Science Requirements",
+              "page": "34"
+            },
+            {
+              "text": "Transferring General Education Credits",
+              "page": "34"
+            },
+            {
+              "text": "Transfer to Arizona Universities",
+              "page": "34"
+            },
+            {
+              "text": "Arizona General Education Curriculum (AGEC)",
+              "page": "34"
+            },
+            {
+              "text": "Requirements",
+              "page": "34"
+            },
+            {
+              "text": "AGEC-A for Liberal Arts Majors",
+              "page": "34"
+            },
+            {
+              "text": "AGEC-B for Business Administration Majors",
+              "page": "35"
+            },
+            {
+              "text": "AGEC-S for Mathematics and Science Majors",
+              "page": "35"
+            },
+            {
+              "text": "Transfer to New Mexico Universities",
+              "page": "35"
+            },
+            {
+              "text": "The New Mexico General Education Common Core",
+              "page": "35"
+            }
+          ]
+        },
+        {
+          "level": 1,
+          "header": "Certificate Programs",
+          "header_type": "toc_header",
+          "items": [
+            {
+              "text": "Computer Technology",
+              "page": "36"
+            },
+            {
+              "text": "Geographic Information System",
+              "page": "36"
+            },
+            {
+              "text": "Medical Assistant",
+              "page": "36"
+            },
+            {
+              "text": "Navajo Nation Leadership",
+              "page": "37"
+            },
+            {
+              "text": "Navajo Cultural Arts",
+              "page": "37"
+            },
+            {
+              "text": "Public Health",
+              "page": "37"
+            }
+          ]
+        }
+      ],
+      "extraction_metadata": {
+        "page_number": 7,
+        "validation_status": "validated",
+        "total_sections": 5,
+        "layout_detected": "table_of_contents"
+      }
+    },
+    {
+      "page_number": 8,
+      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `meta-llama/llama-4-maverick-17b-128e-instruct` in organization `org_01jtyay2zkfbmat4rf5zbqf37e` service tier `on_demand` on tokens per day (TPD): Limit 500000, Used 499999, Requested 2164. Please try again in 6m13.7664s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "extraction_status": "failed"
+    },
+    {
+      "page_number": 9,
+      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `meta-llama/llama-4-maverick-17b-128e-instruct` in organization `org_01jtyay2zkfbmat4rf5zbqf37e` service tier `on_demand` on tokens per day (TPD): Limit 500000, Used 499997, Requested 2164. Please try again in 6m13.4208s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "extraction_status": "failed"
+    },
+    {
+      "page_number": 10,
+      "error": "Error code: 429 - {'error': {'message': 'Rate limit reached for model `meta-llama/llama-4-maverick-17b-128e-instruct` in organization `org_01jtyay2zkfbmat4rf5zbqf37e` service tier `on_demand` on tokens per day (TPD): Limit 500000, Used 499996, Requested 2164. Please try again in 6m13.248s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "extraction_status": "failed"
+    }
+  ]
+}

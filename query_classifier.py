@@ -1,6 +1,6 @@
 """
 Query Classification Module for Diné College Assistant
-Classifies user queries as STUDENT TRANSCRIPT, PAYROLL_CALENDAR, BOR_MEETING, or POLICY
+Classifies user queries as STUDENT TRANSCRIPT, PAYROLL_CALENDAR, BOR_MEETING, CATALOG, or POLICY
 """
 
 from sentence_transformers import SentenceTransformer, util
@@ -19,6 +19,7 @@ class QueryClassifier:
         self.transcript_embeddings = None
         self.payroll_embeddings = None
         self.bor_embeddings = None
+        self.catalog_embeddings = None
         self._initialize_model()
 
     def _initialize_model(self):
@@ -28,9 +29,49 @@ class QueryClassifier:
             self._precompute_transcript_embeddings()
             self._precompute_payroll_embeddings()
             self._precompute_bor_embeddings()
+            self._precompute_catalog_embeddings()
         except Exception as e:
             print(f"❌ Error initializing query classifier: {e}")
             self.model = None
+
+    def _precompute_catalog_embeddings(self):
+        """Precompute embeddings for catalog example queries"""
+        catalog_examples = [
+            # Course details queries
+            "Give me details about AGR 323 Mushroom and Molds",
+            "give me details about ENV 105 Climate Change for Tribal Peoples",
+            "i want name of all the course code that are coming under ENVIRONMENTAL SCIENCE AND TECHNOLOGY.",
+            "tell me about College Board of Regents from Academic Catalog.",
+            
+            # Department/category listing queries
+            "I want name of all the course code that are coming under AGRICULTURE (AGR)",
+            "List all courses in ENVIRONMENTAL SCIENCE AND TECHNOLOGY",
+            
+            # Course search queries
+            "Find courses related to climate change",
+            "Search for courses about mushrooms",
+
+            # Course code queries
+            "What is course code AGR 323?",
+            "Tell me about course ENV 105",
+            "What does course code AGR 323 mean?",
+            "Explain course code ENV 105",
+            "What is the full name of AGR 323?",
+            
+            # General catalog queries
+            "Show me the course catalog",
+            "What courses are available?",
+            
+            # Specific course attribute queries
+            "How many credits is AGR 323?",
+            "What are the prerequisites for ENV 105?",
+        ]
+
+        if self.model:
+            self.catalog_embeddings = self.model.encode(
+                catalog_examples,
+                convert_to_tensor=True,
+            )
 
     def _precompute_payroll_embeddings(self):
         """Precompute embeddings for payroll calendar example queries"""
@@ -108,105 +149,205 @@ class QueryClassifier:
     def _precompute_bor_embeddings(self):
         """Precompute embeddings for Board of Regents (BOR) example queries"""
         bor_examples = [
+
             "When is the next BOR meeting?",
+
             "When is the next Board of Regents meeting?",
+
             "Give me the BOR meeting schedule for this year",
+
             "BOR meeting date in March 2026",
+
             "When is the BOR meeting in May?",
+
             "What are the BOR meeting dates?",
+
             "When are BOR reports due?",
+
             "What is the report due date before the September BOR?",
+
             "When do we submit bi-monthly reports to the Board of Regents?",
+
             "When is the Finance/Audit/Investment Committee meeting?",
+
             "What time does the Governance Committee meet?",
+
             "When are committee meetings for Academic and Student Success?",
+
             "List all Board of Regents committee meetings in August",
+
             "What are the confirmed BOR-related key events?",
+
             "When is the DC Winter Graduation as per BOR planner?",
+
             "When is DC Spring Graduation as per the Board of Regents schedule?",
+
             "Show me all BOR-related events in 2026",
+
             "What is the Board of Regents meeting planner?",
+
             "when is ACCT NLS ‘26 event scheduled",
+
             "AIHEC SPRING BOARD",
+
             # BOR meeting timing
+
             "When is the next BOR meeting?",
+
             "When is the next Board of Regents meeting?",
+
             "What are the Board of Regents meeting dates for 2025-2026?",
+
             "When is the BOR meeting in November 2025?",
+
             "When is the BOR meeting in January 2026?",
+
             "When is the BOR meeting in March 2026?",
+
             "When is the BOR meeting in May 2026?",
+
             "When is the BOR meeting in July 2026?",
+
             "When is the BOR meeting in September 2026?",
+
             "What is the regular BOR meeting schedule?",
+
             "On which day of the week are BOR meetings held?",
+
             "Are BOR meetings bi-monthly?",
+
             "Are BOR meetings generally on the 2nd Friday?",
 
+
+
             # BOR report due dates
+
             "When is the BOR report due?",
+
             "When are BOR reports due?",
+
             "What are the report due dates before each BOR meeting?",
+
             "When is the report due for the November 2025 BOR meeting?",
+
             "When is the report due for the January 2026 BOR meeting?",
+
             "When is the report due for the March 2026 BOR meeting?",
+
             "When is the report due for the May 2026 BOR meeting?",
+
             "When is the report due for the July 2026 BOR meeting?",
+
             "When is the report due for the September 2026 BOR meeting?",
+
             "Are BOR reports due on Wednesday prior to the meeting?",
 
+
+
             # Bi-monthly written reports content
+
             "What must be included in BOR reports?",
+
             "What are the components of the bi-monthly written reports?",
+
             "What is required in the BOR bi-monthly written report?",
+
             "What should the BOR dashboard of key metrics include?",
+
             "What are the strategic goals report requirements for BOR?",
+
             "What are the department goals reporting requirements for BOR?",
+
             "What are other activities in the BOR written report?",
 
+
+
             # Association reporting (Faculty & Staff)
+
             "What is the association reporting schedule for faculty and staff?",
+
             "When do the Faculty and Staff Associations report to the Board of Regents?",
+
             "Do Faculty and Staff Associations provide written and oral reports?",
+
             "In which months do faculty and staff give BOR reports?",
+
             "What report format must Faculty and Staff Associations use for BOR?",
 
+
+
             # Committee schedules and times
+
             "When do the committee meetings occur?",
+
             "What is the standing committee meeting schedule?",
+
             "When does the Finance/Audit/Investment Committee meet?",
+
             "What time is the Finance/Audit/Investment Committee meeting?",
+
             "When does the Governance Committee meet?",
+
             "What time is the Governance Committee meeting?",
+
             "When does the Academic & Student Success Committee meet?",
+
             "What time is the Academic & Student Success Committee meeting?",
+
             "Are committee meetings on the 2nd Friday of alternating months?",
+
             "In which months do committees meet (October, December, February, April, June, August)?",
 
+
+
             # Key events and graduations
+
             "When is AIHEC Fall 2025 event scheduled?",
+
             "When is ACCT Leadership Congress scheduled?",
+
             "When is ACCT GLI scheduled?",
+
             "When is the DC Winter Graduation?",
+
             "When is the DC Spring Graduation?",
+
             "What are the confirmed BOR-related key events?",
+
             "What AIHEC events are planned for 2025-2026?",
+
             "What ACCT events are listed in the BOR planner?",
 
+
+
             # ACCT NLS and TBA events
+
             "When is ACCT NLS 26 event scheduled?",
+
             "When does ACCT NLS 2026 start and end?",
+
             "What is the schedule for AIHEC Spring Board Meeting 2026?",
+
             "What is the schedule for AIHEC Student Conference 2026?",
+
             "What is the schedule for AIHEC Summer 2026?",
+
             "Which BOR-related events have dates TBA?",
 
+
+
             # High-level planner questions
+
             "What is the Board of Regents meeting planner?",
+
             "What does the BOR planner cover for 2025-2026?",
+
             "What is the resolution number and approval date for the BOR planner?",
+
             "What is the academic year for the current BOR planner?",
+
             "Give me the full BOR meeting and reporting schedule for 2025-2026.",
+
             ]
 
         if self.model:
@@ -217,14 +358,14 @@ class QueryClassifier:
 
     def classify_query(self, user_query):
         """
-        Classify user query as STUDENT_TRANSCRIPT, PAYROLL_CALENDAR, BOR_MEETING, or POLICY
+        Classify user query as STUDENT_TRANSCRIPT, PAYROLL_CALENDAR, BOR_MEETING, CATALOG, or POLICY
 
         Args:
             user_query (str): The user's question
 
         Returns:
             tuple: (query_type, confidence_score)
-                query_type: 'STUDENT_TRANSCRIPT', 'PAYROLL_CALENDAR', 'BOR_MEETING', or 'POLICY'
+                query_type: 'STUDENT_TRANSCRIPT', 'PAYROLL_CALENDAR', 'BOR_MEETING', 'CATALOG', or 'POLICY'
                 confidence_score: float between 0 and 1
         """
         if (
@@ -232,6 +373,7 @@ class QueryClassifier:
             or self.transcript_embeddings is None
             or self.payroll_embeddings is None
             or self.bor_embeddings is None
+            or self.catalog_embeddings is None
         ):
             # Fallback to POLICY type if model is not available
             print("⚠️ Query classifier not available, defaulting to POLICY type")
@@ -245,17 +387,20 @@ class QueryClassifier:
             transcript_scores = util.cos_sim(user_embedding, self.transcript_embeddings)
             payroll_scores = util.cos_sim(user_embedding, self.payroll_embeddings)
             bor_scores = util.cos_sim(user_embedding, self.bor_embeddings)
+            catalog_scores = util.cos_sim(user_embedding, self.catalog_embeddings)
 
             # Get the highest similarity score for each type
             max_transcript_score = transcript_scores.max().item()
             max_payroll_score = payroll_scores.max().item()
             max_bor_score = bor_scores.max().item()
+            max_catalog_score = catalog_scores.max().item()
 
             # Classify based on highest score above threshold
             scores = {
                 "STUDENT_TRANSCRIPT": max_transcript_score,
                 "PAYROLL_CALENDAR": max_payroll_score,
                 "BOR_MEETING": max_bor_score,
+                "CATALOG": max_catalog_score,
             }
 
             # Find the type with highest score
@@ -277,7 +422,8 @@ class QueryClassifier:
                 "   Scores - Transcript: "
                 f"{max_transcript_score:.3f}, "
                 f"Payroll: {max_payroll_score:.3f}, "
-                f"BOR: {max_bor_score:.3f}"
+                f"BOR: {max_bor_score:.3f}, "
+                f"Catalog: {max_catalog_score:.3f}"
             )
             print(f"   Threshold: {self.similarity_threshold}")
 
@@ -325,3 +471,4 @@ class QueryType:
     POLICY = "POLICY"
     PAYROLL_CALENDAR = "PAYROLL_CALENDAR"
     BOR_MEETING = "BOR_MEETING"
+    CATALOG = "CATALOG"

@@ -1,0 +1,1353 @@
+[
+  {
+    "page_number": 60,
+    "layout_type": "two_column",
+    "reading_order": "left_to_right",
+    "sections": [
+      {
+        "level": 1,
+        "header": "Senior Semester IV",
+        "header_type": "table_header",
+        "column": "left",
+        "content": {
+          "type": "table",
+          "headers": [
+            "Course",
+            "Credits"
+          ],
+          "rows": [
+            {
+              "course": "Gen Ed: ECO 111, 200, 201, PSY 111, 240",
+              "credits": "3"
+            },
+            {
+              "course": "Elective(500-699 Course)",
+              "credits": "3"
+            },
+            {
+              "total": "Program Credits:",
+              "credits": "13-16"
+            },
+            {
+              "total": "Total Credits:",
+              "credits": "32-36"
+            }
+          ]
+        }
+      },
+      {
+        "level": 1,
+        "header": "Degree Earned",
+        "header_type": "table_header",
+        "column": "left",
+        "content": {
+          "type": "table",
+          "headers": [
+            "Requirement",
+            "Credits"
+          ],
+          "rows": [
+            {
+              "requirement": "Lower Division Requirements",
+              "credits": "63-64"
+            },
+            {
+              "requirement": "Upper Division Requirements",
+              "credits": "59-62"
+            },
+            {
+              "total": "Total Credits Earned:",
+              "credits": "122-126"
+            }
+          ]
+        }
+      },
+      {
+        "level": 1,
+        "header": "MASTER OF SCIENCE DEGREE PROGRAM",
+        "header_type": "main_header",
+        "column": "left",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "Master of Science in Biology (M.S.)",
+            "header_type": "sub_header",
+            "content": {
+              "type": "paragraph",
+              "text": "The Master of Science in Biology program will develop student's knowledge and research skills in an area of laboratory and/or field research in the biological sciences available at Diné College. The program will prepare students to pursue careers in the biological and related science areas, as well as continued graduate and/or professional medical education. In the first year of the two-year graduate program, students will take two Orientation to Graduate Research courses, BIO 501 and NAS 513, 3 hours each, consisting of advanced concepts in experimental design and statistical analysis, grant writing, ethical conduct of research, and publishing papers. Specialty independent study lab \"seminar\" courses (BIO 698, 2-3 hrs) and graduate level background courses will also be taken. The student's Graduate Committee is assembled from graduate faculty in the discipline area of the student's research and an external research faculty from an outside research university or industry. The Graduate Committee is responsible for the two-year plan and timeline for graduation. Students will begin their thesis research the first semester.",
+              "formatting": []
+            }
+          }
+        ]
+      },
+      {
+        "level": 2,
+        "header": "Semester I",
+        "header_type": "table_header",
+        "content": {
+          "type": "table",
+          "headers": [
+            "Course",
+            "Credits"
+          ],
+          "rows": [
+            {
+              "course": "BIO 501 Design of Experiments & Analysis of Data",
+              "credits": "3"
+            },
+            {
+              "course": "BIO 698 Lab Seminar",
+              "credits": "2-3"
+            },
+            {
+              "course": "Elective(500-699 Course) as determined by student's graduate committee",
+              "credits": "3"
+            },
+            {
+              "total": "Program Credits:",
+              "credits": "8-9"
+            }
+          ]
+        }
+      },
+      {
+        "level": 2,
+        "header": "Semester II",
+        "header_type": "table_header",
+        "content": {
+          "type": "table",
+          "headers": [
+            "Course",
+            "Credits"
+          ],
+          "rows": [
+            {
+              "course": "NAS 513 Indigenous Research Methodology",
+              "credits": "3"
+            },
+            {
+              "course": "BIO 698 Lab Seminar",
+              "credits": "2-3"
+            },
+            {
+              "course": "Elective(500-699 Course) as determined by student's graduate committee",
+              "credits": "3"
+            },
+            {
+              "total": "Program Credits:",
+              "credits": "8-9"
+            }
+          ]
+        }
+      },
+      {
+        "level": 2,
+        "header": "Semester III",
+        "header_type": "table_header",
+        "content": {
+          "type": "table",
+          "headers": [
+            "Course",
+            "Credits"
+          ],
+          "rows": [
+            {
+              "course": "BIO 699 Thesis Research",
+              "credits": "3"
+            },
+            {
+              "course": "BIO 698 Lab Seminar",
+              "credits": "2-3"
+            },
+            {
+              "course": "Elective(500-699 Course) as determined by student's graduate committee",
+              "credits": "3"
+            },
+            {
+              "total": "Program Credits:",
+              "credits": "8-9"
+            }
+          ]
+        }
+      },
+      {
+        "level": 2,
+        "header": "Semester IV",
+        "header_type": "table_header",
+        "content": {
+          "type": "table",
+          "headers": [
+            "Course",
+            "Credits"
+          ],
+          "rows": [
+            {
+              "course": "BIO 699 Thesis Research",
+              "credits": "3"
+            },
+            {
+              "course": "BIO 698 Lab Seminar",
+              "credits": "2-3"
+            }
+          ]
+        }
+      },
+      {
+        "level": 1,
+        "header": "Semester IV",
+        "header_type": "table_header",
+        "column": "right",
+        "content": {
+          "type": "table",
+          "headers": [
+            "Course",
+            "Credits"
+          ],
+          "rows": [
+            {
+              "course": "Elective(500-699 Course)",
+              "credits": "3"
+            },
+            {
+              "total": "Program Credits:",
+              "credits": "8-9"
+            },
+            {
+              "total": "Total Credits:",
+              "credits": "32-36"
+            }
+          ]
+        }
+      },
+      {
+        "level": 1,
+        "header": "Course Title and Prefix Code",
+        "header_type": "table_header",
+        "column": "right",
+        "content": {
+          "type": "table",
+          "headers": [
+            "Course Title",
+            "Course Code"
+          ],
+          "rows": [
+            {
+              "course_title": "Accounting",
+              "course_code": "ACC"
+            },
+            {
+              "course_title": "Agriculture",
+              "course_code": "AGR"
+            },
+            {
+              "course_title": "Anthropology",
+              "course_code": "ANT"
+            },
+            {
+              "course_title": "Art Education",
+              "course_code": "ARE"
+            },
+            {
+              "course_title": "Art History",
+              "course_code": "ARH"
+            },
+            {
+              "course_title": "Astronomy",
+              "course_code": "AST"
+            },
+            {
+              "course_title": "Biology",
+              "course_code": "BIO"
+            },
+            {
+              "course_title": "Bi-Lingual Education",
+              "course_code": "BLE"
+            },
+            {
+              "course_title": "Business and Office Administration",
+              "course_code": "BUS"
+            },
+            {
+              "course_title": "Cultural Arts",
+              "course_code": "CA"
+            },
+            {
+              "course_title": "Chemistry",
+              "course_code": "CHM"
+            },
+            {
+              "course_title": "Certified Medical Assistant",
+              "course_code": "CMA"
+            },
+            {
+              "course_title": "Communication",
+              "course_code": "COM"
+            },
+            {
+              "course_title": "Computer Science",
+              "course_code": "CSC"
+            },
+            {
+              "course_title": "Creative Writing",
+              "course_code": "CW"
+            },
+            {
+              "course_title": "Early Childhood Education",
+              "course_code": "ECE"
+            },
+            {
+              "course_title": "Economics",
+              "course_code": "ECO"
+            },
+            {
+              "course_title": "Education",
+              "course_code": "EDU"
+            },
+            {
+              "course_title": "Engineering",
+              "course_code": "EGR"
+            },
+            {
+              "course_title": "English",
+              "course_code": "ENG"
+            },
+            {
+              "course_title": "Environmental Science and Technology",
+              "course_code": "ENV"
+            },
+            {
+              "course_title": "Educational Professional Development",
+              "course_code": "EPD"
+            },
+            {
+              "course_title": "Fine Arts",
+              "course_code": "FA"
+            },
+            {
+              "course_title": "Graphic Design",
+              "course_code": "GD"
+            },
+            {
+              "course_title": "Geology",
+              "course_code": "GLG"
+            },
+            {
+              "course_title": "Health Education",
+              "course_code": "HEE"
+            },
+            {
+              "course_title": "History",
+              "course_code": "HST"
+            },
+            {
+              "course_title": "Humanities",
+              "course_code": "HUM"
+            },
+            {
+              "course_title": "Law",
+              "course_code": "LAW"
+            },
+            {
+              "course_title": "Library",
+              "course_code": "LIB"
+            },
+            {
+              "course_title": "Management",
+              "course_code": "MGT"
+            },
+            {
+              "course_title": "Marketing",
+              "course_code": "MKT"
+            },
+            {
+              "course_title": "Mathematical Education",
+              "course_code": "MTE"
+            },
+            {
+              "course_title": "Mathematics",
+              "course_code": "MTH"
+            },
+            {
+              "course_title": "Music",
+              "course_code": "MUS"
+            },
+            {
+              "course_title": "Native American Studies",
+              "course_code": "NAS"
+            },
+            {
+              "course_title": "Navajo Language",
+              "course_code": "NAV"
+            },
+            {
+              "course_title": "Navajo Cultural Arts",
+              "course_code": "NCA"
+            },
+            {
+              "course_title": "Navajo and Indian Studies",
+              "course_code": "NIS"
+            },
+            {
+              "course_title": "Physical Science",
+              "course_code": "PHS"
+            }
+          ]
+        }
+      }
+    ],
+    "extraction_metadata": {
+      "page_number": 60,
+      "validation_status": "validated",
+      "total_sections": 9,
+      "layout_detected": "two_column",
+      "warnings": [
+        "Potentially missing section: 'program requirements' - may be incomplete extraction",
+        "Potentially missing section: 'credits' - may be incomplete extraction"
+      ]
+    }
+  },
+  {
+    "page_number": 61,
+    "layout_type": "two_column",
+    "reading_order": "left_to_right",
+    "sections": [
+      {
+        "level": 1,
+        "header": "Degree Programs",
+        "header_type": "main_header",
+        "column": "left",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "",
+            "header_type": "table_header",
+            "content": {
+              "type": "table",
+              "headers": [
+                "Course Title",
+                "Course Code"
+              ],
+              "rows": [
+                {
+                  "course_title": "Physics",
+                  "course_code": "PHY"
+                },
+                {
+                  "course_title": "Political Sciences",
+                  "course_code": "POS"
+                },
+                {
+                  "course_title": "Psychology",
+                  "course_code": "PSY"
+                },
+                {
+                  "course_title": "Public Health",
+                  "course_code": "PUH"
+                },
+                {
+                  "course_title": "Sociology",
+                  "course_code": "SOC"
+                },
+                {
+                  "course_title": "Social & Philosophical Foundation",
+                  "course_code": "SPF"
+                },
+                {
+                  "course_title": "Social Science",
+                  "course_code": "SSC"
+                },
+                {
+                  "course_title": "Social Work",
+                  "course_code": "SWO"
+                },
+                {
+                  "course_title": "Theatre",
+                  "course_code": "THR"
+                }
+              ]
+            }
+          },
+          {
+            "level": 2,
+            "header": "ACCOUNTING (ACC)",
+            "header_type": "sub_header",
+            "content": {
+              "type": "multi_course_description",
+              "courses": [
+                {
+                  "code": "ACC 100",
+                  "title": "Fundamentals of Accounting",
+                  "credits": "3",
+                  "description": "This course is an introduction to accounting fundamentals. It includes journaling, posting, worksheets, financial reports, and data processing for accounting. One-hour laboratory required."
+                },
+                {
+                  "code": "ACC 200",
+                  "title": "Financial Accounting",
+                  "credits": "3",
+                  "description": "Prerequisite: Minimum grade of 'C' in ACC 100. This course covers the theory and practice of accounting in services and merchandising firms. It emphasizes the accounting cycle, periodic reporting, receivables, payables, inventories, and accounting systems. One-hour laboratory required."
+                },
+                {
+                  "code": "ACC 201",
+                  "title": "Managerial Accounting",
+                  "credits": "3",
+                  "description": "Prerequisite: Minimum grade of 'C' in ACC 200. This course is a continuation of ACC 200 with emphasis on manufacturing firms, and managerial approaches for decision-making. One-hour laboratory required."
+                },
+                {
+                  "code": "ACC 310",
+                  "title": "Government and Non-Profit Accounting",
+                  "credits": "3",
+                  "description": "Prerequisite: Minimum grade of 'C' in ACC 201. This course covers the theory and practice of accounting for governmental and not-for-profit units. Topics include financial reporting; budgetary accounting; fund accounts; and nonprofit accounting for entities such as public colleges, universities and health care providers."
+                },
+                {
+                  "code": "ACC 350",
+                  "title": "Finance",
+                  "credits": "3",
+                  "description": "Prerequisite: Minimum grade of 'C' in ACC 201, ACC 310, BUS 265, ECO 200 or 201. Introduction to the theories and applications associated with the functions of capital markets. This includes the conceptual foundations of portfolio theory, risk management, and asset valuation. This course will examine the markets for equity, money, and bonds. One-hour laboratory required."
+                }
+              ]
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGRICULTURE (AGR)",
+            "header_type": "sub_header",
+            "content": {
+              "type": "multi_course_description",
+              "courses": [
+                {
+                  "code": "AGR 103",
+                  "title": "Conservation for Community Planning",
+                  "credits": "4",
+                  "description": "This course introduces students to the understanding natural resource conservation issues and concerns to allow them to develop conservation plans necessary to improve natural resource conditions applicable to tribal lands."
+                },
+                {
+                  "code": "AGR 105",
+                  "title": "Introduction to Animal Science",
+                  "credits": "4",
+                  "description": "This course will introduce students to animal and livestock industries, production, systems and markets. Students will not only learn about national production but also include Navajo Nation livestock industry."
+                },
+                {
+                  "code": "AGR 110",
+                  "title": "Monitoring/Assessments and Rangeland Management",
+                  "credits": "4",
+                  "description": "This course will introduce students to the various grazing management concept, identify local vegetation communities, identification of local plants, as related to current Navajo producers grazing management systems. Field trips and field works will serve as a lab for hands-on and field experience to learn range and vegetation monitoring concepts."
+                },
+                {
+                  "code": "AGR 215",
+                  "title": "Introduction to Veterinary Science",
+                  "credits": "3",
+                  "description": "This course will introduce students to medical terminology, physiology, anatomy, diseases, domestic and exotic animals, Roles of the Veterinary Technician and Veterinarian, career options, ethics, laws, safety, and public health as they relate to Veterinary Medicine."
+                },
+                {
+                  "code": "AGR 216/PUH 216",
+                  "title": "One Health",
+                  "credits": "3",
+                  "description": "The course will introduce students to the roles of Veterinary Medicine, Biology and Zoology within Environmental Medicine, career options, ethics, laws, safety, and public health as they relate to the concept of 'One Health' which examines how humans, animals, and environmental health are all interconnected."
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "header": "",
+        "header_type": "main_header",
+        "column": "right",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "",
+            "header_type": "course_description",
+            "content": {
+              "type": "multi_course_description",
+              "courses": [
+                {
+                  "code": "AGR 300",
+                  "title": "Farm and Management/Bookkeeping",
+                  "credits": "3",
+                  "description": "Prerequisite: ENG 101, MTH 110 or equivalent. This course sets the foundation of record keeping, and bookkeeping skills as it relates to farming and ranching operations. Students will learn to apply these skills to analyze operation management decisions."
+                },
+                {
+                  "code": "AGR 301",
+                  "title": "Introduction to Meat Science and Processing",
+                  "credits": "3",
+                  "description": "Prerequisite: AGR 215 or instructor's permission. Fundamental aspects of the meat and poultry industry. Lecture topics and field trip will include the nutrient value of meat and eggs, meat processing and preservation, meat and egg safety, muscle structure and contraction, slaughter and processing of beef, lamb, pork, poultry, sausage and bacon manufacture, meat curing, meat cookery and muscle and bone anatomy."
+                },
+                {
+                  "code": "AGR 302",
+                  "title": "Farm Value-Added Production",
+                  "credits": "3",
+                  "description": "Prerequisite: ENG 101. The student will learn to add the value of a product by transforming a product from its original state to a more valuable product. The course will ensure examples that are applicable to Navajo traditional crops and livestock products. Examples are corn processed in steam corn, fruit product made into jams/jellies or herbs used in soaps. This course will briefly touch on food safety and state regulation and permitting."
+                },
+                {
+                  "code": "AGR 303",
+                  "title": "Beekeeping",
+                  "credits": "3",
+                  "description": "The biology of honey bees and the craft of agriculture will be examined by exploring the natural history, biogeography, and ecology of honey bees. Honey bee anatomy, physiology, colony social structure, pests/diseases, pollination ecology, management and current topics in beekeeping will be discussed."
+                },
+                {
+                  "code": "AGR 304",
+                  "title": "Forage and Hay Production",
+                  "credits": "1",
+                  "description": "This course will concentrate on forage production, adaptation, sustainable agriculture use, seed production, harvest, livestock utilization and storage. The course will cover grasses and legumes species."
+                },
+                {
+                  "code": "AGR 305",
+                  "title": "Industrial Hemp Production",
+                  "credits": "1",
+                  "description": "The course serves as an introduction to the botany, agronomy, history and use of the hemp plant for food, fiber, and building products."
+                },
+                {
+                  "code": "AGR 311",
+                  "title": "Principles of Animal Nutrition",
+                  "credits": "3",
+                  "description": "The student will learn the components of an animal's diet and understand the nutrition requirements of a balanced diet. Students will also be able to explain how specialist feeders obtain their nutrition. This will include the effects of nutritional disorders and deficiencies. The student will focus on the main component of animal feeds and examine the source structure and function of the major nutrients, nutritional value, and the detrimental effect of dietary imbalances."
+                },
+                {
+                  "code": "AGR 312",
+                  "title": "Applied Animal Nutrition",
+                  "credits": "3",
+                  "description": "Prerequisite: AGR 311. Students will build upon the components approach of AGR 311-'Principles of Animal Nutrition' to better understand the nutrition requirements for a balanced diet applied by a species-by-species approach and application. Students will develop and utilize species -specific nutritional disorders, dificiencies, and toxicology. Students focus on the advanced components of animal feeds and examine the source structure and function of the major nutrients, nutritional value, and the detrimental effect of dietary imbalances in individual animal species."
+                },
+                {
+                  "code": "AGR 313",
+                  "title": "Agricultural Genetics",
+                  "credits": "3",
+                  "description": ""
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "extraction_metadata": {
+      "page_number": 61,
+      "validation_status": "validated",
+      "total_sections": 2,
+      "layout_detected": "two_column"
+    }
+  },
+  {
+    "page_number": 62,
+    "layout_type": "two_column",
+    "reading_order": "left_to_right",
+    "sections": [
+      {
+        "level": 1,
+        "header": "Course Descriptions",
+        "header_type": "main_header",
+        "column": "left",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "AGR 313 Agricultural Genetics (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 313",
+              "course_title": "Agricultural Genetics",
+              "credits": "3",
+              "prerequisite": "BIO 181 and 182",
+              "text": "Agricultural Genetics addresses the fundamental principles of reproduction, variation, and heredity in plants and animals and uses these principles to explore the phenotypic modification of economically important crops and livestock."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 323 Mushroom and Molds (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 323",
+              "course_title": "Mushroom and Molds",
+              "credits": "3",
+              "prerequisite": "ENG 101",
+              "text": "An overview of how organisms in the Kingdom Fungi (mushrooms, molds, yeasts, rusts, mildews) impact individuals and society. Content will include contemporary and historical contributions of fungi or fungal products as they relate to food, medicine, religion, famine, industry, and basic science, and how these contributions have changed the way we live, the quality of our lives, and cultural development."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 325 Agro Ecology: Plants and Animals (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 325",
+              "course_title": "Agro Ecology: Plants and Animals",
+              "credits": "3",
+              "prerequisite": "BIO 181, 182, 284",
+              "text": "The course is designed to introduce various topics of Agroecology including Diné Food Sovereignty, traditional and organic farming, plant and animal production, energy, pest management, specialized and controlled environment agriculture and sustainable practices. Alternative agriculture offers society a variety of management practices tending towards sustainable or even regenerative agro-ecosystems, as a response to conventional modes of food, fiber and fuel production that provoke environmental degradation. The class will consist of one-hour lecture and on three four-hours laboratory each week during which students will either be in the field or in the computer laboratory."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 350 Livestock Production Management I (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 350",
+              "course_title": "Livestock Production Management I",
+              "credits": "3",
+              "text": "The course develops entry-level skills and knowledge in the production and management of meat and fiber livestock and businesses development, such as production agriculture, shows, breeding and sales. The primary instruction will be in areas of health care, economics and management issues facing the beef, small ruminant and swine livestock industries."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 355 Livestock Production Management II (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 355",
+              "course_title": "Livestock Production Management II",
+              "credits": "3",
+              "text": "The course develops entry-level skills and knowledge in the production and management of meat, dairy and fiber livestock, equine and poultry and businesses development, such as production agriculture, shows, breeding and sales. The primary instruction will be in areas of health care, economics and management issues facing the dairy, equine and poultry industries."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 363 Soils, Hydrology, and Crops (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 363",
+              "course_title": "Soils, Hydrology, and Crops",
+              "credits": "3",
+              "prerequisite": "ENG 101, BIO 284",
+              "text": "This course is designed to introduce various topics of soils, hydrology, and drought-resilient agricultural systems. This course is a qualitative introduction to the dynamics of soil and water, and their relationship to land use, plant growth, environmental quality, and society/culture. Emphasis will be on restoring farm and ranch ecosystem health, soil growth, and drought-resistant management techniques."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 373 Fruit and Vegetable Production I (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 373",
+              "course_title": "Fruit and Vegetable Production I",
+              "credits": "3",
+              "prerequisite": "ENG 101, BIO 284, AGR 363",
+              "text": "The objective of this course is to provide the student with a basic understanding of fruit and vegetable production. Emphasis will be placed on production regions, biology, soils, nutrition, types of fruits and vegetables, site selection and planting, fruit and vegetable quality factors, propagation, pruning, pollination, flowering and fruit set, horticultural production practices and career opportunities."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 408 Field Work Experience (1-12)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 408",
+              "course_title": "Field Work Experience",
+              "credits": "1-12",
+              "text": "Supervised field experience in an appropriate natural resource agency, organization or agribusiness."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 411 Conservation Planning (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 411",
+              "course_title": "Conservation Planning",
+              "credits": "3",
+              "prerequisite": "Ninety (90) credit hours. Twenty-four (24) credit hours of upper-division courses in Agricultural Science.",
+              "text": "This course introduces students to the understanding of natural resource conservation issues and concerns to allow them to develop conservation plans necessary to improve natural resource conditions applicable to tribal lands. Students will understand Soil, Water, Air, Plant, and Animal resource problems and have the opportunity to establish objective solutions and alternative method to implement the plans. In addition, learn the nine steps of the United States Department of Agriculture Natural Resource Conservation Service Natural Resource Planning Process."
+            }
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "header": "",
+        "header_type": "none",
+        "column": "right",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "AGR 433 Plant Pathology (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 433",
+              "course_title": "Plant Pathology",
+              "credits": "3",
+              "prerequisite": "ENG 101, BIO 284",
+              "text": "This course introduces the basic concepts of plant disease biology and control, covering disorders caused by fungi, viruses, bacteria, and nematodes, as well as the role of environmental factors in contributing to the development of epidemics. Other topics include the mechanisms by which these factors induce disease, the interactions between disease agents and their hosts, disease spread, prevention, and management, and the human and environmental costs of plant diseases."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 460 Animal Health and Disease (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 460",
+              "course_title": "Animal Health and Disease",
+              "credits": "3",
+              "prerequisite": "ENG 101, AGR 215",
+              "text": "Fundamental aspects of Animals in health and disease. Lecture topics will include an overview of animal health and the disease, which lead to unhealthy animals. The primary focus is on infectious, non-infectious and parasitic diseases common to farm animals and those that occasionally crossover to human populations. The diagnosis, management and control of animal disease, treatment and prevention are included."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 465 Animal Breeding and Reproduction (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 465",
+              "course_title": "Animal Breeding and Reproduction",
+              "credits": "3",
+              "prerequisite": "Required BIO 425",
+              "text": "Fundamental aspects of livestock reproduction. Lecture topics will include the value of managed breeding, reproduction technologies, using medical intervention to improve farm economics, discussion of artificial insemination and embryo transplant, using CIDRS in cattle and sheep, how to use current technology to breed livestock out of season, basics of resolving obstetric emergencies and learning when to request advance Veterinary assistance."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 473 Fruit and Vegetable Production II (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 473",
+              "course_title": "Fruit and Vegetable Production II",
+              "credits": "3",
+              "prerequisite": "AGR 373",
+              "text": "A continuation Fruit and Vegetable Production I, with an emphasis on vegetable and fruit harvest and post harvest topics. This course covers the biological principles involved in harvesting, grading, packaging, transportation, and marketing horticultural crops, and their effects on quality maintenance. Commercial post harvest practices are described and explained in relation to general procedure and technology as well as the recommended post harvest best handling practices and optimum post harvest conditions for different types or horticultural crops."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 493/PUH 493 Food Safety and HACCP; From Farm to Table (4)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 493/PUH 493",
+              "course_title": "Food Safety and HACCP; From Farm to Table",
+              "credits": "4",
+              "prerequisite": "AGR 301, 373, or instructor's permission. Recommended: BIO 205",
+              "text": "Fundamental aspects of Food Safety and foodborne disease/adulteration/contamination Prevention. Lecture topics and field trip will include the HACCP (Hazard Analysis and Critical Control Point) system for reducing the risk of safety hazards in food production, coverage of production, fresh and processed foods, plants and plant derived products, animal products and eggs into products safe and suitable for human consumption, and what can be done to prevent adulteration by drugs and chemical contamination."
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 497 Design for Complex Environmental Issues (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "AGR 497",
+              "course_title": "Design for Complex Environmental Issues",
+              "credits": "3",
+              "text": "This collaborative course focuses on design projects addressing environmental and agriculture challenges. Student teams will create working devices, prototypes, and models, along with conventional text/graphic displays. Through this course, students can develop the expertise needed to address complex environmental issues, ensuring"
+            }
+          }
+        ]
+      }
+    ],
+    "extraction_metadata": {
+      "page_number": 62,
+      "validation_status": "validated",
+      "total_sections": 2,
+      "layout_detected": "two_column"
+    }
+  },
+  {
+    "page_number": 63,
+    "layout_type": "two_column",
+    "reading_order": "left_to_right",
+    "sections": [
+      {
+        "level": 1,
+        "header": "Course Descriptions",
+        "header_type": "main_header",
+        "column": "left",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "AGR 498 Senior Thesis I (2)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: Ninety total credits. Twenty-four credits of upper-division courses in Agricultural Science, Exceptions: by approval of the Agricultural Science Baccalaureate. Senior Thesis I is a capstone course where students design, present and initiate a senior research project. The project typically investigates an agricultural process and involves production of an agricultural product.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 499 Senior Thesis II (2)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: AGR 498. Senior Thesis II is the second course of a two-course capstone project where students complete a senior research project. The project typically investigates an agricultural process and involves production of an agricultural product. Students must present the results of their projects publicly.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "AGR 533 Plant Pathology (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "The course introduces the basic concepts of plant disease biology and control, covering disorders caused by fungi, viruses, bacteria, and nematodes, as well as the role of environmental factors in contributing to the development of epidemics. Other topics include the mechanisms by which these factors induce disease, the interactions between disease agents and their hosts, disease spread, prevention, and management, and the human and environmental costs of plant diseases.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANTHROPOLOGY (ANT)",
+            "header_type": "department_header",
+            "content": {
+              "type": "paragraph",
+              "text": "",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 111 Introduction to Cultural Anthropology (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or concurrent enrollment. This course introduces the study of human cultural diversity. It includes subfields of anthropology, sub-disciplines and topics, historical origins, influences, key figures, theory and methods, and an introduction to the comparative study of cultures.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 112 Physical Anthropology (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or concurrent enrollment. This course is an in-depth survey of topics and methods in physical anthropology, including paleoanthropology, geology, genetics, primatology, and hominid evolution.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 116 Introduction to Human-Animal Studies (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "This course explores relationships between humans and other animals, as well as ideas that humans have about animals. Topics will include introduction and application of fundamental concepts of Human-Animal Studies (HAS) as they apply to human-animal economies, attitudes toward animals, and animals in art, belief systems and literature.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 160/NIS 160 Navajo Agricultural History to Present (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Note: Cross-listed with NIS 160. ANT 160 provides philosophical, historical, and cultural practical (hands-on) learning of the foundation and perseverance of Navajo agricultural practices. This includes the study of Navajo agricultural laws and codes practiced prior to European contact as techniques documented during colonial contact, modified through 1868 treaty mandates and practiced in the contemporary as a result of U.S. agricultural laws.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 201 Ethnographic Methods (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or concurrent enrollment. Ethnographic Methods introduces students to methods of conducting research into human cultures and provides guidance and supervision as students conduct research in the community on an aspect of Navajo life.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 210 Ancient Societies in Prehistoric Times (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or concurrent enrollment. ANT 210 is an exploration of prehistoric human societies and cultures throughout the world based on archaeological studies of the remains of ancient dwellings, ceremonial sites, and artifacts.",
+              "formatting": []
+            }
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "header": "",
+        "header_type": "none",
+        "column": "right",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "ANT 216 Animals as Commodities (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Through Human-Animal Studies (HAS) frameworks, the class analyzes three areas in which non-human animals 'serve' humans: as food, as companions, and as research tools. Students will explore notions of power and difference, ethnics and responsibility, and creativity in reimagining the status quo of human-nonhuman animal relationships.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 225/NIS 225 Indians of the United States and North America (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or concurrent enrollment. Cross-listed with NIS 225. This course surveys the indigenous groups of U.S. and Canada with an emphasis on changing economic and political forces that influence various tribal groups. Students will be called upon to focus on origins, language, arts, and habitats.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 250 Principles of Archaeology (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or concurrent enrollment. An introduction to the history of archaeological research and a survey of concepts and methods in the study of prehistoric cultures with an emphasis on modern theories and techniques.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ANT 265 Archaeology of the Southwest (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or concurrent enrollment. A survey of the prehistory of the American Southwest from the Paleozoic to the Spanish historical period, this course focuses on prehistoric cultures of Arizona and New Mexico.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ART EDUCATION (ARE)",
+            "header_type": "department_header",
+            "content": {
+              "type": "paragraph",
+              "text": "",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARE 228 Elementary Art Methods and Curriculum Development (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "This course is designed for an art endorsement teachers who have teaching certificate from the State of New Mexico and Arizona. Course covers teaching strategies, learning environments, teaching sources and use of technology in Elementary setting. New Mexico and Arizona State Board of Education Teaching Standards will be emphasized.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARE 229 Secondary Art Methods and Curriculum Development (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "This course is designed for an art endorsement for teachers who have teaching certificate from the State of New Mexico and Arizona. Course covers teaching strategies, learning environments, teaching sources and use of technology in Elementary setting. New Mexico and Arizona State Board of Education Teaching Standards will be emphasized.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ART HISTORY (ARH)",
+            "header_type": "department_header",
+            "content": {
+              "type": "paragraph",
+              "text": "",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARH 110 Art Appreciation (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101, and computer literacy. Develop an understanding and appreciation of the visual arts by exploring major art works in history, discovering it's meaning and looking at different styles and media of art.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARH 211 Survey of Native American Art (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or instructor's permission. This course provides an overview and develops an appreciation of Native American Art through both historical and contemporary perspectives.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARH 213 Survey of World Art, Prehistoric to 1500 (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or instructor's permission. This course provides knowledge of and appreciation for Western and Eastern Art from the Prehistoric Age until the 1500s.",
+              "formatting": []
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARH 214 Survey of World Art, 1500 to Present (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "paragraph",
+              "text": "Prerequisite: ENG 101 or instructor's permission. This course provides knowledge and appreciation of Western and",
+              "formatting": [],
+              "continues_on_next": true
+            }
+          }
+        ]
+      }
+    ],
+    "extraction_metadata": {
+      "page_number": 63,
+      "validation_status": "validated",
+      "total_sections": 2,
+      "layout_detected": "two_column"
+    }
+  },
+  {
+    "page_number": 64,
+    "layout_type": "two_column",
+    "reading_order": "left_to_right",
+    "sections": [
+      {
+        "level": 1,
+        "header": "Course Descriptions",
+        "header_type": "main_header",
+        "column": "left",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "ARH 313 Contemporary Issues in Art (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "ARH 313",
+              "course_title": "Contemporary Issues in Art",
+              "credits": "3",
+              "prerequisites": "All core Art History courses, ARH 211, 213, and 214.",
+              "description": "Student will learn of contemporary current issues art, art movements and philosophy. Course will cover Euro and Euro-American and modern Native American art. This course uses the Diné epistemology Nitsáhakees, Nahatʼá, Iiná and Siihasin as a process for learning."
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARH 315 History of Graphic Design (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "ARH 315",
+              "course_title": "History of Graphic Design",
+              "credits": "3",
+              "prerequisites": "ENG 101.",
+              "description": "Examination of the history and development of graphic design from the Industrial Revolution through the 21st century. The course will study how graphic design responded to (and affected) international, social, political, and technological developments since 1450. Emphasis will be on printed work from 1880 to 1970 and the relationship of that work to other visual arts and design disciplines. Three hours lecture per week."
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARH 361 Twentieth-Century and Contemporary Native (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "ARH 361",
+              "course_title": "Twentieth-Century and Contemporary Native",
+              "credits": "3",
+              "prerequisites": "ARH 214.",
+              "description": "This course covers twentieth-century and contemporary Native American Art. Readings are paired with examination of artworks and discussion of their contexts of production and reception. The course is taught as lecture and discussion. The professor will provide students with discussion questions that will guide their reading and serve as the focus of class discussions. Students will be expected to complete all readings before the day on which they are listed on the syllabus and come to class prepared to discuss them. Tests and writing assignments develop effective writing skills and group presentations develop their ability to communicate orally. Students are given a map quiz, a mid-term essay exam and a comprehensive final essay exam. In addition, ten two-page weekly papers demonstrating an understanding and ability to articulate the content of the assigned readings are required."
+            }
+          },
+          {
+            "level": 2,
+            "header": "ARH 413 Contemporary American Indian Masters (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "ARH 413",
+              "course_title": "Contemporary American Indian Masters",
+              "credits": "3",
+              "prerequisites": "All core art history courses, ARH 313.",
+              "description": "Students will learn of contemporary American Indian Masters RC man, Allan Houser, Fritz Scholder, T.C. Cannon and other American Indian Masters. This course uses the Diné epistemology Nitsáhakees, Nahatʼá, Iiná and Siihasin as a process for learning."
+            }
+          },
+          {
+            "level": 2,
+            "header": "ASTRONOMY (AST)",
+            "header_type": "department_header",
+            "subsections": [
+              {
+                "level": 3,
+                "header": "AST 100 Fundamentals of Astronomy (4)",
+                "header_type": "course_header",
+                "content": {
+                  "type": "course_description",
+                  "course_code": "AST 100",
+                  "course_title": "Fundamentals of Astronomy",
+                  "credits": "4",
+                  "prerequisites": "Instructor's permission.",
+                  "description": "Students will be introduced to the planets, solar system, and galaxy: sun, moon, and other satellites; stars and constellations; black holes; and other celestial bodies. Navajo stories of creation are related to the scientific view. A nighttime laboratory is required. This course meets for three hours lecture and three hours laboratory per week."
+                }
+              }
+            ]
+          },
+          {
+            "level": 2,
+            "header": "BIOLOGY (BIO)",
+            "header_type": "department_header",
+            "subsections": [
+              {
+                "level": 3,
+                "header": "BIO 100 Biology Concepts (4)",
+                "header_type": "course_header",
+                "content": {
+                  "type": "course_description",
+                  "course_code": "BIO 100",
+                  "course_title": "Biology Concepts",
+                  "credits": "4",
+                  "description": "This one-semester, non-major introductory course covers basic principles and concepts of biology, including how organisms obtain and use energy, reproduction, heredity, evolution, and response to the environment. Environmental issues affecting life, such as global warming, are introduced."
+                }
+              },
+              {
+                "level": 3,
+                "header": "BIO 156 Introduction Biology for Allied Health (4)",
+                "header_type": "course_header",
+                "content": {
+                  "type": "course_description",
+                  "course_code": "BIO 156",
+                  "course_title": "Introduction Biology for Allied Health",
+                  "credits": "4",
+                  "prerequisites": "ENG 101 or instructor's permission.",
+                  "description": "For allied health majors, this is an introductory course with an emphasis on the human body. Includes instruction in fundamental concepts of cell biology, histology, genetics microbiology, and principles of the scientific method."
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "level": 1,
+        "column": "right",
+        "subsections": [
+          {
+            "level": 2,
+            "header": "BIO 160/СMA 160 Introduction to Human Anatomy and Physiology (4)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 160/СMA 160",
+              "course_title": "Introduction to Human Anatomy and Physiology",
+              "credits": "4",
+              "description": "Students examine the structure and function of all the major systems of the body. Basic principles and concepts of scientific method, organization, homeostasis, and control mechanisms are studied. This course meets for three hours lecture and three hours laboratory per week. This course does not meet nursing program requirements."
+            }
+          },
+          {
+            "level": 2,
+            "header": "BIO 165 Cancer Prevention and Control (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 165",
+              "course_title": "Cancer Prevention and Control",
+              "credits": "3",
+              "description": "Cancer Prevention and Control focuses on the core concepts of biology and public health as they relate to cancer. The course addresses both the biological processes within cells that may result in cancer and public health approaches to cancer, including cancer epidemiology, education, screening, early detection, and treatment options. Special emphasis is placed on the impact of language and cultural issues in developing and implementing cancer prevention programs. Numerous basic concepts of biology and public health are covered, so students should have taken at least one course in introductory biology and one course in introductory public health before enrolling in this course."
+            }
+          },
+          {
+            "level": 2,
+            "header": "BIO 170/СMA 170/PUH 170 Medical Terminology (3)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 170/СMA 170/PUH 170",
+              "course_title": "Medical Terminology",
+              "credits": "3",
+              "prerequisites": "ENG 101 (BIO/PUH Majors Only).",
+              "description": "Basic tools are provided, such as root words, prefixes, and suffixes, for building an effective verbal and written biomedical vocabulary."
+            }
+          },
+          {
+            "level": 2,
+            "header": "BIO 181 General Biology I (4)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 181",
+              "course_title": "General Biology I",
+              "credits": "4",
+              "prerequisites": "ENG 101 or instructor's permission.",
+              "description": "One year of high school chemistry or one semester of college chemistry is recommended. This course entails basic principles of structure and function of living things at the molecular, cellular, and system levels of organization. This course meets for three hours lecture and three hours laboratory per week."
+            }
+          },
+          {
+            "level": 2,
+            "header": "BIO 182 General Biology II (4)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 182",
+              "course_title": "General Biology II",
+              "credits": "4",
+              "description": "A survey of biodiversity and core concepts in ecology and evolution. Specifically, a study of the biosphere, ecosystems, populations, evolutionary mechanisms and life phylogenies. Life history strategies will be surveyed among prokaryotes, protists, plants, animals and fungi."
+            }
+          },
+          {
+            "level": 2,
+            "header": "BIO 201 Human Anatomy and Physiology I (4)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 201",
+              "course_title": "Human Anatomy and Physiology I",
+              "credits": "4",
+              "prerequisites": "BIO 181.",
+              "description": "Anatomy and physiology is the study of the structure and function of the human body. Selected topics include cells, tissues, and the integumentary, skeletal, muscular, and nervous systems. This course meets for three hours lecture and three hours laboratory per week."
+            }
+          },
+          {
+            "level": 2,
+            "header": "BIO 202 Human Anatomy and Physiology II (4)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 202",
+              "course_title": "Human Anatomy and Physiology II",
+              "credits": "4",
+              "prerequisites": "BIO 181, 201.",
+              "description": "This course is a continuation of the study of the structure and function of the human body. Selected topics include the endocrine, circulatory, respiratory, digestive, urinary, and reproductive systems. This course meets for three hours lecture and four hours laboratory per week."
+            }
+          },
+          {
+            "level": 2,
+            "header": "BIO 205 Microbiology (4)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 205",
+              "course_title": "Microbiology",
+              "credits": "4",
+              "prerequisites": "BIO 181 and another BIO class (college level) or CHM class. One semester of college-level chemistry is recommended.",
+              "description": "Students study micro-organisms and their relationship to health, ecology, and related fields. The field of microbiology is extensive, and in this class emphasis will be on basic principles and their application in medical microbiology. The class will meet for three hours lecture and four hours laboratory per week."
+            }
+          },
+          {
+            "level": 2,
+            "header": "BIO 221 Invertebrate Biology I (4)",
+            "header_type": "course_header",
+            "content": {
+              "type": "course_description",
+              "course_code": "BIO 221",
+              "course_title": "Invertebrate Biology I",
+              "credits": "4",
+              "prerequisites": "BIO 181.",
+              "description": "This is part one of a two-semester sequence and involves the survey of Phyla Porifera through Chordata including Blast coelomate by using selected taxa to illustrate concepts in evolution, systematics, physiology, morphology, life history, ecology and behavior. Lectures will be focusing on organizing and interpreting information about invertebrate organisms in order to illustrate evolutionary relationships within and"
+            }
+          }
+        ],
+        "header": "Untitled Section"
+      }
+    ],
+    "extraction_metadata": {
+      "page_number": 64,
+      "validation_status": "validated",
+      "total_sections": 2,
+      "layout_detected": "two_column",
+      "warnings": [
+        "Potentially missing section: 'program requirements' - may be incomplete extraction",
+        "Potentially missing section: 'degree earned' - may be incomplete extraction",
+        "Potentially missing section: 'credits' - may be incomplete extraction"
+      ]
+    }
+  }
+]

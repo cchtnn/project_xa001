@@ -1,15 +1,15 @@
 """
 Query Handler for Diné College Assistant - Updated Version
 Handles different types of queries based on classification
-Now uses CSV-based student transcript handler instead of FAISS
+Supports: STUDENT_TRANSCRIPT, PAYROLL_CALENDAR, BOR_MEETING, CATALOG, and POLICY queries
 """
 
 import time
 import streamlit as st
 from query_classifier import classify_user_query, QueryType
-# Updated import - now using CSV handler instead of FAISS handler
 from student_transcript_csv_handler import process_transcript_query
 from docx_parser import PayrollCSVAgent
+from catalog_query_processor import process_catalog_query
 import logic
 import json
 import os
@@ -24,7 +24,7 @@ class QueryHandler:
         self.collection = collection
         self.tab_data = tab_data
     
-    def process_query(self, user_query, language='English', payroll_csv_path=None):
+    def process_query(self, user_query, language='English', payroll_csv_path=None, catalog_path=None):
         """
         Process user query based on its type
         
@@ -32,6 +32,7 @@ class QueryHandler:
             user_query (str): The user's question
             language (str): Selected language for response
             payroll_csv_path (str): Path to payroll CSV file (if available)
+            catalog_path (str): Path to catalog data (if available)
             
         Returns:
             tuple: (answer, query_type, confidence_score)
@@ -44,10 +45,56 @@ class QueryHandler:
             answer = self._handle_student_transcript_query(user_query, language)
         elif query_type == QueryType.PAYROLL_CALENDAR:
             answer = self._handle_payroll_query(user_query, language, payroll_csv_path)
+        elif query_type == QueryType.CATALOG:
+            answer = self._handle_catalog_query(user_query, language, catalog_path)
         else:  # POLICY type
             answer = self._handle_policy_query(user_query, language)
         
         return answer, query_type, confidence_score
+    
+    def _handle_catalog_query(self, user_query, language, catalog_path=None):
+        """
+        Handle course catalog type queries
+        
+        Args:
+            user_query (str): The user's question
+            language (str): Selected language for response
+            catalog_path (str): Path to catalog data
+            
+        Returns:
+            object: Answer object with content attribute
+        """
+        print("📚 Processing CATALOG query...")
+        
+        try:
+            # Use the catalog query processor
+            answer_content = process_catalog_query(user_query, catalog_path)
+            
+            # Create answer object compatible with existing UI
+            answer = type('obj', (object,), {
+                'content': answer_content
+            })
+            
+            return answer
+            
+        except Exception as e:
+            print(f"❌ Error processing catalog query: {e}")
+            
+            # Return error message in appropriate language
+            error_messages = {
+                "English": "I encountered an error while processing your catalog query. Please try again or contact support.",
+                "Spanish": "Encontré un error al procesar tu consulta del catálogo. Por favor, inténtalo de nuevo o contacta al soporte.",
+                "French": "J'ai rencontré une erreur lors du traitement de votre requête de catalogue. Veuillez réessayer ou contacter le support.",
+                "Navajo": "Béédahodeesnih bee ákóníín. T'áá íiyisí naaltsoos."
+            }
+            
+            error_content = error_messages.get(language, error_messages["English"])
+            
+            answer = type('obj', (object,), {
+                'content': error_content
+            })
+            
+            return answer
     
     def _handle_student_transcript_query(self, user_query, language):
         """
@@ -82,7 +129,7 @@ class QueryHandler:
                 "English": "I encountered an error while processing your student transcript query. Please try again or contact support.",
                 "Spanish": "Encontré un error al procesar tu consulta del expediente académico. Por favor, inténtalo de nuevo o contacta al soporte.",
                 "French": "J'ai rencontré une erreur lors du traitement de votre requête de relevé de notes. Veuillez réessayer ou contacter le support.",
-                "Navajo": "Bééhániih ályaa éí átʼé. Náábah ílį́ éí doodaii' ánáhwiiłtááh."
+                "Navajo": "Béédahoniih áláá éí át'é. Náábah ílį́ éí doodaii' ánáhwiiltááh."
             }
             
             error_content = error_messages.get(language, error_messages["English"])
@@ -135,7 +182,7 @@ class QueryHandler:
                 "English": "I encountered an error while processing your payroll calendar query. Please try again or contact support.",
                 "Spanish": "Encontré un error al procesar tu consulta del calendario de nómina. Por favor, inténtalo de nuevo o contacta al soporte.",
                 "French": "J'ai rencontré une erreur lors du traitement de votre requête de calendrier de paie. Veuillez réessayer ou contacter le support.",
-                "Navajo": "Béédahodeesnih bee ákonízin. T'áá íiyisí naaltsoos."
+                "Navajo": "Béédahodeesnih bee ákóníín. T'áá íiyisí naaltsoos."
             }
             
             error_content = error_messages.get(language, error_messages["English"])
@@ -193,7 +240,7 @@ class QueryHandler:
                 "English": "I encountered an error while processing your policy query. Please try again or rephrase your question.",
                 "Spanish": "Encontré un error al procesar tu consulta de política. Por favor, inténtalo de nuevo o reformula tu pregunta.",
                 "French": "J'ai rencontré une erreur lors du traitement de votre requête de politique. Veuillez réessayer ou reformuler votre question.",
-                "Navajo": "Bééhódeilnih ályaa éí átʼé. Náábah ílį́ éí doodaii' saad naaltsoos."
+                "Navajo": "Béédódeilnih áláá éí át'é. Náábah ílį́ éí doodaii' saad naaltsoos."
             }
             
             error_content = error_messages.get(language, error_messages["English"])

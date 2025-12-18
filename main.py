@@ -13,6 +13,7 @@ import shutil
 import auth_db
 import session_db, session_manager, student_transcript_csv_handler, query_handler, logic, config
 from query_classifier import classify_user_query, QueryType
+from catalog_query_processor import process_catalog_query
 import jwt
 from datetime import datetime, timedelta
 import re
@@ -33,6 +34,9 @@ STRONG_PASSWORD = os.getenv("STRONG_PASSWORD", "true").lower() == "true"
 # Default payroll calendar path
 DEFAULT_PAYROLL_CALENDAR_PATH = 'data//payroll_cal//2026Payroll Calendar.docx'
 DEFAULT_PAYROLL_CSV_FOLDER = 'data//payroll_cal//csv_files'
+
+DEFAULT_CATALOG_CHUNKS_FILE = 'data//catalog_data//parsed_data//embedding_chunks_robust.json'
+DEFAULT_CATALOG_SEARCH_SYSTEM = 'chtn_test_docs//search_system'
 
 app = FastAPI()
 
@@ -186,13 +190,10 @@ async def delete_session(request: Request, session_id: int = Form(...)):
     username = get_username_from_token(request)
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # Delete from DB
     session_db.delete_session(session_id)
-    # Delete session folder (private uploads)
     session_folder = f"data/user_uploads/{username}/session_{session_id}"
     if os.path.exists(session_folder):
         shutil.rmtree(session_folder)
-    # Optionally, delete public uploads if you support public sessions
     public_folder = f"data/public_uploads/session_{session_id}"
     if os.path.exists(public_folder):
         shutil.rmtree(public_folder)
@@ -213,12 +214,11 @@ async def upload_files(request: Request, session_id: int = Form(...), files: Lis
     image_output_path = os.path.join(base_output_path, "extracted_images")
     csv_output_path = os.path.join(base_output_path, "csv_files")
     os.makedirs(csv_output_path, exist_ok=True)
-    upload_folder = base_output_path  # Always upload to the base_output_path
+    upload_folder = base_output_path
 
     processed_files = []
     errors = []
     
-    # Determine output folders based on private flag
     if private:
         upload_folder = f"data/user_uploads/{username}/session_{session_id}"
         os.makedirs(upload_folder, exist_ok=True)
@@ -232,32 +232,23 @@ async def upload_files(request: Request, session_id: int = Form(...), files: Lis
             with open(file_path, "wb") as f:
                 shutil.copyfileobj(file.file, f)
             
-            # Check file extension
             if file.filename.lower().endswith('.zip'):
-                # Process ZIP file (only extract images and create individual CSVs)
                 extracted_pdfs = logic.extract_and_process_zip_images_only(file_path, image_output_path, csv_output_path)
                 processed_files.extend(extracted_pdfs)
                 logging.info(f"User {username} uploaded and processed ZIP file {file.filename}")
             elif file.filename.lower().endswith('.pdf'):
-                # Process single PDF (only extract images and create individual CSVs)
                 result = logic.parse_pdf_to_individual_csv(file_path, image_output_path, csv_output_path)
                 if result:
                     processed_files.append(file.filename)
                 logging.info(f"User {username} uploaded PDF file {file.filename}")
             elif file.filename.lower().endswith('.docx'):
-                # Process DOCX file (payroll calendar extraction)
                 try:
                     print(f"Extract payroll calendar from DOCX")
                     df = docx_parser.extract_payroll_calendar(file_path, expected_count=27)
                     df.columns = ['payroll_no', 'start_date', 'end_date', 'check_date']
-                    
-                    # Add optional withholdings column
                     df['optional_withholdings_changes_by'] = df['end_date']
-                    
-                    # Save extracted data to CSV in the session folder
                     docx_csv_output = os.path.join(csv_output_path, f"{os.path.splitext(file.filename)[0]}_payroll.csv")
                     df.to_csv(docx_csv_output, index=False)
-                    
                     processed_files.append(file.filename)
                     logging.info(f"User {username} uploaded and processed DOCX file {file.filename} - extracted {len(df)} payroll records")
                     
@@ -271,7 +262,6 @@ async def upload_files(request: Request, session_id: int = Form(...), files: Lis
             errors.append(f"Error processing {file.filename}: {str(e)}")
             logging.error(f"Error processing file {file.filename}: {e}")
     
-    # After processing all files, create ONE final merged CSV
     if processed_files:
         try:
             print("Creating final merged CSV from all individual CSVs...")
@@ -283,7 +273,6 @@ async def upload_files(request: Request, session_id: int = Form(...), files: Lis
             errors.append(f"Error creating final merged CSV: {str(e)}")
             logging.error(f"Error creating final merged CSV: {e}")
     
-    # After upload, update session_db with file paths
     session_db.update_upload_paths(session_id, processed_files)
     
     message = f"Processed {len(processed_files)} file(s) successfully."
@@ -301,7 +290,7 @@ async def upload_files(request: Request, session_id: int = Form(...), files: Lis
 @app.post("/query")
 async def query_endpoint(
     request: Request,
-    user_query: str = Form(..., alias="query"),  # Renamed to avoid conflict
+    user_query: str = Form(..., alias="query"),
     session_id: int = Form(...),
     private: bool = Form(False)
 ):
@@ -310,26 +299,190 @@ async def query_endpoint(
         raise HTTPException(status_code=401, detail="Unauthorized")
 
     session_info = session_db.get_session_info(session_id)
-    csv_folder = session_info['upload_paths']  # or parse JSON
+    csv_folder = session_info['upload_paths']
     embedding_index = session_info['embedding_index_path']
 
-    # CLASSIFICATION FIRST - Always classify the query regardless of uploaded data
     query_type, confidence_score = classify_user_query(user_query)
     print(f"Query classified as: {query_type} (confidence: {confidence_score:.3f})")
 
-    # --- BOR_MEETING queries (Board of Regents) ---
-    if query_type == QueryType.BOR_MEETING:
-        # Use current UTC date; adjust if you want local time
-        today = datetime.utcnow().date()
-        answer = answer_bor_query(query, today=today)
-
-        # Save to history
+    # ==================================================================================
+    # CATALOG QUERY HANDLING
+    # ==================================================================================
+    if query_type == QueryType.CATALOG:
+        logging.info(f"User {username} queried CATALOG: {user_query}")
+        
+        print(f"\n{'='*80}")
+        print(f"📚 CATALOG QUERY DETECTED")
+        print(f"{'='*80}")
+        print(f"User: {username}")
+        print(f"Query: {user_query}")
+        print(f"Session ID: {session_id}")
+        print(f"Private Mode: {private}")
+        print(f"Confidence: {confidence_score:.3f}")
+        
+        # Determine catalog data paths
+        catalog_chunks_file = None
+        catalog_search_system = None
+        user_uploaded_catalog = False
+        
+        # Check for user-uploaded catalog data (private mode)
+        if private:
+            user_catalog_folder = f"data/user_uploads/{username}/session_{session_id}/catalog"
+            user_chunks_file = os.path.join(user_catalog_folder, "embedding_chunks.json")
+            user_search_system = os.path.join(user_catalog_folder, "search_system")
+            
+            print(f"\n🔍 Checking for private catalog data...")
+            print(f"   Chunks file: {user_chunks_file}")
+            print(f"   Search system: {user_search_system}")
+            
+            if os.path.exists(user_search_system):
+                catalog_search_system = user_search_system
+                user_uploaded_catalog = True
+                print(f"✅ Using user's private search system")
+            elif os.path.exists(user_chunks_file):
+                catalog_chunks_file = user_chunks_file
+                catalog_search_system = user_search_system  # Will be created
+                user_uploaded_catalog = True
+                print(f"✅ Using user's private chunks file")
+            else:
+                print(f"⚠️ No private catalog data found")
+        
+        # Check for public/shared catalog data (session-based)
+        if not user_uploaded_catalog:
+            public_catalog_folder = f"data/public_uploads/session_{session_id}/catalog"
+            public_chunks_file = os.path.join(public_catalog_folder, "embedding_chunks.json")
+            public_search_system = os.path.join(public_catalog_folder, "search_system")
+            
+            print(f"\n🔍 Checking for session catalog data...")
+            print(f"   Chunks file: {public_chunks_file}")
+            print(f"   Search system: {public_search_system}")
+            
+            if os.path.exists(public_search_system):
+                catalog_search_system = public_search_system
+                print(f"✅ Using session search system")
+            elif os.path.exists(public_chunks_file):
+                catalog_chunks_file = public_chunks_file
+                catalog_search_system = public_search_system  # Will be created
+                print(f"✅ Using session chunks file")
+            else:
+                print(f"⚠️ No session catalog data found")
+        
+        # Fall back to default catalog if no user/session data found
+        if not catalog_search_system and not catalog_chunks_file:
+            print(f"\n🔍 Falling back to default catalog...")
+            print(f"   Default chunks: {DEFAULT_CATALOG_CHUNKS_FILE}")
+            print(f"   Default system: {DEFAULT_CATALOG_SEARCH_SYSTEM}")
+            
+            if os.path.exists(DEFAULT_CATALOG_SEARCH_SYSTEM):
+                catalog_search_system = DEFAULT_CATALOG_SEARCH_SYSTEM
+                print(f"✅ Using default search system")
+            elif os.path.exists(DEFAULT_CATALOG_CHUNKS_FILE):
+                catalog_chunks_file = DEFAULT_CATALOG_CHUNKS_FILE
+                catalog_search_system = DEFAULT_CATALOG_SEARCH_SYSTEM
+                print(f"✅ Using default chunks file")
+            else:
+                print(f"❌ No catalog data available")
+                answer = (
+                    "📚 **Course Catalog Not Available**\n\n"
+                    "I couldn't find any course catalog data to answer your question.\n\n"
+                    "**To use the catalog feature:**\n"
+                    "1. Upload your course catalog document (PDF with embedded chunks JSON), or\n"
+                    "2. Contact your administrator to set up the default catalog system.\n\n"
+                    "For now, please try asking about policies, student transcripts, "
+                    "payroll calendar, or Board of Regents meetings."
+                )
+                
+                # Save to history
+                history_before = session_db.get_session_message_count(session_id)
+                session_db.add_single_qa_to_history(session_id, user_query, answer)
+                
+                if history_before == 0:
+                    session_name = generate_session_name(user_query)
+                    session_db.rename_session(session_id, session_name)
+                    logging.info(f"Updated session {session_id} name to: {session_name}")
+                
+                return {
+                    "answer": answer,
+                    "session_id": session_id,
+                    "query_type": query_type,
+                    "confidence_score": confidence_score,
+                    "session_name_updated": history_before == 0,
+                    "error": "No catalog data available"
+                }
+        
+        # Process the catalog query
+        print(f"\n{'='*80}")
+        print(f"🚀 PROCESSING CATALOG QUERY")
+        print(f"{'='*80}")
+        print(f"Chunks File: {catalog_chunks_file or 'N/A (using pre-built system)'}")
+        print(f"Search System: {catalog_search_system}")
+        print(f"User Uploaded: {user_uploaded_catalog}")
+        print(f"{'='*80}\n")
+        
+        try:
+            answer = process_catalog_query(
+                user_query=user_query,
+                catalog_path=None,  # Not used in current implementation
+                chunks_file=catalog_chunks_file,
+                search_system_dir=catalog_search_system
+            )
+            
+            print(f"\n✅ Catalog query processed successfully")
+            print(f"   Answer length: {len(answer)} characters")
+            
+        except Exception as e:
+            logging.error(f"Error processing catalog query: {e}")
+            import traceback
+            traceback.print_exc()
+            
+            answer = (
+                "❌ **Error Processing Catalog Query**\n\n"
+                "I encountered an error while processing your course catalog query. "
+                "This could be due to:\n\n"
+                "- Corrupted or incompatible catalog data\n"
+                "- Missing required files\n"
+                "- System configuration issues\n\n"
+                "Please try again or contact support if the problem persists.\n\n"
+                f"**Error Details:** {str(e)}"
+            )
+            print(f"❌ Error: {str(e)}")
+        
+        # Save to conversation history
         history_before = session_db.get_session_message_count(session_id)
-        session_db.add_single_qa_to_history(session_id, query, answer)
-
-        # If this was the first question, update the session name
+        session_db.add_single_qa_to_history(session_id, user_query, answer)
+        
+        # Update session name if this is the first message
         if history_before == 0:
-            session_name = generate_session_name(query)
+            session_name = generate_session_name(user_query)
+            session_db.rename_session(session_id, session_name)
+            logging.info(f"Updated session {session_id} name to: {session_name}")
+        
+        print(f"\n{'='*80}")
+        print(f"📊 CATALOG QUERY COMPLETE")
+        print(f"{'='*80}")
+        print(f"Session Name Updated: {history_before == 0}")
+        print(f"Response Length: {len(answer)} chars")
+        print(f"{'='*80}\n")
+        
+        return {
+            "answer": answer,
+            "session_id": session_id,
+            "query_type": query_type,
+            "confidence_score": confidence_score,
+            "session_name_updated": history_before == 0,
+            "catalog_source": "user_private" if user_uploaded_catalog and private else 
+                            "session_shared" if user_uploaded_catalog else "default"
+        }
+    
+    if query_type == QueryType.BOR_MEETING:
+        today = datetime.utcnow().date()
+        answer = answer_bor_query(user_query, today=today)
+
+        history_before = session_db.get_session_message_count(session_id)
+        session_db.add_single_qa_to_history(session_id, user_query, answer)
+
+        if history_before == 0:
+            session_name = generate_session_name(user_query)
             session_db.rename_session(session_id, session_name)
             logging.info(f"Updated session {session_id} name to: {session_name}")
 
@@ -341,11 +494,8 @@ async def query_endpoint(
             "session_name_updated": history_before == 0,
         }
 
-
-    # Scenario a: Private checked - use ONLY user's private data (no fallback to common pool)
     print("Private flag is", private)
     if private:
-        # FIX: Use session-specific folder for CSVs
         user_csv_folder = f"data/user_uploads/{username}/session_{session_id}/csv_files"
         has_csv = False
 
@@ -354,9 +504,7 @@ async def query_endpoint(
             if csv_files:
                 has_csv = True
 
-        # NEW LOGIC: Check if it's actually a transcript query
         if query_type == QueryType.STUDENT_TRANSCRIPT and has_csv:
-            # Use private CSV for transcript queries
             csv_files = sorted([f for f in os.listdir(user_csv_folder) if f.lower().endswith('.csv')])
             csv_path = os.path.join(user_csv_folder, csv_files[-1])
             print("Using private CSV for transcript query:", csv_path)
@@ -364,11 +512,9 @@ async def query_endpoint(
                 user_query, csv_path=csv_path
             )
             
-            # Check if this is the first question in the session BEFORE adding to history
             history_before = session_db.get_session_message_count(session_id)
             session_db.add_single_qa_to_history(session_id, user_query, answer)
 
-            # If this was the first question, update the session name
             if history_before == 0:
                 session_name = generate_session_name(user_query)
                 session_db.rename_session(session_id, session_name)
@@ -382,8 +528,6 @@ async def query_endpoint(
                 "session_name_updated": history_before == 0
             }
         
-        # UPDATED LOGIC: If private is checked, ALWAYS stay within private scope
-        # Don't fall through to common pool - return out of scope message
         if query_type == QueryType.STUDENT_TRANSCRIPT and not has_csv:
             answer = "Based on the document you uploaded I did not find the answer. Kindly upload the specific document."
         elif query_type == QueryType.POLICY:
@@ -407,7 +551,6 @@ async def query_endpoint(
             "session_name_updated": history_before == 0
         }
 
-    # Check if user has uploaded files to public folder (only for transcript queries)
     public_upload_folder = "data/public_uploads"
     public_csv_folder = os.path.join(public_upload_folder, "csv_files")
     has_public_csv = False
@@ -419,11 +562,9 @@ async def query_endpoint(
 
     print("User has public CSV:", has_public_csv)
     
-    # Handle PAYROLL_CALENDAR queries
     if query_type == QueryType.PAYROLL_CALENDAR:
         logging.info(f"User {username} queried PAYROLL_CALENDAR: {user_query}")
         
-        # Determine payroll CSV path based on private flag
         if private:
             payroll_csv_folder = f"data/user_uploads/{username}/session_{session_id}/csv_files"
         else:
@@ -431,7 +572,6 @@ async def query_endpoint(
         
         print(f"Looking for payroll CSV in: {payroll_csv_folder}")
         
-        # Look for payroll CSV (contains "payroll" in filename)
         payroll_csv_path = None
         user_uploaded_file = False
         
@@ -439,7 +579,6 @@ async def query_endpoint(
             csv_files = [f for f in os.listdir(payroll_csv_folder) if f.lower().endswith('.csv') and 'payroll' in f.lower()]
             print(f"Found CSV files with 'payroll': {csv_files}")
             if csv_files:
-                # Prefer merged files if available
                 merged_files = [f for f in csv_files if 'merged' not in f.lower()]
                 if merged_files:
                     payroll_csv_path = os.path.join(payroll_csv_folder, merged_files[0])
@@ -452,29 +591,23 @@ async def query_endpoint(
         else:
             print(f"Payroll CSV folder does not exist: {payroll_csv_folder}")
         
-        # Fallback to default payroll calendar if user hasn't uploaded
         if not payroll_csv_path:
             print(f"No user-uploaded payroll data found. Checking default payroll calendar...")
             
-            # Ensure default CSV folder exists
             os.makedirs(DEFAULT_PAYROLL_CSV_FOLDER, exist_ok=True)
             
-            # Check if default CSV already exists
             default_csv_files = [f for f in os.listdir(DEFAULT_PAYROLL_CSV_FOLDER) if f.lower().endswith('.csv') and 'payroll' in f.lower()]
             
             if default_csv_files:
-                # Use existing default CSV
                 payroll_csv_path = os.path.join(DEFAULT_PAYROLL_CSV_FOLDER, default_csv_files[-1])
                 print(f"Using existing default payroll CSV: {payroll_csv_path}")
             elif os.path.exists(DEFAULT_PAYROLL_CALENDAR_PATH):
-                # Parse default DOCX and create CSV
                 print(f"Parsing default payroll calendar from: {DEFAULT_PAYROLL_CALENDAR_PATH}")
                 try:
                     df = docx_parser.extract_payroll_calendar(DEFAULT_PAYROLL_CALENDAR_PATH, expected_count=27)
                     df.columns = ['payroll_no', 'start_date', 'end_date', 'check_date']
                     df['optional_withholdings_changes_by'] = df['end_date']
                     
-                    # Save to default CSV folder
                     default_csv_path = os.path.join(DEFAULT_PAYROLL_CSV_FOLDER, "2026Payroll_Calendar_payroll.csv")
                     df.to_csv(default_csv_path, index=False)
                     payroll_csv_path = default_csv_path
@@ -487,34 +620,29 @@ async def query_endpoint(
             else:
                 print(f"Default payroll calendar not found at: {DEFAULT_PAYROLL_CALENDAR_PATH}")
         
-        # Process the query with PayrollCSVAgent
-        answer = None  # Initialize answer variable
+        answer = None
         
         if payroll_csv_path and os.path.exists(payroll_csv_path):
-            # Import and use PayrollCSVAgent with reformulation
             from docx_parser import PayrollCSVAgent
             
             try:
                 print(f"\n{'='*60}")
-                print(f"🚀 INITIALIZING PAYROLL QUERY PROCESSING")
+                print(f"INITIALIZING PAYROLL QUERY PROCESSING")
                 print(f"{'='*60}")
-                print(f"📄 CSV Path: {payroll_csv_path}")
-                print(f"❓ Query: {user_query}")
-                print(f"🔒 Private: {private}")
+                print(f"CSV Path: {payroll_csv_path}")
+                print(f"Query: {user_query}")
+                print(f"Private: {private}")
                 
                 payroll_agent = PayrollCSVAgent(csv_path=payroll_csv_path)
                 if payroll_agent.initialize():
-                    print(f"✅ Payroll agent initialized successfully")
-                    
-                    # The query() method now includes reformulation internally
+                    print(f"Payroll agent initialized successfully")
                     answer = payroll_agent.query(user_query)
-                    
-                    print(f"✅ Query processed successfully")
-                    print(f"📊 Answer length: {len(answer)} characters")
+                    print(f"Query processed successfully")
+                    print(f"Answer length: {len(answer)} characters")
                     print(f"{'='*60}\n")
                 else:
                     answer = "Failed to initialize payroll calendar system. Please try again."
-                    print(f"❌ Failed to initialize payroll agent")
+                    print(f"Failed to initialize payroll agent")
             except Exception as e:
                 logging.error(f"Error processing payroll query: {e}")
                 import traceback
@@ -523,7 +651,6 @@ async def query_endpoint(
         else:
             answer = "No payroll calendar data found. Please upload a payroll calendar document (.docx) or contact support if the default calendar should be available."
         
-        # Save to history
         history_before = session_db.get_session_message_count(session_id)
         session_db.add_single_qa_to_history(session_id, user_query, answer)
 
@@ -540,7 +667,6 @@ async def query_endpoint(
             "session_name_updated": history_before == 0
         }
     
-    # NEW LOGIC: Only use public CSV if it's actually a transcript query
     if query_type == QueryType.STUDENT_TRANSCRIPT and has_public_csv and not private:
         csv_files = sorted([f for f in os.listdir(public_csv_folder) if f.lower().endswith('.csv')])
         csv_path = os.path.join(public_csv_folder, csv_files[-1])
@@ -548,11 +674,9 @@ async def query_endpoint(
             user_query, csv_path=csv_path
         )
         
-        # Check if this is the first question in the session BEFORE adding to history
         history_before = session_db.get_session_message_count(session_id)
         session_db.add_single_qa_to_history(session_id, user_query, answer)
 
-        # If this was the first question, update the session name
         if history_before == 0:
             session_name = generate_session_name(user_query)
             session_db.rename_session(session_id, session_name)
@@ -566,7 +690,6 @@ async def query_endpoint(
             "session_name_updated": history_before == 0
         }
 
-    # Scenario c: Either no uploads found OR it's a POLICY query - use common data (existing vectorstore logic)
     logging.info(f"User {username} queried: {user_query} (session_id: {session_id}) - Using vectorstore for {query_type} query")
     try:
         index, metadata, tab_data = initialize_vectorstore()
@@ -575,7 +698,6 @@ async def query_endpoint(
         logging.error(f"Error loading data for user {username}: {e}")
         collection, tab_data = None, {}
 
-    # Existing logic for chat_history, user_context, conversation graph
     chat_history = session_db.get_contextual_history(session_id, limit=5)
     user_context = {
         "username": username,
@@ -587,11 +709,9 @@ async def query_endpoint(
     result = conv_graph.process_conversation(user_query, chat_history, user_context)
     response_content = result["response"]
 
-    # Check if this is the first question in the session BEFORE adding to history
     history_before = session_db.get_session_message_count(session_id)
     session_db.add_single_qa_to_history(session_id, user_query, response_content)
 
-    # If this was the first question, update the session name
     if history_before == 0:
         session_name = generate_session_name(user_query)
         session_db.rename_session(session_id, session_name)
@@ -600,8 +720,8 @@ async def query_endpoint(
     return {
         "answer": response_content,
         "session_id": session_id,
-        "query_type": query_type,  # Now returns the actual classified type
-        "confidence_score": confidence_score,  # Now returns the actual confidence
+        "query_type": query_type,
+        "confidence_score": confidence_score,
         "contextual": len(chat_history) > 0,
         "session_name_updated": history_before == 0
     }
@@ -612,7 +732,6 @@ async def get_history(request: Request, session_id: int):
     if not username:
         raise HTTPException(status_code=401, detail="Unauthorized")
     
-    # Verify user owns this session
     user_sessions = session_db.get_user_sessions(username)
     session_ids = [s["session_id"] for s in user_sessions]
     
@@ -622,253 +741,7 @@ async def get_history(request: Request, session_id: int):
     history = session_db.load_qa_history(session_id)
     return {"history": history}
 
-# --- Admin Endpoints ---
-@app.get("/admin", response_class=HTMLResponse)
-async def admin_page(request: Request):
-    username = get_username_from_token(request)
-    if not username or not auth_db.validate_admin(username):
-        return RedirectResponse(url="/admin/login", status_code=302)
-    users_raw = auth_db.list_users()
-    users = [{"username": u[0], "role": u[1]} for u in users_raw]
-    active_sessions = session_db.get_all_active_sessions()
-    csrf_token = secrets.token_urlsafe(32)
-    session_db.save_meta(f"csrf_{username}", csrf_token)
-    
-    # Check for success/error parameters
-    add_success = request.query_params.get("add_success") == "true"
-    
-    return templates.TemplateResponse("admin.html", {
-        "request": request,
-        "user_authenticated": True,
-        "users": users,
-        "active_sessions": active_sessions,
-        "csrf_token": csrf_token,
-        "add_success": add_success
-    })
-
-@app.get("/admin/login", response_class=HTMLResponse)
-async def admin_login_get(request: Request):
-    return templates.TemplateResponse("admin_login.html", {"request": request})
-
-@app.post("/admin/login", response_class=HTMLResponse)
-async def admin_login_post(request: Request, username: str = Form(...), password: str = Form(...)):
-    user = auth_db.validate_user(username, password)
-    if not user or user["role"] != "admin":
-        return templates.TemplateResponse(
-            "admin_login.html",
-            {"request": request, "error": "Invalid credentials"}
-        )
-    access_token = create_access_token({"sub": username}, expires_delta=timedelta(minutes=15))
-    response = RedirectResponse(url="/admin", status_code=302)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=True, samesite="strict")
-    logging.info(f"Admin {username} logged in")
-    return response
-
-@app.get("/admin/add_user")
-async def admin_add_user_get(request: Request):
-    """Redirect GET requests to admin page"""
-    username = get_username_from_token(request)
-    if not username or not auth_db.validate_admin(username):
-        return RedirectResponse(url="/admin/login", status_code=302)
-    return RedirectResponse(url="/admin", status_code=302)
-
-@app.get("/admin/delete_user")
-async def admin_delete_user_get(request: Request):
-    """Redirect GET requests to admin page"""
-    username = get_username_from_token(request)
-    if not username or not auth_db.validate_admin(username):
-        return RedirectResponse(url="/admin/login", status_code=302)
-    return RedirectResponse(url="/admin", status_code=302)
-
-@app.get("/admin/edit_user")
-async def admin_edit_user_get(request: Request):
-    """Redirect GET requests to admin page"""
-    username = get_username_from_token(request)
-    if not username or not auth_db.validate_admin(username):
-        return RedirectResponse(url="/admin/login", status_code=302)
-    return RedirectResponse(url="/admin", status_code=302)
-
-@app.post("/admin/refresh_sessions")
-async def refresh_sessions(request: Request, csrf_token: str = Form(...)):
-    admin_username = get_username_from_token(request)
-    if not admin_username or not auth_db.validate_admin(admin_username):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if session_db.load_meta(f"csrf_{admin_username}") != csrf_token:
-        raise HTTPException(status_code=403, detail="Invalid CSRF token")
-    
-    try:
-        # Clean up inactive sessions first
-        session_db.cleanup_inactive_sessions()
-        
-        # Get fresh session data
-        active_sessions = session_db.get_all_active_sessions()
-        
-        logging.info(f"Admin {admin_username} refreshed active sessions - found {len(active_sessions)} sessions")
-        
-        return {"success": True, "session_count": len(active_sessions)}
-        
-    except Exception as e:
-        logging.error(f"Error refreshing sessions for admin {admin_username}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to refresh sessions")
-
-@app.get("/admin/kill_session")
-async def admin_kill_session_get(request: Request):
-    """Redirect GET requests to admin page"""
-    username = get_username_from_token(request)
-    if not username or not auth_db.validate_admin(username):
-        return RedirectResponse(url="/admin/login", status_code=302)
-    return RedirectResponse(url="/admin", status_code=302)
-
-@app.post("/admin/add_user")
-async def add_user(request: Request, username: str = Form(...), password: str = Form(...), role: str = Form(...), csrf_token: str = Form(...)):
-    admin_username = get_username_from_token(request)
-    if not admin_username or not auth_db.validate_admin(admin_username):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if session_db.load_meta(f"csrf_{admin_username}") != csrf_token:
-        raise HTTPException(status_code=403, detail="Invalid CSRF token")
-    try:
-        auth_db.add_user(username, password, role, created_by=admin_username)
-        logging.info(f"Admin {admin_username} added user {username} with role {role}")
-        return RedirectResponse(url="/admin?add_success=true", status_code=302)
-    
-    except sqlite3.IntegrityError:
-        return templates.TemplateResponse("admin.html", {
-            "request": request,
-            "user_authenticated": True,
-            "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-            "active_sessions": session_db.get_all_active_sessions(),
-            "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-            "error": f"Username '{username}' already exists. Please choose a different username."
-        })
-    except ValueError as e:
-        if STRONG_PASSWORD:
-            return templates.TemplateResponse("admin.html", {
-                "request": request,
-                "user_authenticated": True,
-                "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-                "active_sessions": session_db.get_all_active_sessions(),
-                "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-                "error": str(e)
-            })
-        else:
-            try:
-                logging.warning(f"Admin {admin_username} added user {username} with weak password")
-                auth_db.add_user(username, password, role, created_by=admin_username, bypass_password_validation=True)
-                return templates.TemplateResponse("admin.html", {
-                    "request": request,
-                    "user_authenticated": True,
-                    "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-                    "active_sessions": session_db.get_all_active_sessions(),
-                    "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-                    "add_success": True
-                })
-            except sqlite3.IntegrityError:
-                return templates.TemplateResponse("admin.html", {
-                    "request": request,
-                    "user_authenticated": True,
-                    "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-                    "active_sessions": session_db.get_all_sessions(),
-                    "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-                    "error": f"Username '{username}' already exists. Please choose a different username."
-                })
-
-@app.post("/admin/edit_user")
-async def edit_user(request: Request, original_username: str = Form(...), username: str = Form(...), role: str = Form(...), csrf_token: str = Form(...)):
-    admin_username = get_username_from_token(request)
-    if not admin_username or not auth_db.validate_admin(admin_username):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if session_db.load_meta(f"csrf_{admin_username}") != csrf_token:
-        raise HTTPException(status_code=403, detail="Invalid CSRF token")
-    try:
-        auth_db.update_user(original_username, username, None, role)
-        logging.info(f"Admin {admin_username} edited user {original_username} to {username} with role {role}")
-        return templates.TemplateResponse("admin.html", {
-            "request": request,
-            "user_authenticated": True,
-            "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-            "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-            "edit_success": True
-        })
-    except Exception as e:
-        logging.error(f"Error editing user {original_username}: {e}")
-        return templates.TemplateResponse("admin.html", {
-            "request": request,
-            "user_authenticated": True,
-            "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-            "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-            "edit_error": True
-        })
-
-@app.post("/admin/delete_user")
-async def delete_user(request: Request, username: str = Form(...), csrf_token: str = Form(...)):
-    admin_username = get_username_from_token(request)
-    if not admin_username or not auth_db.validate_admin(admin_username):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if session_db.load_meta(f"csrf_{admin_username}") != csrf_token:
-        raise HTTPException(status_code=403, detail="Invalid CSRF token")
-    try:
-        auth_db.delete_user(username)
-        logging.info(f"Admin {admin_username} deleted user {username}")
-        return templates.TemplateResponse("admin.html", {
-            "request": request,
-            "user_authenticated": True,
-            "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-            "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-            "delete_success": True
-        })
-    except Exception as e:
-        logging.error(f"Error deleting user {username}: {e}")
-        return templates.TemplateResponse("admin.html", {
-            "request": request,
-            "user_authenticated": True,
-            "users": [{"username": u[0], "role": u[1]} for u in auth_db.list_users()],
-            "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-            "delete_error": True
-        })
-
-
-@app.post("/admin/kill_session")
-async def kill_session(request: Request, session_id: int = Form(...), csrf_token: str = Form(...)):
-    admin_username = get_username_from_token(request)
-    if not admin_username or not auth_db.validate_admin(admin_username):
-        raise HTTPException(status_code=401, detail="Unauthorized")
-    if session_db.load_meta(f"csrf_{admin_username}") != csrf_token:
-        raise HTTPException(status_code=403, detail="Invalid CSRF token")
-    
-    try:
-        session_info = session_db.kill_user_session(session_id)
-        if session_info:
-            logging.info(f"Admin {admin_username} killed session {session_id} for user {session_info[0]}")
-            users_raw = auth_db.list_users()
-            users = [{"username": u[0], "role": u[1]} for u in users_raw]
-            active_sessions = session_db.get_all_active_sessions()
-            add_success = request.query_params.get("add_success") == "true"
-            return templates.TemplateResponse("admin.html", {
-                "request": request,
-                "user_authenticated": True,
-                "users": users,
-                "active_sessions": active_sessions,
-                "csrf_token": csrf_token,
-                "add_success": add_success
-            })
-        else:
-            raise Exception("Session not found")
-    except Exception as e:
-        logging.error(f"Error killing session {session_id}: {e}")
-        users_raw = auth_db.list_users()
-        users = [{"username": u[0], "role": u[1]} for u in users_raw]
-        active_sessions = session_db.get_all_active_sessions()
-        
-        return templates.TemplateResponse("admin.html", {
-            "request": request,
-            "user_authenticated": True,
-            "users": users,
-            "active_sessions": active_sessions,
-            "csrf_token": session_db.load_meta(f"csrf_{admin_username}"),
-            "session_kill_error": True
-        })
-    
-# Add this to main.py for quick debugging (remove after use)
+# --- Debug Endpoint ---
 @app.get("/debug/sessions")
 async def debug_sessions():
     import sqlite3
@@ -878,6 +751,10 @@ async def debug_sessions():
     rows = c.fetchall()
     conn.close()
     return {"sessions": rows}
-    
+
+# --- Register Admin Routes ---
+from admin_routes import register_admin_routes
+register_admin_routes(app)
+
 if __name__ == "__main__":
     uvicorn.run("main:app", host="127.0.0.1", port=8000, reload=True)
